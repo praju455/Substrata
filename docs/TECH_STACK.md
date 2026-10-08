@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Status:** architecture choices. FastAPI and Python checks are verified in M0.2; the Next.js / TypeScript / Tailwind workspace and static build in M0.3; SQLite WAL, SQLAlchemy transaction helpers and Alembic schema history in M1.1; graph/provenance tables and typed attributes in M1.2. Exact pins are in `pyproject.toml`, `requirements-dev.lock`, `frontend/package.json` and `frontend/package-lock.json`. ERP/workflow tables and other technologies below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
+> **Current implementation:** Implemented locally: Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, mock extraction plus an optional HTTP adapter, Next.js/TypeScript/Tailwind/Cytoscape and direct SSE. Exact pins are in project manifests and lockfiles. SAP, live retrieval, authentication and cloud deployment remain unimplemented design targets.
 
 ## Decision principles
 

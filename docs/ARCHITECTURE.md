@@ -1,6 +1,6 @@
 # Substrata architecture proposal
 
-> **Status:** design specification. FastAPI health is implemented and tested (M0.2), the static frontend workspace is checked (M0.3), SQLite WAL transaction/migration foundations are verified (M1.1), and empty graph/provenance tables are implemented (M1.2). ERP/workflow tables, domain services, agents, integrations and deployment below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
+> **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 
 ## 1. Goals and boundaries
 

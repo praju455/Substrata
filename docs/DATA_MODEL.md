@@ -1,6 +1,6 @@
 # Data model proposal
 
-> **Status:** M1.2 implements graph nodes, edges, evidence links, evidence records and source snapshots, with a versioned SQLite migration. The database is still empty; ERP, workflow and evaluation tables remain planned. The sections below describe the broader target model. **[Design]**
+> **Current implementation:** The five migrations implement graph/provenance, synthetic ERP, agent/confirmation/evaluation, replay/scenario/action/approval and audit/stream tables. Seed 42 populates the scenario. Frozen input hashes and migration-owned integrity triggers support repeatable calculations and approval checks. Broader enterprise fields below remain design targets.
 
 ## Implemented graph and provenance schema (M1.2)
 

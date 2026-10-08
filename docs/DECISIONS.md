@@ -64,6 +64,9 @@ offline after installation; self-hosted documentation assets are deferred.
 
 ## D006: static frontend scaffold
 
+This section records the historical M0.3 checkpoint. D015 describes the completed
+interactive API/SSE dashboard; the dependency caveats below still apply.
+
 M0.3 adds a Next.js App Router / TypeScript / Tailwind workspace, with an explicit
 synthetic-data label, a network empty state and a description of the planned
 workflow. No supplier records, API status, graph interactions, replay controls
@@ -315,23 +318,33 @@ tests compare canonical graph, calculated reports and action/decision outputs.
 Ten complete seeded mock replays produce identical semantic hashes, with a
 valid audit chain on every run. This does not assert identical wall-clock logs.
 
-## Open implementation decisions
+## D015: browser dashboard and portable build
 
-- **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked
-  example, but does not provide the claimed depth spec, a priority equation or
-  full shared-dependency/path-confidence rules. Record precise deterministic
-  rules and any assumptions before implementing them. The supplied brief's
-  product-along-path and noisy-OR-across-paths requirements remain inputs to that
-  decision. **[TBD]**
-- **M1 scenario size:** EVALUATION.md describes a minimum fixture and explicitly
-  leaves final generator size open. Freeze and record generator parameters
-  before producing data. **[TBD]**
-- **M3 thresholds and M4 spend limit:** choose explicit configurable assumptions;
-  do not present them as calibrated or real procurement policy. **[TBD]**
+The client-only Cytoscape graph uses an explicit dynamic import with SSR disabled;
+its presentation layout does not calculate dependency risk. Node shapes distinguish
+types; status styles and evidence quotes expose uncertainty. Keyboard users can
+inspect the same relationships through a native select. API/SSE state drives replay,
+runway, simulated action payloads, named approval and audit panels. UI formatting
+never computes business metrics. Error banners, empty panels, disabled controls,
+inline reset confirmation and graph fallback handle unavailable/incomplete state.
+
+Static output needs a running FastAPI service; it contains no Next.js API routes or
+Server Actions. The runner shares root .env/shell configuration between dev and build,
+embedding the selected API URL at build time. Fonts are local/system resources.
+The HTTP LLM adapter was contract-tested with mocked transport, not a real provider.
+Full npm audit retains the development lint-chain advisory in D006; runtime audit
+must be reported separately. The dashboard is a local single-worker prototype.
+
+## Resolved initial implementation questions
+
+- Formula/priority and bounded path traversal: D011 records the exact assumptions.
+- Scenario size and hidden relationships: D010 fixes generator 1.0 and seed 42.
+- Inference threshold and spend policy: D012/D013 record configurable, uncalibrated
+  demo assumptions. They are not enterprise procurement policy.
 
 ## Deferred scope
 
 SAP HANA/BTP/Joule adapters, live public-signal and ownership calls, model
 training, MCP transport, authentication and production deployment remain TODOs
-outside this prototype pass. **[Design]** No SAP integration or evaluation result
-is claimed.
+outside this prototype pass. **[Design]** No SAP integration is claimed. Measured
+frozen synthetic-fixture results are generated in EVALUATION.md.

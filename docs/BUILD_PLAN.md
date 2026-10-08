@@ -29,8 +29,8 @@ Working branch: `feat/prototype-vertical-slice`.
 | M0.3 | Minimal Next.js / TypeScript / Tailwind app, synthetic-data label and verified static build | Complete; workspace scaffold only |
 | M0.4 | Verified setup, seed, test, lint, api, ui and demo entry points; `.env.example`; README commands | Complete; scaffold commands only |
 
-`seed` reports that scenario seeding is pending until M1. `demo` launches the
-scaffold only. GNU Make is not available in the current shell: use the verified
+The current `seed` command resets the complete synthetic fixture and `demo`
+launches the complete local workflow. Earlier checkpoint notes below are historical. GNU Make is not available in the current shell: use the verified
 Python runner on Windows. Makefile forwarding targets are supplied but have not
 been executed with GNU Make here.
 
@@ -44,21 +44,20 @@ been executed with GNU Make here.
 | M1.4 | Deterministic seed and separate true/declared graphs | Complete |
 | M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Complete; combined with the fixture checkpoint |
 
-Run-state, approval, audit and evaluation tables will be introduced with their
-own feature checkpoints in M3/M4, rather than creating unused tables now.
+Run-state, approval, audit and evaluation tables were added in M3/M4.
 
 ## Later milestones
 
-These remain planned. Before starting each milestone, split it into small,
-reviewable checkpoints and update this checklist. **[Design]**
+All milestones in this local prototype pass are implemented. Production adapters
+and broader inference remain deferred as recorded in DECISIONS.md.
 
 | Milestone | Scope | Status |
 |---|---|---|
-| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | In progress; M1.1–M1.2 complete |
+| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | Complete; M1.1–M1.5 |
 | M2 | GraphStore, deterministic cascade formulas and edge-case tests | Complete; formula assumptions recorded in D011 |
 | M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Complete; narrow fixture baseline, limitations in D012 |
 | M4 | Event replay, ranked simulated actions, approval gate, hash-chained audit, API and SSE | Complete; single-process local API, no external execution |
-| M5 | Graph, replay feed, cascade card, approval queue, audit view and demo script | Planned |
+| M5 | Graph, replay feed, cascade card, approval queue, audit view and demo script | Implemented; final verification recorded below |
 
 ## Current verification
 
@@ -129,3 +128,35 @@ handling, migration/ORM agreement and empty-database downgrade/re-upgrade.
 These checks verify the foundations, not the full supply-chain workflow.
 M1.3 verified 86 passing tests and Ruff checks, then upgraded the local database.
 The next checkpoint is the deterministic scenario and synthetic evidence corpus.
+
+## Completed vertical slice verification — 8 October 2026
+
+M1–M5 are complete for this synthetic local prototype. Earlier notes above
+describe historical checkpoints, not current feature gaps.
+
+- Common runner: 109 pytest tests and frontend type checking pass. This includes
+  ten full seeded mock replays with identical canonical graph, impact and action
+  hashes and a valid chain on every run. Wall-clock log IDs/timestamps vary.
+- Ruff lint/format and frontend ESLint pass; Python dependency check passes.
+- Next.js production build exports `frontend/out/`. Served the exported files
+  with Python's HTTP server, independently of Next.js, against the FastAPI API.
+- Browser checked discovery, evidence quotes/source hashes, supplier replies,
+  shared-parent highlighting, direct SSE updates, 18/90/72-day runway, named
+  simulated approval and chain verification. Rejection, analyst escalation,
+  recalculation preserving previous snapshots and API-unavailable recovery were
+  also exercised. Fresh combined `demo` startup works after CLI reseeding.
+- Checked the default desktop viewport and a 390-pixel phone viewport: panels
+  stack without horizontal document overflow. Restored the default viewport.
+- Browser checks found and fixed a missing analyst identity form when no actions
+  were available, refreshed-run selection and a nondefault wheel warning. Both
+  the selected impact record and its selector now use the same bounded index.
+- Evaluation was actually rerun, persisting results and regenerating the measured
+  section. The frozen fixture is not a held-out generalisation benchmark; warning
+  gain uses the explicit stock-exhaustion alert assumption in EVALUATION.md.
+- Runtime-only npm audit: zero vulnerabilities. Full npm audit: five high entries
+  from the single dev lint dependency chain documented in D006; not a clean audit.
+- Exact click path, preparation, recovery and pre-demo risks are in DEMO_SCRIPT.md.
+
+No live provider, SAP connection, supplier contact, production authentication,
+model training or external procurement execution was verified or implemented.
+GNU Make and non-Windows process-tree cleanup remain unverified locally.

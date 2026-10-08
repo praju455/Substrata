@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts import dev
 from scripts.dev import Ports, read_ports
 
 
@@ -42,3 +43,16 @@ def test_api_and_ui_cannot_share_a_port(tmp_path: Path) -> None:
     env_file.write_text("SUBSTRATA_API_PORT=3000\n", encoding="utf-8")
     with pytest.raises(ValueError, match="must be different"):
         read_ports(env_file)
+
+
+def test_static_build_environment_matches_local_api(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(dev, "ROOT", tmp_path)
+    monkeypatch.delenv("NEXT_PUBLIC_API_URL", raising=False)
+    (tmp_path / ".env").write_text("SUBSTRATA_API_PORT=8100\n", encoding="utf-8")
+    assert dev.local_environment()["NEXT_PUBLIC_API_URL"] == "http://127.0.0.1:8100"
+    monkeypatch.setenv("SUBSTRATA_API_PORT", "8200")
+    assert dev.local_environment()["NEXT_PUBLIC_API_URL"] == "http://127.0.0.1:8200"
+    monkeypatch.setenv("NEXT_PUBLIC_API_URL", "http://127.0.0.1:8300")
+    assert dev.local_environment()["NEXT_PUBLIC_API_URL"] == "http://127.0.0.1:8300"

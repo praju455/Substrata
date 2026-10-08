@@ -1,6 +1,6 @@
 # Evaluation plan
 
-> **No results exist.** Every metric below is a proposed target or reporting rule. **[Design]**
+> **Current status:** the executed frozen-fixture results appear in the generated results section below. They measure a narrow synthetic template baseline, not held-out generalisation or real-world accuracy. Other metrics and targets in this design plan remain unmeasured. **[Design]**
 
 ## 1. Claims under test
 
@@ -14,7 +14,7 @@
 
 ## 2. Planned synthetic dataset
 
-The minimum judge fixture is proposed to contain one focal product, eight components, twelve supplier sites across four regions, three apparent Tier-1 alternatives sharing one hidden Tier-3 source, two plants, five alternative-supplier candidates, six dated public-event records and three confirmation outcomes. **[Design]** Final size and generator parameters remain **[TBD]** until implementation.
+The minimum judge fixture is proposed to contain one focal product, eight components, twelve supplier sites across four regions, three apparent Tier-1 alternatives sharing one hidden Tier-3 source, two plants, five alternative-supplier candidates, six dated public-event records and three confirmation outcomes. **[Design]** Implemented fixture: seed 42, generator 1.0, 32 nodes, seven evidence snippets, four hidden ownership relationships and six synthetic events. Aliases, transliterations and broad semantic retrieval remain future evaluation work; the generator list below is a design target.
 
 The generator should emit:
 

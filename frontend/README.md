@@ -1,46 +1,27 @@
 # Frontend
 
-Minimal Next.js App Router, TypeScript and Tailwind workspace. It visibly labels
-all content as synthetic and shows an empty supplier-network panel plus the
-planned demo workflow. No supplier records, graph interactions or API calls are
-connected yet.
+Next.js App Router, TypeScript, Tailwind and client-only Cytoscape dashboard:
+graph/evidence inspector, replay controls, direct FastAPI SSE, server-calculated
+runway, simulated approval queue and audit history. Synthetic data is labelled.
 
-## Local development
-
-Requires Node.js 24.x and npm. From the repository root in PowerShell:
-
-```powershell
-npm --prefix frontend ci
-npm --prefix frontend run dev
-```
-
-Open `http://127.0.0.1:3000`. Stop the server with `Ctrl+C`.
-
-## Checks and static output
+Use `python scripts/dev.py demo` from the root after setup and seed. The runner
+supplies the API URL from root .env/shell configuration. Direct npm commands
+use port 8000 unless NEXT_PUBLIC_API_URL is explicitly set.
 
 ```powershell
-npm --prefix frontend run lint
-npm --prefix frontend run typecheck
-npm --prefix frontend run build
+npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run typecheck
+python scripts/dev.py build
 ```
 
-The build writes static files to `frontend/out/`. Next.js is configured with
-`output: "export"`; no Next.js production server is required to serve those files.
-Fonts and artwork are local/system resources, so the exported page does not
-need external font or image requests.
+Static output is `frontend/out/`; serve it over HTTP while FastAPI runs. No
+Next.js server, route handlers or Server Actions are needed. NEXT_PUBLIC_API_URL
+is embedded at build time: rebuild after changing it. CORS must permit the UI
+port. Fonts use system resources. Cytoscape is dynamically imported with SSR
+disabled in a Client Component; graph metrics and business calculations stay
+in Python. A native relationship selector provides keyboard evidence access.
+Responsive panels stack on phones; loading/error/empty states give recovery.
 
-## Dependency notes
-
-Direct versions and transitive resolutions are pinned in `package.json` and
-`package-lock.json`. The lint stack uses ESLint 9 to satisfy the current plugin
-peer ranges, although npm marks that ESLint release as unsupported. The npm
-audit also reports an unpatched `braces` advisory through the development-only
-Next.js lint plugin. Runtime-only audit reported zero vulnerabilities at this
-checkpoint. See [D006](../docs/DECISIONS.md#d006-static-frontend-scaffold) for the
-scope and follow-up.
-
-## Next implementation boundaries
-
-Cytoscape graph interactions, direct FastAPI SSE, replay controls, cascade
-results, approvals and audit remain planned. **[Design]** Business calculations
-stay in Python; Next.js route handlers and Server Actions are not used.
+Versions are pinned in manifests/lockfiles. Full npm audit retains the dev-only
+lint-chain advisory recorded in D006; runtime audit is reported separately.
+No production security or real supplier integration is claimed.

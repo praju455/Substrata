@@ -1,26 +1,24 @@
 # Development scripts
 
-`dev.py` is the shared local command runner. From the repository root:
+Invoke `python scripts/dev.py TASK` from the root, or use the script's absolute path.
 
-| Command | Behavior |
+| Task | Behavior |
 |---|---|
-| `python scripts/dev.py setup` | Create/reuse `.venv`, install locked dependencies, create `.env` if absent |
-| `python scripts/dev.py migrate` | Create/upgrade `data/substrata.sqlite3` to the checked-in schema revision; preserve data |
-| `python scripts/dev.py seed` | Report that M1 seeding is pending; create no data |
-| `python scripts/dev.py test` | Run pytest and frontend type checking |
-| `python scripts/dev.py lint` | Run Ruff lint/format checks and frontend ESLint |
-| `python scripts/dev.py api` | Start the API on the configured loopback port |
-| `python scripts/dev.py ui` | Start the Next.js development UI on the configured loopback port |
-| `python scripts/dev.py demo` | Start both scaffolds; Ctrl+C stops both |
-| `python scripts/dev.py build` | Export the frontend to static files |
+| setup | Install locked dependencies; create .venv and preserve existing .env |
+| migrate | Upgrade schema without resetting records |
+| seed | Write fixtures and reset synthetic business/session data |
+| evaluate | Measure fixture, persist results and regenerate EVALUATION.md results |
+| test | Run pytest and frontend type checking |
+| lint | Check Ruff lint/format and frontend ESLint |
+| api / ui | Start the selected loopback service |
+| demo | Start API/UI; Ctrl+C stops both owned process trees |
+| build | Export frontend/out |
 
-Commands locate the repository from the script path, so they also work when the
-script is called by absolute path from another directory. Tasks after setup use
-the local Python virtual environment automatically.
+Tasks after setup use .venv automatically. Root .env supplies ports and optional
+LLM/policy settings; shell values take precedence. Dev/build share API URL
+selection; NEXT_PUBLIC_API_URL is embedded at build time. Default mock needs no
+network after installation. Stop servers before setup or CLI seed.
 
-Edit the root `.env` ports or override `SUBSTRATA_API_PORT` /
-`SUBSTRATA_UI_PORT` in your shell. Existing configuration is preserved by setup.
-Stop running servers before reinstalling frontend dependencies with setup.
-
-The Makefile forwards these tasks when GNU Make is available. Deterministic
-scenario seeding and evaluation scripts remain planned. **[Design]**
+Makefile forwards the same tasks. GNU Make is unavailable on this Windows
+workstation; the Python runner is verified. Non-Windows process cleanup remains
+unverified. See docs/DEMO_SCRIPT.md for recovery.

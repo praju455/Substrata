@@ -51,9 +51,22 @@ def npm_command(*arguments: str) -> list[str]:
     return [npm, "--prefix", str(ROOT / "frontend"), *arguments]
 
 
-def run(command: list[str]) -> None:
+def run(command: list[str], *, env: dict[str, str] | None = None) -> None:
     """Run a finite task and propagate its failure."""
-    subprocess.run(command, cwd=ROOT, check=True)
+    subprocess.run(command, cwd=ROOT, check=True, env=env)
+
+
+def local_environment() -> dict[str, str]:
+    """Use the same root configuration for development and static builds."""
+    from dotenv import dotenv_values
+
+    environment = {
+        **{k: v for k, v in dotenv_values(ROOT / ".env").items() if v is not None},
+        **os.environ,
+        "NEXT_TELEMETRY_DISABLED": "1",
+    }
+    environment.setdefault("NEXT_PUBLIC_API_URL", f"http://{HOST}:{read_ports(ROOT / '.env').api}")
+    return environment
 
 
 def setup() -> None:
@@ -175,14 +188,7 @@ def serve(task: str) -> int:
     for _, port, _ in commands:
         require_free_port(port)
     children = []
-    from dotenv import dotenv_values
-
-    environment = {
-        **{k: v for k, v in dotenv_values(ROOT / ".env").items() if v is not None},
-        **os.environ,
-        "NEXT_TELEMETRY_DISABLED": "1",
-    }
-    environment.setdefault("NEXT_PUBLIC_API_URL", f"http://{HOST}:{ports.api}")
+    environment = local_environment()
     try:
         if task == "demo":
             print("Starting the synthetic demo. All actions are simulated only.", flush=True)
@@ -268,7 +274,7 @@ def main() -> int:
             run([str(VENV_PYTHON), "-m", "ruff", "format", "--check", "."])
             run(npm_command("run", "lint"))
         elif task == "build":
-            run(npm_command("run", "build"))
+            run(npm_command("run", "build"), env=local_environment())
         return 0
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

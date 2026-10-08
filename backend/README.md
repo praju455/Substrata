@@ -1,36 +1,28 @@
 # Backend
 
-The `substrata` Python package now provides a minimal FastAPI app:
+FastAPI implements the complete synthetic workflow. Entry point:
+`substrata.app:app`; `create_app()` creates isolated test instances. Health has
+no DB/network side effects. Workflow readiness requires the seeded database.
 
-- `GET /health`: typed process-liveness response labelled `synthetic`.
-- `GET /openapi.json`: generated API contract.
-- `GET /docs`: default interactive API documentation (CDN assets need internet).
+- `GET /health`, `/openapi.json`, `/docs` (default docs CDN needs internet).
+- `GET /state`, `/graph`; `POST /mapper/run`, `/confirmations/simulate`.
+- `POST /replay/start`, `/replay/pause`, `/replay/reset`.
+- `POST /events/{id}/resolve`, `/scenarios/{id}/refresh`.
+- `POST /approvals/{id}/decision`; `GET /audit/verify`, `/stream`.
 
-Use the verified commands in the root [README](../README.md#getting-started).
-`create_app()` constructs an independent app for tests; `substrata.app:app` is
-the Uvicorn entry point. Health does not assert database or scenario readiness.
+OpenAPI describes request schemas. SSE is direct, persisted and resumable via
+generation/cursor IDs. Use one local process, without multiple Uvicorn workers.
+Five Alembic revisions create graph/provenance, ERP, agent/evaluation, workflow
+and audit tables. SQLite enables WAL, foreign keys and busy timeout. Migrations
+preserve data; seed/reset recreates synthetic business data atomically. Do not
+initialize through `Base.metadata.create_all()`, which omits integrity triggers.
 
-M1.1 adds `database.py`: a file-backed SQLAlchemy engine with SQLite WAL,
-foreign-key enforcement, a five-second busy timeout, typed model metadata and
-a transaction helper that commits on success or rolls back on failure.
-No database is opened or migrated when the app is imported or started.
+`graph.py` exposes GraphStore/NetworkX bounded traversal. `cascade.py` owns all
+business formulas. `mapper.py` validates evidence extractions before writes;
+the default `llm.py` mock is offline. `runtime.py` freezes scenario inputs;
+`governance.py` rejects stale, expired and duplicate approvals. `audit.py`
+verifies the hash chain. All procurement execution is simulated.
 
-Run `python scripts/dev.py migrate` from the repository root to create/upgrade
-`data/substrata.sqlite3`. M1.2 adds five graph/provenance tables after the baseline:
-`graph_nodes`, `graph_edges`, `source_snapshots`, `evidence_records` and
-`edge_evidence`. Repeated upgrades preserve existing records; this command does
-not seed or reset data. Schema changes use new, checked-in revisions in
-`substrata/migrations/versions`; do not use `Base.metadata.create_all()` to
-initialize the application because it omits migration-owned triggers.
-
-`models.py` provides typed ORM records and UTC timestamp handling;
-`graph_types.py` validates type-specific node attributes. Versioned endpoint
-foreign keys prevent cross-version or wrongly typed links. Inferred edges
-require evidence; migration-owned triggers retain a supporting primary citation
-and block confirmation updates until the human workflow exists. See the
-[implemented data model](../docs/DATA_MODEL.md#implemented-graph-and-provenance-schema-m12)
-for the constraints and remaining validation boundaries.
-
-ERP tables, deterministic graph/runway calculations, orchestration,
-approvals and audit remain planned. **[Design]** See the
-[build checklist](../docs/BUILD_PLAN.md).
+The optional HTTP adapter is tested with mocked transport, not live credentials.
+SAP, broad retrieval, model training, authentication and production deployment
+remain deferred. See the root README and docs/DECISIONS.md.

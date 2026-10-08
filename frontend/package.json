@@ -12,6 +12,7 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
+    "cytoscape": "3.34.3",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
