@@ -260,9 +260,9 @@
       "id": "calc",
       "type": "rectangle",
       "x": 330,
-      "y": 290,
+      "y": 275,
       "width": 500,
-      "height": 120,
+      "height": 150,
       "angle": 0,
       "backgroundColor": "#ffffff",
       "boundElements": [
@@ -356,8 +356,8 @@
           0
         ],
         [
-          100,
-          0
+          55,
+          -65
         ]
       ],
       "roughness": 1,
@@ -400,8 +400,8 @@
           0
         ],
         [
-          100,
-          0
+          65,
+          -25
         ]
       ],
       "roughness": 1,
@@ -444,8 +444,8 @@
           0
         ],
         [
-          100,
-          0
+          65,
+          60
         ]
       ],
       "roughness": 1,
@@ -488,8 +488,8 @@
           0
         ],
         [
-          100,
-          0
+          70,
+          45
         ]
       ],
       "roughness": 1,
@@ -532,8 +532,8 @@
           0
         ],
         [
-          100,
-          0
+          70,
+          -45
         ]
       ],
       "roughness": 1,
@@ -576,7 +576,7 @@
           0
         ],
         [
-          100,
+          70,
           0
         ]
       ],
@@ -598,7 +598,7 @@
       "x": 580,
       "y": 230,
       "width": 0,
-      "height": 60,
+      "height": 45,
       "angle": 0,
       "backgroundColor": "transparent",
       "boundElements": null,
@@ -620,8 +620,8 @@
           0
         ],
         [
-          100,
-          0
+          0,
+          45
         ]
       ],
       "roughness": 1,
@@ -664,7 +664,7 @@
           0
         ],
         [
-          100,
+          65,
           0
         ]
       ],
@@ -990,7 +990,7 @@
       "containerId": "calc",
       "fillStyle": "solid",
       "fontFamily": 1,
-      "fontSize": 19,
+      "fontSize": 17,
       "frameId": null,
       "groupIds": [],
       "index": "aP",
@@ -999,14 +999,14 @@
       "link": null,
       "locked": false,
       "opacity": 100,
-      "originalText": "Deterministic calculation\ncover = 18 days   •   requalification = 90 days\nexposure window = 72 days   •   confidence = 0.70",
+      "originalText": "SYNTHETIC BUSINESS EXAMPLE — NOT HACKATHON SCHEDULE\ncover = 18 days   •   requalification = 90 days\nexposure window = 72 days   •   confidence = 0.70",
       "roughness": 1,
       "roundness": null,
       "seed": 671601945,
       "strokeColor": "#ef4444",
       "strokeStyle": "solid",
       "strokeWidth": 1,
-      "text": "Deterministic calculation\ncover = 18 days   •   requalification = 90 days\nexposure window = 72 days   •   confidence = 0.70",
+      "text": "SYNTHETIC BUSINESS EXAMPLE — NOT HACKATHON SCHEDULE\ncover = 18 days   •   requalification = 90 days\nexposure window = 72 days   •   confidence = 0.70",
       "textAlign": "center",
       "updated": 1791439215782,
       "version": 1,
