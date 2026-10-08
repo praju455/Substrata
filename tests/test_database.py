@@ -70,7 +70,7 @@ def test_migration_is_repeatable_and_preserves_records(engine, probe_table):
     engine.dispose()
     with engine.connect() as connection:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-            "0004_mapper_evaluation"
+            "0005_governed_replay"
         )
         assert connection.execute(select(probe_table.c.id)).scalar_one() == 7
 

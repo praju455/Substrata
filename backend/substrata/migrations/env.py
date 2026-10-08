@@ -2,7 +2,12 @@
 
 from alembic import context
 
-from substrata import agent_models, erp_models, models  # noqa: F401 -- register mapped metadata
+from substrata import (  # noqa: F401 -- register mapped metadata
+    agent_models,
+    erp_models,
+    models,
+    workflow_models,
+)
 from substrata.database import Base
 
 connection = context.config.attributes.get("connection")

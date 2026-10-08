@@ -263,6 +263,32 @@ weights were tuned and no model was trained. Warning gain assumes Tier-1-only
 alerting at stock exhaustion and deep alerting at the event; it is calculated
 stock headroom under that assumption, not measured enterprise warning time.
 
+## D013: simulated options, snapshot approval and audit
+
+Five mitigation templates use invented USD cost, duration and risk assumptions,
+ranked by 0.4 × cost/25000 + 0.35 × duration/90 + 0.25 × risk (lower is first).
+These estimates do not claim supplier availability, plant capacity or commercial
+feasibility. Default spend limit is USD 10,000; alternate-source qualification
+and reallocation always require review. Low-spend allowed actions record a
+preview only. Unknown actions, incomplete/truncated impacts or zero exposure
+are blocked. **[Assumption]**
+
+Approval requires a name, demo planning/procurement role and reason. Roles are
+self-declared in this local prototype; identity/authentication remain out of
+scope. Approval pins graph/evidence, ERP input hashes, dataset, formula and
+policy configuration. Changed inputs, policy or expiry invalidate the request;
+duplicates are rejected. Approving one option supersedes other pending options
+for the same scenario. No approval sends an external transaction.
+
+Audit records hash canonical payload plus sequence, previous hash, actor, type
+and UTC timestamp. SQLite triggers reject ordinary updates/deletes, and every
+append verifies the existing chain. A corrupt chain blocks further decisions.
+Copied record mutation and gaps are detected; tail truncation requires a
+previously trusted head hash. There is no external anchor, signature or claim
+that hashing proves source truth. Reset intentionally discards demo history.
+The local single-process runtime serializes mutations; distributed workers and
+production concurrency are outside scope.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked
