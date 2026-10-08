@@ -211,6 +211,25 @@ transaction. A failed reset rolls back schema and data. It never deletes paths
 or contacts an external system. Seeding requires an initialized database and
 clears prior demo runs/approvals when those tables exist.
 
+## D011: deterministic formulas and bounded graph projection
+
+The README supplies the cover/exposure example but no depth/API formula sketch.
+Formula version `runway-v1` defines cover = (on_hand + eligible_in_transit) /
+daily_consumption; exposure = max(0, requalification_days - cover). Zero demand
+returns `no_demand`, null cover and zero exposure; missing inputs or unit/snapshot
+mismatch return `incomplete` with no invented numerical answer. Shipments count
+only if they arrive before available stock is exhausted. Priority is an
+uncalibrated 0–100 ordering score: 100 × severity × path_confidence ×
+exposure / max(requalification_days, 1). **[Assumption]**
+
+Paths multiply edge confidence; alternative simple paths combine with noisy-OR
+(1 - product(1 - path_score)). This is an explanatory score, not a calibrated
+probability: paths may share evidence. Ownership/location reverse for event
+propagation; supply/where-used edges follow their stored direction. Rejected,
+expired and out-of-validity edges are excluded. Traversal bounds depth at 8,
+paths at 128 and work at 10,000, returning explicit truncation instead of looping
+on cycles. Approval policy must block incomplete/truncated impact results.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked
