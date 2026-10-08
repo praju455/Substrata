@@ -16,8 +16,9 @@ Invoke `python scripts/dev.py TASK` from the root, or use the script's absolute 
 
 Tasks after setup use .venv automatically. Root .env supplies ports and optional
 LLM/policy settings; shell values take precedence. Dev/build share API URL
-selection; NEXT_PUBLIC_API_URL is embedded at build time. Default mock needs no
-network after installation. Stop servers before setup or CLI seed.
+selection; NEXT_PUBLIC_API_URL is embedded at build time. Gemini primary/Grok
+backup needs backend keys; explicit provider=mock needs no network after installation.
+See [LLM setup](../docs/LLM_SETUP.md). Stop servers before setup or CLI seed.
 
 Makefile forwards the same tasks. GNU Make is unavailable on this Windows
 workstation; the Python runner is verified. Non-Windows process cleanup remains

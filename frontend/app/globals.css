@@ -8,6 +8,36 @@
   --color-human: #98590c;
   --color-risk: #c0393e;
 }
+.provider-status {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #dedce5;
+  border-radius: 8px;
+  background: #f6f7fa;
+  font-size: 11px;
+}
+.provider-status p {
+  margin-top: 8px;
+  color: var(--color-muted);
+}
+.provider-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.provider-row strong {
+  display: block;
+  font-size: 13px;
+}
+.provider-model {
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+}
+.provider-row > span {
+  flex-shrink: 0;
+}
 * {
   box-sizing: border-box;
 }

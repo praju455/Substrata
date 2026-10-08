@@ -11,7 +11,10 @@ python scripts/dev.py evaluate
 python scripts/dev.py demo
 ```
 
-Setup needs internet for dependencies; default mock replay works offline afterward.
+Setup needs internet for dependencies. For this exact, reproducible click path,
+set `SUBSTRATA_LLM_PROVIDER=mock` in the root `.env` before starting the demo; it
+works offline afterward. The application defaults to Gemini primary/Grok backup,
+which requires keys and may produce different extraction counts. See [LLM setup](LLM_SETUP.md).
 Open http://127.0.0.1:3000/ and leave the terminal running. Start fresh; if needed
 click **Reset demo → Reset synthetic session**. Reset intentionally clears demo
 approvals and audit history. All session records are disposable synthetic data.

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from substrata.app import create_app
 from substrata.database import build_engine, upgrade_database
+from substrata.llm import GeminiClient, GrokClient, PrimaryFallbackClient
 from substrata.runtime import Runtime
 from substrata.seed import canonical, seed_database, write_fixtures
 
@@ -31,6 +32,21 @@ def wait_replay(client):
             return state
         time.sleep(0.05)
     raise AssertionError("Replay did not finish.")
+
+
+def test_missing_provider_keys_leave_workspace_available_and_graph_unchanged(runtime):
+    runtime.client = PrimaryFallbackClient(GeminiClient(""), GrokClient(""))
+    with TestClient(create_app(runtime)) as client:
+        before = client.get("/state").json()
+        assert before["llm"]["primary"]["provider"] == "gemini"
+        assert before["llm"]["backup"]["provider"] == "grok"
+        response = client.post("/mapper/run")
+        assert response.status_code == 503
+        assert "GEMINI_API_KEY and XAI_API_KEY" in response.json()["detail"]
+        after = client.get("/state").json()
+        assert after["graph"] == before["graph"]
+        assert after["audit"] == before["audit"]
+        assert len(after["llm"]["last_attempts"]) == 2
 
 
 def test_full_loop_through_api_and_sse(runtime):

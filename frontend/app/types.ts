@@ -92,6 +92,18 @@ export type StreamEvent = {
 export type Workspace = {
   generation: string;
   synthetic: true;
+  llm: {
+    mode: "gemini" | "mock";
+    primary: LLMProvider;
+    backup: LLMProvider | null;
+    last_attempts: {
+      provider: string;
+      model: string;
+      status: "completed" | "failed";
+      error_code: string | null;
+      latency_ms: number;
+    }[];
+  };
   replay: { active: boolean; processed: number; total: number };
   graph: GraphData;
   tier1_ids: string[];
@@ -123,4 +135,10 @@ export type Workspace = {
     candidates: { node_id: string; score: number }[];
   }[];
   evaluation: { id: string; metrics: Record<string, number> }[];
+};
+
+export type LLMProvider = {
+  provider: string;
+  model: string;
+  credential_configured: boolean;
 };

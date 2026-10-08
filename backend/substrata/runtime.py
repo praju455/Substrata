@@ -20,7 +20,7 @@ from substrata.database import transaction
 from substrata.erp_models import Dataset, VendorMaster
 from substrata.governance import current_input_hashes, decide_action, row_data
 from substrata.graph import NetworkXGraphStore, shared_dependencies
-from substrata.llm import PROMPT_VERSION, LLMClient, MockLLMClient
+from substrata.llm import PROMPT_VERSION, LLMClient, MockLLMClient, client_status
 from substrata.mapper import map_evidence, simulate_replies
 from substrata.seed import DATASET, canonical, seed_database
 from substrata.workflow_models import (
@@ -397,6 +397,7 @@ class Runtime:
                 return {
                     "generation": session.get(DemoState, "current").generation,
                     "synthetic": True,
+                    "llm": client_status(self.client),
                     "replay": {"active": self.active, "processed": len(events), "total": 6},
                     "graph": snapshot.model_dump(mode="json"),
                     "tier1_ids": tier1,

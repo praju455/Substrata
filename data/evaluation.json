@@ -31,7 +31,7 @@
     "owned_by_site_t2_0_site_shared_source",
     "owned_by_site_t2_1_site_shared_source"
   ],
-  "prompt_version": "ownership-extraction-v1",
+  "prompt_version": "ownership-extraction-v2",
   "provider": "local-mock",
   "seed": 42,
   "threshold": 0.75,

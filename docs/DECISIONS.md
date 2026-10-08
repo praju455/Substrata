@@ -235,6 +235,8 @@ on cycles. Approval policy must block incomplete/truncated impact results.
 
 ## D012: mock extraction and measured fixture evaluation
 
+Historical initial provider decision; D016 supersedes the default mock and generic HTTP adapter.
+
 The first Mapper is a narrow exact-name/ownership-sentence baseline. Co-location
 and similar names can retrieve distractors but cannot establish a relationship.
 Embeddings/fuzzy/category heuristics are deferred; the client interface includes
@@ -311,7 +313,7 @@ hash also pins the replay source for approval validity.
 
 The app factory/health endpoint still perform no database or network work.
 First workflow access checks readiness and gives setup/seed guidance if missing.
-Environment settings are loaded by the launcher; mock mode remains default.
+Environment settings are loaded by the launcher; D016 later changes the application default to Gemini.
 One local process serializes mutations and replay. All raw audit timestamps,
 agent run IDs and SSE generations are intentionally variable; repeatability
 tests compare canonical graph, calculated reports and action/decision outputs.
@@ -335,6 +337,26 @@ The HTTP LLM adapter was contract-tested with mocked transport, not a real provi
 Full npm audit retains the development lint-chain advisory in D006; runtime audit
 must be reported separately. The dashboard is a local single-worker prototype.
 
+## D016: Gemini primary and Grok backup — 8 October 2026
+
+At the user's request, Gemini is the application's primary LLM and xAI Grok is
+its backup. Fixed official HTTPS endpoints replace the generic compatible HTTP
+adapter; no OpenAI service or SDK is used. Models, keys and a bounded timeout
+are configured through backend environment variables. See [LLM setup](LLM_SETUP.md)
+for current defaults, source API contracts and activation instructions.
+
+Every extraction tries Gemini first, then Grok once on transport/provider or
+JSON-schema failure. It never silently substitutes mock output. Missing keys
+leave the dashboard available and produce a guided 503 on extraction. The UI
+shows credential presence, not a claimed successful connection. Attempt metadata
+and the actual answering model are persisted; secret values/upstream error bodies
+are excluded. Exact-quote/endpoints validation and all business math remain
+outside the models. Semantic embedding retrieval remains deferred.
+
+Explicit mock mode and isolated mock-only evaluation retain the repeatable demo.
+The user will provide keys later, so live model quality, billing and account access
+are not verified. Historical mock graph/scenario records are preserved.
+
 ## Resolved initial implementation questions
 
 - Formula/priority and bounded path traversal: D011 records the exact assumptions.
@@ -344,7 +366,7 @@ must be reported separately. The dashboard is a local single-worker prototype.
 
 ## Deferred scope
 
-SAP HANA/BTP/Joule adapters, live public-signal and ownership calls, model
+SAP HANA/BTP/Joule adapters, live public-signal retrieval, live provider verification, model
 training, MCP transport, authentication and production deployment remain TODOs
 outside this prototype pass. **[Design]** No SAP integration is claimed. Measured
 frozen synthetic-fixture results are generated in EVALUATION.md.

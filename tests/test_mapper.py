@@ -6,7 +6,13 @@ from sqlalchemy import func, select
 from substrata.agent_models import AgentRun, EvaluationRun
 from substrata.database import build_engine, transaction, upgrade_database
 from substrata.evaluation import evaluate
-from substrata.llm import CompatibleHTTPClient, Extraction, MockLLMClient
+from substrata.llm import (
+    GeminiClient,
+    GrokClient,
+    MockLLMClient,
+    PrimaryFallbackClient,
+    ProviderError,
+)
 from substrata.mapper import map_evidence, simulate_replies
 from substrata.models import GraphEdge
 from substrata.seed import seed_database, write_fixtures
@@ -84,22 +90,19 @@ def test_measured_evaluation_is_repeatable_and_stored(mapped_database):
         assert session.scalar(select(func.count()).select_from(EvaluationRun)) == 2
 
 
-def test_compatible_adapter_validates_response_schema(monkeypatch):
-    client = CompatibleHTTPClient("http://127.0.0.1:9999/v1", "test-only", "configured-model")
-    monkeypatch.setattr(
-        client,
-        "_post",
-        lambda route, payload: {"choices": [{"message": {"content": '{"links": []}'}}]},
-    )
-    assert client.generate_structured(
-        task="extract", schema=Extraction.model_json_schema(), evidence=[]
-    ) == {"links": []}
-    monkeypatch.setattr(
-        client,
-        "_post",
-        lambda route, payload: {"choices": [{"message": {"content": '{"invented_field": true}'}}]},
-    )
-    with pytest.raises(ValueError):
-        client.generate_structured(
-            task="extract", schema=Extraction.model_json_schema(), evidence=[]
-        )
+def test_mapper_records_actual_backup_and_attempts(mapped_database, monkeypatch):
+    engine, _ = mapped_database
+    client = PrimaryFallbackClient(GeminiClient("test"), GrokClient("test"))
+
+    def unavailable(**kwargs):
+        raise ProviderError("gemini", "http_429", "Rate limited.")
+
+    monkeypatch.setattr(client.primary, "generate_structured", unavailable)
+    monkeypatch.setattr(client.backup, "generate_structured", MockLLMClient().generate_structured)
+    result = map_evidence(engine, client)
+    assert result["provider"] == "grok"
+    assert [a["status"] for a in result["llm_attempts"]] == ["failed", "completed"]
+    with transaction(engine) as session:
+        run = session.get(AgentRun, result["run_id"])
+        assert run.provider == "grok"
+        assert run.output["llm_attempts"] == result["llm_attempts"]

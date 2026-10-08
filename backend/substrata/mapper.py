@@ -12,7 +12,7 @@ from sqlalchemy import Engine, select
 from substrata.agent_models import AgentRun, ConfirmationRequest, ConfirmationResponse, ToolCall
 from substrata.database import transaction
 from substrata.graph import NetworkXGraphStore
-from substrata.llm import PROMPT_VERSION, Extraction, LLMClient, MockLLMClient
+from substrata.llm import PROMPT_VERSION, Extraction, LLMClient, MockLLMClient, client_status
 from substrata.models import EvidenceRecord, GraphEdge, SourceSnapshot
 from substrata.seed import AS_OF, canonical
 
@@ -85,7 +85,15 @@ def map_evidence(engine: Engine, client: LLMClient | None = None, threshold: flo
                     },
                 )
             )
-        output = {"inferred": [], "confirmation_requests": [], "skipped": [], "run_id": run_id}
+        output = {
+            "inferred": [],
+            "confirmation_requests": [],
+            "skipped": [],
+            "run_id": run_id,
+            "provider": client.provider,
+            "model": client.model,
+            "llm_attempts": client_status(client)["last_attempts"],
+        }
         with transaction(engine) as session:
             for link, confidence, values in prepared:
                 if session.get(GraphEdge, (values["id"], 1)) is not None:
@@ -148,7 +156,10 @@ def map_evidence(engine: Engine, client: LLMClient | None = None, threshold: flo
                     prompt_version=PROMPT_VERSION,
                     latency_ms=(time.perf_counter() - started) * 1000,
                     schema_valid=False,
-                    output={"error_type": type(exc).__name__},
+                    output={
+                        "error_type": type(exc).__name__,
+                        "llm_attempts": client_status(client)["last_attempts"],
+                    },
                 )
             )
         raise

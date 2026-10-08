@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from substrata.audit import verify_chain
 from substrata.database import build_engine
 from substrata.graph import GraphSnapshot
-from substrata.llm import configured_client
+from substrata.llm import ProviderError, configured_client
 from substrata.runtime import Runtime
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +24,7 @@ router = APIRouter()
 class WorkspaceState(BaseModel):
     generation: str
     synthetic: Literal[True]
+    llm: dict
     replay: dict
     graph: GraphSnapshot
     tier1_ids: list[str]
@@ -96,7 +97,10 @@ def graph(request: Request):
 
 @router.post("/mapper/run")
 def mapper_run(request: Request):
-    return runtime_for(request).map()
+    try:
+        return runtime_for(request).map()
+    except ProviderError as exc:
+        raise HTTPException(503, str(exc)) from None
 
 
 @router.post("/confirmations/simulate")

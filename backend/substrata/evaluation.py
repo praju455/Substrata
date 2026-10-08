@@ -12,6 +12,7 @@ from substrata.agent_models import EvaluationExample, EvaluationMetric, Evaluati
 from substrata.cascade import cascade
 from substrata.database import build_engine, transaction, upgrade_database
 from substrata.graph import NetworkXGraphStore
+from substrata.llm import PROMPT_VERSION
 from substrata.mapper import map_evidence
 from substrata.models import GraphEdge
 from substrata.seed import AS_OF, DATASET, canonical, seed_database, write_fixtures
@@ -75,7 +76,7 @@ def evaluate(target_engine, hide_share: float = 1, threshold: float = 0.75) -> d
                 "threshold": threshold,
                 "provider": "local-mock",
                 "model": "ownership-template-v1",
-                "prompt_version": "ownership-extraction-v1",
+                "prompt_version": PROMPT_VERSION,
                 "evaluation_scope": "Frozen synthetic fixture; no trained model or "
                 "held-out generalisation claim",
                 "metrics": metrics,

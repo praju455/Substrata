@@ -19,10 +19,11 @@ initialize through `Base.metadata.create_all()`, which omits integrity triggers.
 
 `graph.py` exposes GraphStore/NetworkX bounded traversal. `cascade.py` owns all
 business formulas. `mapper.py` validates evidence extractions before writes;
-the default `llm.py` mock is offline. `runtime.py` freezes scenario inputs;
+`llm.py` calls Gemini first and Grok on provider failure. Explicit mock mode is offline. `runtime.py` freezes scenario inputs;
 `governance.py` rejects stale, expired and duplicate approvals. `audit.py`
 verifies the hash chain. All procurement execution is simulated.
 
-The optional HTTP adapter is tested with mocked transport, not live credentials.
+Gemini/Grok adapters and failover are tested with intercepted HTTP, not live credentials.
+See [LLM setup](../docs/LLM_SETUP.md) for keys and the missing-key 503 behavior.
 SAP, broad retrieval, model training, authentication and production deployment
 remain deferred. See the root README and docs/DECISIONS.md.

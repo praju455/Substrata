@@ -10,7 +10,8 @@ Tests use temporary SQLite files, synthetic fixtures and offline mocks.
 - Bounded paths, cycles, shared parents, arrival eligibility, 18/90/72 example,
   multiple-path scores, zero demand and missing inputs.
 - Mapper evidence validation, thresholds, idempotency, invalid-output logging,
-  simulated confirmations and mocked HTTP adapter transport contract.
+  simulated confirmations and Gemini/Grok transport, failover/recovery, missing-key
+  503, invalid/oversized response and credential-redaction contracts.
 - Policy, named approval, stale/expired/duplicate requests and audit tampering.
 - Full API/SSE/reset loop, analyst escalation, refreshed snapshots, CORS,
   pause/resume and ten identical semantic hashes across seeded replays.
