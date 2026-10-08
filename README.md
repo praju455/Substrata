@@ -11,7 +11,7 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** minimal FastAPI backend with a tested health endpoint (M0.2), a Next.js workspace with verified static export (M0.3), and common development commands (M0.4). The dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** minimal FastAPI backend with a tested health endpoint (M0.2), a Next.js workspace with verified static export (M0.3), common development commands (M0.4), and SQLite WAL / Alembic database foundations (M1.1). The dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
 
 Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
 
@@ -21,6 +21,7 @@ Requires Python 3.12+, Node.js 24.x and npm. Verified on Windows with Python 3.1
 
 ```powershell
 python scripts/dev.py setup
+python scripts/dev.py migrate
 python scripts/dev.py seed
 python scripts/dev.py demo
 ```
@@ -31,7 +32,7 @@ Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1
 {"status":"ok","service":"substrata-api","data_mode":"synthetic"}
 ```
 
-This starts the scaffold only. `seed` reports that M1 is pending and creates no data. Health reports process liveness; database readiness, scenario replay and the supply-chain workflow are not implemented yet. The workspace does not yet connect to FastAPI.
+This starts the scaffold only. `migrate` creates/upgrades the ignored local `data/substrata.sqlite3` database; the current baseline contains only schema history. `seed` reports that scenario seeding is pending and creates no data. Health reports process liveness; database readiness, scenario replay and the supply-chain workflow are not implemented yet. The workspace does not yet connect to FastAPI.
 
 Run the current checks:
 
@@ -279,6 +280,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Backend process health and OpenAPI contract | Implemented and tested (M0.2) |
 | Frontend workspace shell and static export | Implemented and checked (M0.3); no supplier data or API connection |
 | Development commands and local configuration | Implemented and checked (M0.4); Makefile forwarding supplied, GNU Make execution unverified locally |
+| Database connection, transactions and migration history | Implemented and checked (M1.1); no domain tables or seeded data yet |
 | Synthetic dataset and prototype features | Planned; not built <sup>[Design]</sup> |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |

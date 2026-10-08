@@ -1,6 +1,6 @@
 # Data model proposal
 
-> **Status:** logical and persistence design only; no schema or migration exists. **[Design]**
+> **Status:** M1.1 implements SQLite WAL connection/transaction helpers and an Alembic baseline containing only schema history. Domain tables and the logical model below remain planned. **[Design]**
 
 ## 1. Modelling rules
 

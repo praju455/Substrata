@@ -32,6 +32,19 @@ scaffold only. GNU Make is not available in the current shell: use the verified
 Python runner on Windows. Makefile forwarding targets are supplied but have not
 been executed with GNU Make here.
 
+## M1: persistence and synthetic data, split into small steps
+
+| Checkpoint | Deliverable | Status |
+|---|---|---|
+| M1.1 | SQLite WAL engine, transaction helper, Alembic baseline and explicit migration command | Complete; infrastructure only |
+| M1.2 | Graph entities, edges, evidence and source snapshot schema with constraints | Planned |
+| M1.3 | Synthetic ERP schema with units, inventory timestamps and dataset versions | Planned |
+| M1.4 | Deterministic seed and separate true/declared graphs | Planned |
+| M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Planned |
+
+Run-state, approval, audit and evaluation tables will be introduced with their
+own feature checkpoints in M3/M4, rather than creating unused tables now.
+
 ## Later milestones
 
 These remain planned. Before starting each milestone, split it into small,
@@ -39,7 +52,7 @@ reviewable checkpoints and update this checklist. **[Design]**
 
 | Milestone | Scope | Status |
 |---|---|---|
-| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | Planned |
+| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | In progress; M1.1 complete |
 | M2 | GraphStore, deterministic cascade formulas and edge-case tests | Planned |
 | M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Planned |
 | M4 | Event replay, ranked simulated actions, approval gate, hash-chained audit, API and SSE | Planned |
@@ -84,6 +97,17 @@ ports are covered by tests. Setup preserves existing local configuration. The
   checks passed. The existing frontend development-tool advisory remains.
 - GNU Make forwarding and non-Windows process behavior remain unverified locally.
 
-These checks verify the scaffolds, not the full supply-chain workflow.
-The next milestone is M1; split schema and synthetic seeding into small
-checkpoints before starting it.
+M1.1 adds pinned SQLAlchemy/Alembic dependencies, explicit schema upgrades and
+transaction boundaries. Real temporary SQLite files verify per-connection WAL,
+foreign-key enforcement, busy timeout, commit/rollback, concurrent reads during
+a pending write and repeated migrations preserving existing test records.
+The baseline creates only `alembic_version`; no business tables or data yet.
+
+- All 15 pytest tests and frontend type checking passed through the runner.
+- Python lint/format checks and frontend ESLint passed through the runner.
+- The migration command succeeded twice against the ignored local database.
+- Locked Python installation and `pip check` passed. No frontend source changed,
+  so the previously verified static build was not repeated.
+
+These checks verify the foundations, not the full supply-chain workflow.
+The next checkpoint is M1.2: graph and evidence schema.

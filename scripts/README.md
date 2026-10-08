@@ -5,6 +5,7 @@
 | Command | Behavior |
 |---|---|
 | `python scripts/dev.py setup` | Create/reuse `.venv`, install locked dependencies, create `.env` if absent |
+| `python scripts/dev.py migrate` | Create/upgrade `data/substrata.sqlite3` to the checked-in schema revision; preserve data |
 | `python scripts/dev.py seed` | Report that M1 seeding is pending; create no data |
 | `python scripts/dev.py test` | Run pytest and frontend type checking |
 | `python scripts/dev.py lint` | Run Ruff lint/format checks and frontend ESLint |

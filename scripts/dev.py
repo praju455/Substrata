@@ -209,7 +209,7 @@ def main() -> int:
     """Dispatch a task, bootstrapping first or using the local virtual environment."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "task", choices=("setup", "seed", "test", "lint", "api", "ui", "demo", "build")
+        "task", choices=("setup", "migrate", "seed", "test", "lint", "api", "ui", "demo", "build")
     )
     task = parser.parse_args().task
     signal.signal(
@@ -227,7 +227,17 @@ def main() -> int:
             return in_virtualenv(task)
         if task in {"api", "ui", "demo"}:
             return serve(task)
-        if task == "seed":
+        if task == "migrate":
+            from substrata.database import build_engine, upgrade_database
+
+            path = ROOT / "data" / "substrata.sqlite3"
+            engine = build_engine(path)
+            try:
+                upgrade_database(engine)
+            finally:
+                engine.dispose()
+            print(f"Database migrated: {path}. Scenario data is not seeded yet.")
+        elif task == "seed":
             print("Scenario seeding is planned for M1. No database or fixture was created.")
         elif task == "test":
             run([str(VENV_PYTHON), "-m", "pytest", "-q"])

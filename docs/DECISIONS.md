@@ -124,6 +124,24 @@ supply-chain scenario works. `test` runs pytest plus frontend type checking;
 `lint` checks Python lint/formatting and frontend ESLint. Browser automation
 tests remain deferred to interactive UI features. **[Design]**
 
+## D008: explicit database foundation before domain schema
+
+M1.1 uses SQLAlchemy 2.0.54 (the maintained 2.0 series) and Alembic 1.20.0,
+with resolved dependencies pinned in the Python lock. SQLite uses WAL,
+foreign-key enforcement and a five-second busy timeout on every connection.
+Python's non-legacy transaction mode (`autocommit=False`) gives explicit
+commit/rollback behavior, including transactional DDL. The configuration follows
+[SQLAlchemy's SQLite guidance](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html)
+and [Alembic connection sharing](https://alembic.sqlalchemy.org/en/latest/cookbook.html#sharing-a-connection-across-one-or-more-programmatic-migration-commands).
+
+The explicit `migrate` task upgrades `data/substrata.sqlite3`, independent of
+the launcher's working directory. It never resets or seeds data. Importing or
+starting the API performs no database work; health remains process liveness.
+The initial revision establishes only Alembic history. Graph/evidence and ERP
+tables follow in M1.2/M1.3; run, approval, audit and evaluation tables follow with
+their features in M3/M4. Existing migration revisions stay immutable.
+PostgreSQL configuration and migrations are not verified at this checkpoint.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked
