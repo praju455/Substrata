@@ -11,6 +11,12 @@ foreign keys, busy timeout, transaction commit/rollback, a reader during a
 pending write, and repeatable migrations that preserve test records. Test-only
 probe tables do not become part of the application schema.
 
+`test_graph_schema.py` verifies valid and invalid node payloads, versioned typed
+endpoints, edge numeric/unit/time constraints, source provenance, required and
+conflicting evidence, citation retention and the temporary confirmation gate.
+It also checks migration/ORM agreement and downgrade/re-upgrade on an empty
+temporary database. Test records do not populate the local demo database.
+
 Run `python scripts/dev.py test` and `python scripts/dev.py lint` from the root.
 
 Graph calculations, inference, approval rules, audit integrity and the complete

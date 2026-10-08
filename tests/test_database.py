@@ -70,11 +70,18 @@ def test_migration_is_repeatable_and_preserves_records(engine, probe_table):
     engine.dispose()
     with engine.connect() as connection:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-            "0001_database_baseline"
+            "0002_graph_provenance"
         )
         assert connection.execute(select(probe_table.c.id)).scalar_one() == 7
 
 
-def test_fresh_database_has_only_migration_history(engine):
+def test_fresh_database_has_current_graph_schema(engine):
     upgrade_database(engine)
-    assert inspect(engine).get_table_names() == ["alembic_version"]
+    assert inspect(engine).get_table_names() == [
+        "alembic_version",
+        "edge_evidence",
+        "evidence_records",
+        "graph_edges",
+        "graph_nodes",
+        "source_snapshots",
+    ]

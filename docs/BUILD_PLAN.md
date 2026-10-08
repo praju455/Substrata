@@ -37,7 +37,7 @@ been executed with GNU Make here.
 | Checkpoint | Deliverable | Status |
 |---|---|---|
 | M1.1 | SQLite WAL engine, transaction helper, Alembic baseline and explicit migration command | Complete; infrastructure only |
-| M1.2 | Graph entities, edges, evidence and source snapshot schema with constraints | Planned |
+| M1.2 | Graph entities, edges, evidence and source snapshot schema with constraints | Complete; empty schema only |
 | M1.3 | Synthetic ERP schema with units, inventory timestamps and dataset versions | Planned |
 | M1.4 | Deterministic seed and separate true/declared graphs | Planned |
 | M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Planned |
@@ -52,7 +52,7 @@ reviewable checkpoints and update this checklist. **[Design]**
 
 | Milestone | Scope | Status |
 |---|---|---|
-| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | In progress; M1.1 complete |
+| M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | In progress; M1.1–M1.2 complete |
 | M2 | GraphStore, deterministic cascade formulas and edge-case tests | Planned |
 | M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Planned |
 | M4 | Event replay, ranked simulated actions, approval gate, hash-chained audit, API and SSE | Planned |
@@ -109,5 +109,20 @@ The baseline creates only `alembic_version`; no business tables or data yet.
 - Locked Python installation and `pip check` passed. No frontend source changed,
   so the previously verified static build was not repeated.
 
+M1.2 adds the five graph/provenance tables, seven validated node attribute
+shapes, typed versioned endpoints and source/evidence integrity constraints.
+Migration-owned SQLite triggers ensure inferred edges have supporting evidence
+and block updates into confirmed until the M3 human workflow is implemented.
+Schema tests cover persistence, invalid records, provenance retention, UTC
+handling, migration/ORM agreement and empty-database downgrade/re-upgrade.
+
+- All 78 pytest tests and frontend type checking passed through the runner.
+- Python lint/format checks, frontend ESLint and `pip check` passed.
+- The existing local baseline upgraded to `0002_graph_provenance`; a second
+  migration run succeeded. All five domain tables have zero rows and all five
+  migration-owned triggers are installed.
+- No frontend source changed; the static build was not repeated. No graph API,
+  scenario data or confirmation workflow is claimed at this checkpoint.
+
 These checks verify the foundations, not the full supply-chain workflow.
-The next checkpoint is M1.2: graph and evidence schema.
+The next checkpoint is M1.3: synthetic ERP schema.

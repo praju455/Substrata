@@ -142,6 +142,45 @@ tables follow in M1.2/M1.3; run, approval, audit and evaluation tables follow wi
 their features in M3/M4. Existing migration revisions stay immutable.
 PostgreSQL configuration and migrations are not verified at this checkpoint.
 
+## D009: versioned graph schema and primary evidence
+
+M1.2 stores graph identity as `(id, graph_version)`. Endpoint IDs, types and
+versions use composite foreign keys, so an edge cannot silently cross versions
+or claim a component is a supplier site. Node-specific attributes use validated
+Pydantic JSON payloads; display and normalized names stay indexed relational
+columns. This avoids a separate sparse table for each entity in the prototype.
+Application validation checks the full payload; SQL checks its discriminator.
+Future services must replace attribute payloads rather than mutate nested JSON.
+
+Every inferred edge has a primary supporting citation. A foreign key ensures
+the evidence exists; SQLite triggers create its association and prevent its
+removal or alteration while primary. Other evidence can support or contradict.
+Changing the primary citation retains the prior link and cannot promote a
+contradictory citation. `source_ids` will be projected from `edge_evidence`
+rather than separately stored. This follows SQLite's
+[trigger and constraint mechanism](https://www.sqlite.org/lang_createtrigger.html).
+
+The M3 human confirmation workflow does not exist yet. A temporary trigger
+blocks updates from any other status into `confirmed`. Initial pre-confirmed
+fixtures may be inserted with a verification timestamp; no API exposes this.
+The later workflow will replace this gate with confirmation-record checks in
+a new migration. This checkpoint makes no authorization or immutable-history
+claim. Rejection and expiry keep rows and evidence.
+
+Ownership uses the documented site-to-site option; a separate legal-entity
+model is deferred. Location supports sites/plants and region nesting.
+Alternative-supplier references and event source IDs in payloads will be
+cross-checked by the seed/workflow service, and authoritative external-ID
+uniqueness is deferred until identifier authority is modelled. All graph nodes
+are synthetic; source kind separately distinguishes synthetic evidence from
+public event context. No data has been seeded or ingested.
+
+JSON discriminator checks, hash-format checks and evidence/confirmation
+triggers currently target SQLite. PostgreSQL portability remains unverified.
+Use the migration command for initialization; ORM `create_all()` alone does
+not install these triggers. Migration files contain their own frozen schema
+definitions and do not import current models.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked

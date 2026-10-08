@@ -1,6 +1,46 @@
 # Data model proposal
 
-> **Status:** M1.1 implements SQLite WAL connection/transaction helpers and an Alembic baseline containing only schema history. Domain tables and the logical model below remain planned. **[Design]**
+> **Status:** M1.2 implements graph nodes, edges, evidence links, evidence records and source snapshots, with a versioned SQLite migration. The database is still empty; ERP, workflow and evaluation tables remain planned. The sections below describe the broader target model. **[Design]**
+
+## Implemented graph and provenance schema (M1.2)
+
+- `graph_nodes`: `(id, graph_version)` identity, node type, display/normalized
+  names, a synthetic-only flag and type-specific attributes. Pydantic validates
+  all seven attribute shapes on SQLAlchemy writes/reads; SQLite checks the JSON
+  discriminator matches `node_type`. Missing requalification time is `null`,
+  distinct from zero. Attribute payloads must be replaced as a whole when edited.
+- `graph_edges`: versioned identity; composite foreign keys enforce endpoint
+  types in the same graph version. Confidence and supply share are in `[0,1]`;
+  supply lead time is nonnegative; BOM quantity is positive with a unit. Validity
+  has a required start and an optional end strictly later than the start.
+- `source_snapshots`: source URI/kind, UTC observed time, lowercase SHA-256,
+  permitted excerpt and license note. `synthetic` and `public_context` are
+  distinct source kinds; no public sources have been ingested.
+- `evidence_records`: a source snapshot, claim and optional reliability/recency
+  features. These are stored inputs, not calibrated scores.
+- `edge_evidence`: unique edge/version/evidence associations marked `supports`
+  or `contradicts`. Source IDs will be derived from these links by the graph/API
+  layer rather than duplicated as a JSON array on each edge.
+
+An inferred edge requires a `primary_evidence_id` pointing to an evidence record.
+SQLite triggers create its supporting `edge_evidence` row in the same statement
+and prevent deletion or alteration of that primary link. Changing the primary
+citation retains the old link; contradictory evidence cannot become primary.
+Additional evidence can support or contradict an edge without changing status.
+
+Updates into `confirmed` are blocked until the M3 confirmation workflow and its
+migration exist. A pre-confirmed fixture may be inserted with `last_verified`;
+there is no application endpoint for creating such records. Rejected and
+expired edges retain their evidence. This is not a complete authorization or
+immutable-snapshot system.
+
+Type-specific fields inside JSON receive application validation, not individual
+SQL checks. Event source IDs and alternative-supplier references inside these
+payloads will be cross-checked by seed/workflow services when those features
+are built. Authoritative external-identifier uniqueness, a separate legal-entity
+node and PostgreSQL support remain deferred. Ownership currently uses the
+documented `SupplierSite → SupplierSite` option; location supports sites, plants
+and nested regions. All business graph nodes remain explicitly synthetic.
 
 ## 1. Modelling rules
 
