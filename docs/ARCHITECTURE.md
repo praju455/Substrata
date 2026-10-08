@@ -1,0 +1,145 @@
+# Substrata architecture proposal
+
+> **Status:** design specification only. No service, agent, integration or deployment described here exists yet. **[Design]**
+
+## 1. Goals and boundaries
+
+Substrata is proposed as an evidence-aware analysis and response layer above supply-chain systems of record. **[Design]** It must preserve the distinction between declared, inferred, confirmed and rejected relationships; reproduce every impact calculation from versioned inputs; and require a named human for high-impact actions. **[Design]**
+
+It is not an ERP, master-data replacement, sanctions-screening product, legal due-diligence service or autonomous purchasing system. **[Design]** The prototype uses synthetic SAP-shaped records and simulated actions only. **[Design]**
+
+## 2. System context
+
+![System context for proposed data, graph, agent and approval boundaries](diagrams/03-system-context.png)
+
+*Figure 3 — Integration targets are shown for context; no production SAP connection is claimed. **[Design]** **[TBD]***
+
+| Actor or system | Exchanges with Substrata | Boundary |
+|---|---|---|
+| Supply-risk analyst | Scenario, evidence review, inferred-link decision | Authenticated user role **[Design]** |
+| Procurement/planning approver | Action review, reason and approve/reject decision | Cannot approve a stale snapshot **[Design]** |
+| Synthetic ERP adapter | Vendor master, purchasing documents, BOM, plant stock and lead times | Stand-in for SAP-shaped data **[Design]** |
+| Declared-network adapter | Declared supplier relationships | Stand-in for SAP Business Network / Ariba-shaped records **[Design]** |
+| Public-signal adapter | Replay file first; RSS/GDELT-style event source later | Licensing and live availability **[TBD]** |
+| Ownership adapter | Direct/ultimate parent data shaped like GLEIF output | Not a beneficial-ownership register **[Design]** |
+| Supplier confirmation adapter | Confirm/reject response | Simulated in the prototype **[Design]** |
+| Simulated execution adapter | Alert, requisition draft, safety-stock change and supplier-message preview | Cannot mutate a real external system **[Design]** |
+
+## 3. Layered architecture
+
+![Six proposed architecture layers](diagrams/04-layered-architecture.png)
+
+*Figure 4 — Each layer is replaceable through typed interfaces. **[Design]***
+
+### Layer 1 — Data
+
+- Synthetic ERP-style vendor, purchasing, BOM, stock and lead-time records. **[Design]**
+- Declared supplier relationships as a Business Network / Ariba-shaped stand-in. **[Design]**
+- Replayed news/event records, with optional live RSS/GDELT-style adapter. **[Design]**
+- Direct and ultimate parent records; never represent these as beneficial ownership. **[Design]**
+- Simulated supplier confirmations. **[Design]**
+
+### Layer 2 — Persistence
+
+SQLAlchemy is the proposed data-access boundary. SQLite in WAL mode is the local default and must be resettable by a deterministic seed; PostgreSQL in Docker Compose is the drop-in shared option. **[Design]** See [Data model](DATA_MODEL.md).
+
+### Layer 3 — Knowledge graph
+
+`GraphStore` projects versioned database records into a NetworkX working graph and writes governed relationship changes back to the database. **[Design]** A SAP HANA Cloud Knowledge Graph adapter is a stretch target only if the finale environment supplies a suitable service and entitlement. **[TBD]** Neo4j is intentionally not in the proposal. **[Design]**
+
+### Layer 4 — Agents and tools
+
+LangGraph is the proposed orchestration layer; a plain typed state machine is the fallback. **[Design]** Three MCP boundaries keep capabilities narrow:
+
+| Proposed MCP server | Example tools | Permitted effects |
+|---|---|---|
+| Evidence and graph | `evidence.search`, `entity.resolve`, `graph.paths`, `graph.propose_edge` | Read evidence/graph; propose an inferred edge **[Design]** |
+| Planning | `inventory.snapshot`, `bom.where_used`, `simulation.calculate`, `sourcing.alternatives` | Read inputs and calculate/draft options **[Design]** |
+| Governance | `policy.evaluate`, `approval.request`, `audit.append`, `audit.verify_chain` | Block/review, queue a human, append audit events **[Design]** |
+
+An optional A2A wrapper may expose a read-only analysis capability to Joule as a stretch goal, following the cited SAP agent architecture. **[Design]** Access and compatibility are **[TBD]**.
+
+### Layer 5 — API and experience
+
+FastAPI contains all calculations, orchestration, policies and persistence. **[Design]** Next.js App Router and TypeScript are the preferred client; it is mostly client-rendered and uses Cytoscape.js for the graph and MapLibre for the map. **[Design]** Browser-only libraries load dynamically with server-side rendering disabled. **[Design]**
+
+Replay updates travel directly from FastAPI to the browser by SSE; WebSocket is reserved for a proven two-way need. **[Design]** Next.js route handlers and Server Actions contain no domain logic and do not proxy the stream. **[Design]** Vite/React is the fallback if the team cannot operate Next.js reliably. **[Design]**
+
+### Layer 6 — Execution
+
+The demo can render SAP-shaped alert, requisition-draft, safety-stock-update and supplier-message payloads. **[Design]** All are stand-ins and carry `external_execution: simulated_only`. **[Design]**
+
+## 4. Agent sequence and human gate
+
+![Proposed agent collaboration and approval flow](diagrams/05-agent-collaboration.png)
+
+*Figure 5 — Agents use bounded tools; deterministic policy controls the approval gate. **[Design]***
+
+<details>
+<summary>Mermaid sequence fallback</summary>
+
+```mermaid
+sequenceDiagram
+    participant Feed as Event replay
+    participant Sensor
+    participant Graph as GraphStore
+    participant Cascade
+    participant Action
+    participant Policy as Policy/Audit
+    participant Human as Named approver
+    Feed->>Sensor: timestamped event + evidence
+    Sensor->>Graph: resolve affected nodes
+    Graph->>Cascade: versioned graph snapshot
+    Cascade->>Action: deterministic impact report
+    Action->>Policy: ranked simulated proposals
+    Policy-->>Action: allow / review / block
+    Policy->>Human: context + exact payload
+    Human->>Policy: approve or reject + reason
+    Policy-->>Graph: append hash-chained event
+```
+
+</details>
+
+## 5. State machine
+
+| State | Entry condition | Allowed next states | Failure handling |
+|---|---|---|---|
+| `INGESTED` | Valid event/evidence schema | `MATCHED`, `IGNORED`, `NEEDS_REVIEW` | Invalid input is rejected **[Design]** |
+| `MATCHED` | Entity match above configured rule | `ANALYSING`, `NEEDS_REVIEW` | Preserve candidates and scores **[Design]** |
+| `ANALYSING` | Immutable snapshots acquired | `OPTIONS_READY`, `INCOMPLETE` | Missing units/stock never become zero **[Design]** |
+| `OPTIONS_READY` | Tool-returned options scored | `AUTO_RECORDED`, `AWAITING_APPROVAL`, `BLOCKED` | Policy defaults to review/block **[Design]** |
+| `AWAITING_APPROVAL` | Named approval required | `APPROVED`, `REJECTED`, `EXPIRED` | Snapshot/version change expires request **[Design]** |
+| `APPROVED` | Valid role and reason | `SIMULATED`, `FAILED` | Prototype has no real execution method **[Design]** |
+| `SIMULATED` | Payload rendered | `AUDITED` | Record failure and correlation ID **[Design]** |
+| `AUDITED` | Hash-chained event appended | terminal | Chain verification remains available **[Design]** |
+
+## 6. Deterministic and model boundaries
+
+| Work | Pretrained model allowed? | Deterministic authority |
+|---|---:|---|
+| Candidate name retrieval | Yes: embeddings **[Design]** | Identifier normalization and candidate constraints |
+| Relationship extraction | Yes: schema-constrained LLM with evidence spans **[Design]** | JSON validation, evidence requirement and status transition |
+| Event classification/rationale | Yes **[Design]** | Entity thresholds, deduplication and scenario trigger |
+| Graph traversal/path confidence | No | Versioned graph algorithms **[Design]** |
+| Inventory, runway and priority arithmetic | No | Typed formula service **[Design]** |
+| Action feasibility and spend/risk policy | Rationale only | Rules and tool-returned values **[Design]** |
+| Audit hashes and approval validity | No | Governance service **[Design]** |
+
+No model training is planned for core scope. **[Design]** An optional GNN is a synthetic-only research baseline and cannot replace the governed graph record. **[Design]**
+
+## 7. Failure and recovery design
+
+| Failure | Observable behavior | Recovery |
+|---|---|---|
+| LLM timeout or invalid JSON | Agent step marked failed; no edge/action written | Retry once with same schema or use cached fixture **[Design]** |
+| Event source unavailable | Live adapter reports unavailable | Continue deterministic replay **[Design]** |
+| Ambiguous entity | Scenario enters `NEEDS_REVIEW` | Analyst selects/rejects candidate **[Design]** |
+| Graph cycle/path explosion | Calculation stops at configured depth/node budget | Return partial result plus explicit truncation **[Design]** |
+| Unit or snapshot mismatch | Impact result is `INCOMPLETE` | Correct data and create new snapshot **[Design]** |
+| Approval becomes stale | Decision endpoint rejects it | Regenerate options under current versions **[Design]** |
+| Audit chain mismatch | Scenario blocked from further action | Preserve evidence and investigate copied chain **[Design]** |
+| SAP adapter unavailable | Readiness reports adapter unavailable | Use local adapter; do not relabel it SAP **[Design]** |
+
+## 8. Security and governance work still required
+
+Role design, identity provider, secret management, encryption, field-level authorization, tenant isolation, retention, source licensing, threat modelling and incident handling are not complete. **[TBD]** The prototype should begin with least privilege, synthetic data, no external mutation and redacted structured logs. **[Design]** These controls are necessary but not sufficient for production. **[Design]**
