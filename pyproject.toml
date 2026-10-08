@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "substrata"
+version = "0.1.0"
+description = "Synthetic supply-chain resilience prototype"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic==1.20.0",
+    "fastapi==0.142.4",
+    "networkx==3.7",
+    "pydantic==2.13.5",
+    "SQLAlchemy==2.0.54",
+    "uvicorn==0.54.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx2==2.13.1",
+    "pytest==9.1.1",
+    "python-dotenv==1.2.4",
+    "ruff==0.16.10",
+]
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-config --strict-markers"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["scripts", "substrata"]

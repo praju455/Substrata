@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Status:** architecture choices, not installed or implemented dependencies. **[Design]**
+> **Current implementation:** Implemented locally: Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, Gemini primary/Grok backup extraction plus an explicit offline mock, Next.js/TypeScript/Tailwind/Cytoscape and direct SSE. Exact pins are in project manifests and lockfiles. SAP, live retrieval, authentication and cloud deployment remain unimplemented design targets.
 
 ## Decision principles
 
@@ -29,7 +29,7 @@
 | ORM and migrations | SQLAlchemy + Alembic | SQLite/PostgreSQL portability **[Design]** | Schema migration discipline begins in Phase 1 |
 | Local database | SQLite WAL | Resettable, offline and zero-service demo **[Design]** | PostgreSQL in Compose for concurrency/shared preview |
 | Vector retrieval | Stored embeddings + NumPy | Sufficient first baseline **[Design]** | pgvector/HANA vector only if measured need exists |
-| AI access | `LLMClient` | Keeps provider/model details out of domain logic **[Design]** | SAP generative AI hub adapter preferred if supplied; permitted fallback otherwise **[TBD]** |
+| AI access | `LLMClient`: Gemini primary, Grok backup; explicit offline mock | Keeps provider/model details out of domain logic **[Design]** | SAP generative AI hub adapter preferred if supplied; permitted fallback otherwise **[TBD]** |
 | Tests | pytest + schema/contract fixtures | Exact graph math and policy behavior **[Design]** | Browser tests selected with UI scaffold **[TBD]** |
 | Observability | Structured JSON logs + correlation IDs | Inspectable agent/tool trail **[Design]** | OpenTelemetry optional after core flow works |
 

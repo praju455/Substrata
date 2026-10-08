@@ -1,0 +1,1079 @@
+{
+  "manifest": {
+    "seed": 42,
+    "generator_version": "1.0",
+    "dataset_version": "synthetic-v1",
+    "inventory_snapshot_id": "inventory-v1",
+    "graph_version": 1,
+    "as_of": "2025-10-22T09:00:00+00:00",
+    "synthetic": true,
+    "scope": "Invented ownership/control dependency, not a real supplier map"
+  },
+  "nodes": [
+    {
+      "id": "region_0",
+      "node_type": "Region",
+      "name": "India",
+      "attributes": {
+        "node_type": "Region",
+        "region_type": "country"
+      }
+    },
+    {
+      "id": "region_1",
+      "node_type": "Region",
+      "name": "Malaysia",
+      "attributes": {
+        "node_type": "Region",
+        "region_type": "country"
+      }
+    },
+    {
+      "id": "region_2",
+      "node_type": "Region",
+      "name": "Netherlands",
+      "attributes": {
+        "node_type": "Region",
+        "region_type": "country"
+      }
+    },
+    {
+      "id": "region_3",
+      "node_type": "Region",
+      "name": "Mexico",
+      "attributes": {
+        "node_type": "Region",
+        "region_type": "country"
+      }
+    },
+    {
+      "id": "site_t1_0",
+      "node_type": "SupplierSite",
+      "name": "Aster Mobility",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Aster Mobility",
+        "site_name": "Aster Mobility synthetic facility",
+        "country_code": "IN",
+        "identifiers": {
+          "synthetic_id": "site_t1_0"
+        }
+      }
+    },
+    {
+      "id": "site_t1_1",
+      "node_type": "SupplierSite",
+      "name": "Birch Controls",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Birch Controls",
+        "site_name": "Birch Controls synthetic facility",
+        "country_code": "MY",
+        "identifiers": {
+          "synthetic_id": "site_t1_1"
+        }
+      }
+    },
+    {
+      "id": "site_t1_2",
+      "node_type": "SupplierSite",
+      "name": "Cedar Electronics",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Cedar Electronics",
+        "site_name": "Cedar Electronics synthetic facility",
+        "country_code": "NL",
+        "identifiers": {
+          "synthetic_id": "site_t1_2"
+        }
+      }
+    },
+    {
+      "id": "site_t1_3",
+      "node_type": "SupplierSite",
+      "name": "Delta Systems",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Delta Systems",
+        "site_name": "Delta Systems synthetic facility",
+        "country_code": "MX",
+        "identifiers": {
+          "synthetic_id": "site_t1_3"
+        }
+      }
+    },
+    {
+      "id": "site_t1_4",
+      "node_type": "SupplierSite",
+      "name": "Elm Devices",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Elm Devices",
+        "site_name": "Elm Devices synthetic facility",
+        "country_code": "IN",
+        "identifiers": {
+          "synthetic_id": "site_t1_4"
+        }
+      }
+    },
+    {
+      "id": "site_t1_5",
+      "node_type": "SupplierSite",
+      "name": "Fern Components",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Fern Components",
+        "site_name": "Fern Components synthetic facility",
+        "country_code": "MY",
+        "identifiers": {
+          "synthetic_id": "site_t1_5"
+        }
+      }
+    },
+    {
+      "id": "site_t2_0",
+      "node_type": "SupplierSite",
+      "name": "Cobalt Assemblies",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Cobalt Assemblies",
+        "site_name": "Cobalt Assemblies synthetic facility",
+        "country_code": "NL",
+        "identifiers": {
+          "synthetic_id": "site_t2_0"
+        }
+      }
+    },
+    {
+      "id": "site_t2_1",
+      "node_type": "SupplierSite",
+      "name": "Indigo Fabrication",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Indigo Fabrication",
+        "site_name": "Indigo Fabrication synthetic facility",
+        "country_code": "MX",
+        "identifiers": {
+          "synthetic_id": "site_t2_1"
+        }
+      }
+    },
+    {
+      "id": "site_t2_2",
+      "node_type": "SupplierSite",
+      "name": "Violet Circuits",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Violet Circuits",
+        "site_name": "Violet Circuits synthetic facility",
+        "country_code": "IN",
+        "identifiers": {
+          "synthetic_id": "site_t2_2"
+        }
+      }
+    },
+    {
+      "id": "site_t2_3",
+      "node_type": "SupplierSite",
+      "name": "Silver Materials",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Silver Materials",
+        "site_name": "Silver Materials synthetic facility",
+        "country_code": "MY",
+        "identifiers": {
+          "synthetic_id": "site_t2_3"
+        }
+      }
+    },
+    {
+      "id": "site_shared_source",
+      "node_type": "SupplierSite",
+      "name": "Meridian Semiconductors",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Meridian Semiconductors",
+        "site_name": "Meridian Semiconductors synthetic facility",
+        "country_code": "NL",
+        "identifiers": {
+          "synthetic_id": "site_shared_source"
+        }
+      }
+    },
+    {
+      "id": "site_other_source",
+      "node_type": "SupplierSite",
+      "name": "Orion Devices",
+      "attributes": {
+        "node_type": "SupplierSite",
+        "legal_entity_name": "Orion Devices",
+        "site_name": "Orion Devices synthetic facility",
+        "country_code": "MX",
+        "identifiers": {
+          "synthetic_id": "site_other_source"
+        }
+      }
+    },
+    {
+      "id": "product_controller",
+      "node_type": "Product",
+      "name": "Atlas vehicle controller",
+      "attributes": {
+        "node_type": "Product",
+        "product_family": "automotive electronics",
+        "manufacturer_id": "synthetic_oem"
+      }
+    },
+    {
+      "id": "plant_0",
+      "node_type": "Plant",
+      "name": "Pune assembly",
+      "attributes": {
+        "node_type": "Plant",
+        "country_code": "IN",
+        "capacity_unit": "controller/day"
+      }
+    },
+    {
+      "id": "plant_1",
+      "node_type": "Plant",
+      "name": "Monterrey assembly",
+      "attributes": {
+        "node_type": "Plant",
+        "country_code": "MX",
+        "capacity_unit": "controller/day"
+      }
+    },
+    {
+      "id": "component_0",
+      "node_type": "Component",
+      "name": "Power module",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-001",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 90
+      }
+    },
+    {
+      "id": "component_1",
+      "node_type": "Component",
+      "name": "Brake controller",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-002",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 90
+      }
+    },
+    {
+      "id": "component_2",
+      "node_type": "Component",
+      "name": "Sensor module",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-003",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 90
+      }
+    },
+    {
+      "id": "component_3",
+      "node_type": "Component",
+      "name": "Controller input 4",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-004",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 30
+      }
+    },
+    {
+      "id": "component_4",
+      "node_type": "Component",
+      "name": "Controller input 5",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-005",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 30
+      }
+    },
+    {
+      "id": "component_5",
+      "node_type": "Component",
+      "name": "Controller input 6",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-006",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 30
+      }
+    },
+    {
+      "id": "component_6",
+      "node_type": "Component",
+      "name": "Controller input 7",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-007",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 30
+      }
+    },
+    {
+      "id": "component_7",
+      "node_type": "Component",
+      "name": "Controller input 8",
+      "attributes": {
+        "node_type": "Component",
+        "part_number": "SYN-008",
+        "description": "Invented automotive component",
+        "unit": "piece",
+        "requalification_days": 30
+      }
+    },
+    {
+      "id": "alternative_0",
+      "node_type": "AlternativeSupplier",
+      "name": "Candidate source 1",
+      "attributes": {
+        "node_type": "AlternativeSupplier",
+        "supplier_site_id": "site_t1_3",
+        "component_id": "component_0",
+        "qualification_status": "pending"
+      }
+    },
+    {
+      "id": "alternative_1",
+      "node_type": "AlternativeSupplier",
+      "name": "Candidate source 2",
+      "attributes": {
+        "node_type": "AlternativeSupplier",
+        "supplier_site_id": "site_t1_4",
+        "component_id": "component_1",
+        "qualification_status": "pending"
+      }
+    },
+    {
+      "id": "alternative_2",
+      "node_type": "AlternativeSupplier",
+      "name": "Candidate source 3",
+      "attributes": {
+        "node_type": "AlternativeSupplier",
+        "supplier_site_id": "site_t1_5",
+        "component_id": "component_2",
+        "qualification_status": "pending"
+      }
+    },
+    {
+      "id": "alternative_3",
+      "node_type": "AlternativeSupplier",
+      "name": "Candidate source 4",
+      "attributes": {
+        "node_type": "AlternativeSupplier",
+        "supplier_site_id": "site_t1_0",
+        "component_id": "component_0",
+        "qualification_status": "qualified"
+      }
+    },
+    {
+      "id": "alternative_4",
+      "node_type": "AlternativeSupplier",
+      "name": "Candidate source 5",
+      "attributes": {
+        "node_type": "AlternativeSupplier",
+        "supplier_site_id": "site_t1_1",
+        "component_id": "component_1",
+        "qualification_status": "qualified"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "located_in_site_t1_0_region_0",
+      "from_node_id": "site_t1_0",
+      "to_node_id": "region_0",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t1_1_region_1",
+      "from_node_id": "site_t1_1",
+      "to_node_id": "region_1",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t1_2_region_2",
+      "from_node_id": "site_t1_2",
+      "to_node_id": "region_2",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t1_3_region_3",
+      "from_node_id": "site_t1_3",
+      "to_node_id": "region_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t1_4_region_0",
+      "from_node_id": "site_t1_4",
+      "to_node_id": "region_0",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t1_5_region_1",
+      "from_node_id": "site_t1_5",
+      "to_node_id": "region_1",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t2_0_region_2",
+      "from_node_id": "site_t2_0",
+      "to_node_id": "region_2",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t2_1_region_3",
+      "from_node_id": "site_t2_1",
+      "to_node_id": "region_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t2_2_region_0",
+      "from_node_id": "site_t2_2",
+      "to_node_id": "region_0",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_t2_3_region_1",
+      "from_node_id": "site_t2_3",
+      "to_node_id": "region_1",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_shared_source_region_2",
+      "from_node_id": "site_shared_source",
+      "to_node_id": "region_2",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_site_other_source_region_3",
+      "from_node_id": "site_other_source",
+      "to_node_id": "region_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_plant_0_region_0",
+      "from_node_id": "plant_0",
+      "to_node_id": "region_0",
+      "from_node_type": "Plant",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "located_in_plant_1_region_3",
+      "from_node_id": "plant_1",
+      "to_node_id": "region_3",
+      "from_node_type": "Plant",
+      "to_node_type": "Region",
+      "edge_type": "LOCATED_IN",
+      "confidence": 1.0
+    },
+    {
+      "id": "supplies_site_t1_0_component_0",
+      "from_node_id": "site_t1_0",
+      "to_node_id": "component_0",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_0_product_controller",
+      "from_node_id": "component_0",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_0_plant_0",
+      "from_node_id": "component_0",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_0_plant_1",
+      "from_node_id": "component_0",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_1_component_1",
+      "from_node_id": "site_t1_1",
+      "to_node_id": "component_1",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_1_product_controller",
+      "from_node_id": "component_1",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_1_plant_0",
+      "from_node_id": "component_1",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_1_plant_1",
+      "from_node_id": "component_1",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_2_component_2",
+      "from_node_id": "site_t1_2",
+      "to_node_id": "component_2",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_2_product_controller",
+      "from_node_id": "component_2",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_2_plant_0",
+      "from_node_id": "component_2",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_2_plant_1",
+      "from_node_id": "component_2",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_3_component_3",
+      "from_node_id": "site_t1_3",
+      "to_node_id": "component_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_3_product_controller",
+      "from_node_id": "component_3",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_3_plant_0",
+      "from_node_id": "component_3",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_3_plant_1",
+      "from_node_id": "component_3",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_4_component_4",
+      "from_node_id": "site_t1_4",
+      "to_node_id": "component_4",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_4_product_controller",
+      "from_node_id": "component_4",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_4_plant_0",
+      "from_node_id": "component_4",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_4_plant_1",
+      "from_node_id": "component_4",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_5_component_5",
+      "from_node_id": "site_t1_5",
+      "to_node_id": "component_5",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_5_product_controller",
+      "from_node_id": "component_5",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_5_plant_0",
+      "from_node_id": "component_5",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_5_plant_1",
+      "from_node_id": "component_5",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_0_component_6",
+      "from_node_id": "site_t1_0",
+      "to_node_id": "component_6",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_6_product_controller",
+      "from_node_id": "component_6",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_6_plant_0",
+      "from_node_id": "component_6",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_6_plant_1",
+      "from_node_id": "component_6",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "supplies_site_t1_1_component_7",
+      "from_node_id": "site_t1_1",
+      "to_node_id": "component_7",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "Component",
+      "edge_type": "SUPPLIES",
+      "confidence": 1.0,
+      "share": 1,
+      "lead_time_days": 10
+    },
+    {
+      "id": "used_in_component_7_product_controller",
+      "from_node_id": "component_7",
+      "to_node_id": "product_controller",
+      "from_node_type": "Component",
+      "to_node_type": "Product",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_7_plant_0",
+      "from_node_id": "component_7",
+      "to_node_id": "plant_0",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "used_in_component_7_plant_1",
+      "from_node_id": "component_7",
+      "to_node_id": "plant_1",
+      "from_node_type": "Component",
+      "to_node_type": "Plant",
+      "edge_type": "USED_IN",
+      "confidence": 1.0,
+      "bom_quantity": 1,
+      "unit": "piece"
+    },
+    {
+      "id": "owned_by_site_t1_0_site_t2_0",
+      "from_node_id": "site_t1_0",
+      "to_node_id": "site_t2_0",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    },
+    {
+      "id": "owned_by_site_t1_1_site_t2_1",
+      "from_node_id": "site_t1_1",
+      "to_node_id": "site_t2_1",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    },
+    {
+      "id": "owned_by_site_t1_2_site_t2_2",
+      "from_node_id": "site_t1_2",
+      "to_node_id": "site_t2_2",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    },
+    {
+      "id": "owned_by_site_t1_3_site_t2_3",
+      "from_node_id": "site_t1_3",
+      "to_node_id": "site_t2_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    },
+    {
+      "id": "owned_by_site_t1_4_site_t2_3",
+      "from_node_id": "site_t1_4",
+      "to_node_id": "site_t2_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    },
+    {
+      "id": "owned_by_site_t1_5_site_t2_3",
+      "from_node_id": "site_t1_5",
+      "to_node_id": "site_t2_3",
+      "from_node_type": "SupplierSite",
+      "to_node_type": "SupplierSite",
+      "edge_type": "OWNED_BY",
+      "confidence": 1.0
+    }
+  ],
+  "stock": [
+    {
+      "component_id": "component_0",
+      "plant_id": "plant_0",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_0",
+      "plant_id": "plant_1",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_1",
+      "plant_id": "plant_0",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_1",
+      "plant_id": "plant_1",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_2",
+      "plant_id": "plant_0",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_2",
+      "plant_id": "plant_1",
+      "on_hand": 1200,
+      "in_transit": 600,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 90
+    },
+    {
+      "component_id": "component_3",
+      "plant_id": "plant_0",
+      "on_hand": 2028,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_3",
+      "plant_id": "plant_1",
+      "on_hand": 1851,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_4",
+      "plant_id": "plant_0",
+      "on_hand": 2363,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_4",
+      "plant_id": "plant_1",
+      "on_hand": 2301,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_5",
+      "plant_id": "plant_0",
+      "on_hand": 2257,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_5",
+      "plant_id": "plant_1",
+      "on_hand": 2085,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_6",
+      "plant_id": "plant_0",
+      "on_hand": 2009,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_6",
+      "plant_id": "plant_1",
+      "on_hand": 2916,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_7",
+      "plant_id": "plant_0",
+      "on_hand": 1978,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    },
+    {
+      "component_id": "component_7",
+      "plant_id": "plant_1",
+      "on_hand": 2664,
+      "in_transit": 200,
+      "daily_consumption": 100,
+      "unit": "piece",
+      "requalification_days": 30
+    }
+  ]
+}

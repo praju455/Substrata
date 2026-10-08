@@ -2,8 +2,8 @@
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
-![Stage](https://img.shields.io/badge/stage-proposal-6f42c1)
-![Build](https://img.shields.io/badge/build-not%20started-lightgrey)
+![Stage](https://img.shields.io/badge/stage-working%20prototype-6f42c1)
+![Build](https://img.shields.io/badge/build-synthetic%20vertical%20slice%20checked-147d78)
 ![Data](https://img.shields.io/badge/demo%20data-synthetic-f59e0b)
 ![Event](https://img.shields.io/badge/SAP%20Hackfest-Bengaluru%202026-0a6ed1)
 
@@ -11,7 +11,59 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** proposal only. No application, trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** the complete synthetic vertical slice is implemented: evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, ranked mitigation drafts, named approval and hash-chained audit. Gemini is the primary LLM and Grok is its backup. Live extraction needs your provider keys; explicit mock mode works offline after installation. No model training, SAP connection, live supplier contact or real purchase execution is claimed.
+
+See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
+
+## Getting started
+
+Requires Python 3.12+, Node.js 24.x and npm. Verified on Windows with Python 3.13.5, Node.js 24.14.0 and npm 11.9.0. Run from the repository root. Setup needs internet to install dependencies.
+
+```powershell
+python scripts/dev.py setup
+python scripts/dev.py migrate
+python scripts/dev.py seed
+python scripts/dev.py demo
+```
+
+Before starting the demo, add `GEMINI_API_KEY` and `XAI_API_KEY` to the root `.env`. See [LLM setup and failover](docs/LLM_SETUP.md). To follow the exact offline demo instead, set `SUBSTRATA_LLM_PROVIDER=mock`.
+
+Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
+
+```json
+{"status":"ok","service":"substrata-api","data_mode":"synthetic"}
+```
+
+`seed` creates or resets the deterministic synthetic scenario and the ignored SQLite database, including demo approvals and audit history. Stop servers before CLI reseeding. Normal schema upgrades use `migrate` and preserve data. Health reports process liveness; `/state` checks seeded workspace readiness. The UI fetches the API directly and receives live events through SSE.
+
+Use **Discover links → Simulate supplier replies → Replay next event**, inspect the 18/90/72-day runway, enter a name and reason, approve a simulated draft, then verify the audit chain. [Exact click path and recovery](docs/DEMO_SCRIPT.md).
+
+Run the current checks:
+
+```powershell
+python scripts/dev.py test
+python scripts/dev.py lint
+python scripts/dev.py build
+python scripts/dev.py evaluate
+```
+
+`test` runs pytest and frontend type checking. `lint` checks Python lint/formatting and frontend ESLint. `build` exports the frontend to `frontend/out/`. The exported UI still requires the running FastAPI API. `evaluate` regenerates measured fixture results and persists the evaluation run; it does not train a model. Frontend dependency limitations are recorded in the [decision register](docs/DECISIONS.md#d006-static-frontend-scaffold).
+
+## Individual services and local configuration
+
+To run services separately, use these commands in separate terminals:
+
+```powershell
+python scripts/dev.py api
+```
+
+```powershell
+python scripts/dev.py ui
+```
+
+Setup creates a root `.env` from `.env.example` when absent and preserves an existing file. Set `SUBSTRATA_API_PORT` / `SUBSTRATA_UI_PORT` there to change the default 8000 / 3000 ports; shell values take precedence. Both development and the static build use the configured API port; `NEXT_PUBLIC_API_URL` explicitly overrides the browser API URL and is embedded at build time. Rebuild after changing it. Stop running servers before rerunning setup. All commands after setup use `.venv` automatically.
+
+The Makefile forwards the same tasks for GNU Make users. GNU Make is unavailable on this workstation, so those wrappers have not been locally executed; use the Python commands above. See the [scripts guide](scripts/README.md) for all tasks.
 
 ## Read this first: what do 18, 90 and 72 days mean?
 
@@ -142,7 +194,7 @@ LLM outputs must be structured JSON, validated against a schema and include evid
 
 ## Demo plan
 
-The finale prototype, if the team advances, is planned as a deterministic six-minute replay. <sup>[Design]</sup>
+The local prototype implements this synthetic six-stage replay. See the [three-minute click path](docs/DEMO_SCRIPT.md). A production/competition deployment remains a future decision. <sup>[Design]</sup>
 
 1. Show three Tier-1 suppliers that appear independent.
 2. Reveal their inferred shared Tier-N source and supporting evidence.
@@ -157,7 +209,7 @@ The finale prototype, if the team advances, is planned as a deterministic six-mi
 
 ## Evaluation plan
 
-There are no evaluation results yet. <sup>[Design]</sup> Planned targets include:
+The [evaluation report](docs/EVALUATION.md#measured-synthetic-fixture-results) contains script-generated frozen-fixture measurements and raw errors. These do not establish held-out generalisation or real-world accuracy. Broader planned targets include:
 
 | Area | Proposed target |
 |---|---:|
@@ -218,6 +270,9 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | [Data model](docs/DATA_MODEL.md) | Graph entities, relationships, provenance and persistence |
 | [Tech stack](docs/TECH_STACK.md) | Proposed technologies, alternatives and SAP preflight checklist |
 | [Evaluation](docs/EVALUATION.md) | Synthetic dataset, leakage controls, metrics and reporting template |
+| [Build checklist](docs/BUILD_PLAN.md) | Small implementation checkpoints and current progress |
+| [LLM setup](docs/LLM_SETUP.md) | Gemini/Grok credentials, failover and offline mode |
+| [Decisions](docs/DECISIONS.md) | Implementation choices, assumptions and deferred work |
 | [Judge Q&A](docs/JUDGE_QA.md) | Twelve candid answers for expected judge questions |
 | [Diagram manifest](docs/diagrams/README.md) | Questions answered, editable sources and export notes |
 
@@ -227,10 +282,18 @@ Key unresolved items include stakeholder validation, real data availability, sou
 |---|---|
 | Research, proposal and diagrams | Available in this repository <sup>[Design]</sup> |
 | Stakeholder validation | Not completed <sup>[TBD]</sup> |
-| Synthetic dataset and prototype | Not built <sup>[Design]</sup> |
+| Project folder scaffold | Created (M0.1) |
+| Backend process health and OpenAPI contract | Implemented and tested (M0.2) |
+| Interactive graph, replay, runway, approvals and audit UI | Implemented with direct API/SSE and static export; see current verification in the build checklist |
+| Development commands and local configuration | Implemented and checked (M0.4); Makefile forwarding supplied, GNU Make execution unverified locally |
+| Database connection, transactions and migration history | Implemented and checked (M1.1) |
+| Graph entities, relationships and evidence provenance | Implemented with typed/versioned records, evidence citations and GraphStore API |
+| Synthetic dataset and workflow | Implemented: fixed seed 42, separate truth/declared graphs, 32 nodes, seven evidence snippets and six events |
+| Mapper and supplier replies | Gemini primary / Grok backup with validated ownership extraction; explicit offline mock baseline. Provider transport/failover tested with simulated responses; live keys pending |
+| Action, approval and audit | Implemented simulated templates, stale-input checks and hash-chain verification; self-declared local roles |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |
-| Evaluation results | None <sup>[Design]</sup> |
+| Evaluation results | Generated by the evaluation script; frozen synthetic fixture only, not held-out generalisation or real business value |
 
 ## Key sources
 

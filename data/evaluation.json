@@ -1,0 +1,39 @@
+{
+  "corpus_sha256": "189232224ef3f4195552817314db241d7593f656fd6868ce2a2d68ec40e0f82b",
+  "dataset_version": "synthetic-v1",
+  "evaluation_scope": "Frozen synthetic fixture; no trained model or held-out generalisation claim",
+  "expected": [
+    "owned_by_site_t2_0_site_shared_source",
+    "owned_by_site_t2_1_site_shared_source",
+    "owned_by_site_t2_2_site_shared_source",
+    "owned_by_site_t2_3_site_other_source"
+  ],
+  "false_negative_ids": [
+    "owned_by_site_t2_2_site_shared_source",
+    "owned_by_site_t2_3_site_other_source"
+  ],
+  "false_positive_ids": [],
+  "fixture_sha256": "90a5cc9e5249aa17bdcd4dcb76a89479266f6f9d4d5ec52489a961643075b55e",
+  "generator_version": "1.0",
+  "hide_share": 1,
+  "limitation": "Measured only on invented data and template extraction. Not real-world accuracy or business value.",
+  "metrics": {
+    "false_negatives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "review_volume": 3,
+    "true_positives": 2,
+    "warning_days_gained_vs_tier1": 18.0
+  },
+  "model": "ownership-template-v1",
+  "predicted": [
+    "owned_by_site_t2_0_site_shared_source",
+    "owned_by_site_t2_1_site_shared_source"
+  ],
+  "prompt_version": "ownership-extraction-v2",
+  "provider": "local-mock",
+  "seed": 42,
+  "threshold": 0.75,
+  "warning_assumption": "Tier-1-only alert occurs at stock exhaustion (zero warning); deep view alerts at the replay event. Gain is minimum affected stock cover, not observed enterprise data."
+}

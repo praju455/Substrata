@@ -1,0 +1,68 @@
+[
+  {
+    "id": "event_0",
+    "title": "Semiconductor output disruption",
+    "entity": "Meridian Semiconductors",
+    "severity": 0.9,
+    "observed_at": "2025-10-22T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  },
+  {
+    "id": "event_1",
+    "title": "Alternative capacity review",
+    "entity": "Orion Devices",
+    "severity": 0.4,
+    "observed_at": "2025-10-23T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  },
+  {
+    "id": "event_2",
+    "title": "Regional shipping notice",
+    "entity": "Malaysia",
+    "severity": 0.3,
+    "observed_at": "2025-10-24T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  },
+  {
+    "id": "event_3",
+    "title": "Ambiguous facility notice",
+    "entity": "Meridian",
+    "severity": 0.5,
+    "observed_at": "2025-10-25T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  },
+  {
+    "id": "event_4",
+    "title": "Assembly monitoring update",
+    "entity": "Pune assembly",
+    "severity": 0.2,
+    "observed_at": "2025-10-26T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  },
+  {
+    "id": "event_5",
+    "title": "Supplier recovery update",
+    "entity": "Silver Materials",
+    "severity": 0.25,
+    "observed_at": "2025-10-27T09:00:00+00:00",
+    "synthetic": true,
+    "event_type": "supply_disruption",
+    "source_id": "synthetic-event-replay-v1",
+    "description": "Invented replay inspired by semiconductor disruption context; no claim about a real company's inventory or supplier relationships."
+  }
+]

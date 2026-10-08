@@ -1,6 +1,6 @@
 # Substrata architecture proposal
 
-> **Status:** design specification only. No service, agent, integration or deployment described here exists yet. **[Design]**
+> **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 
 ## 1. Goals and boundaries
 
