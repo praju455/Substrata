@@ -18,7 +18,8 @@ TECH_STACK.md specifies Python 3.12+; the pasted brief says 3.11+. Follow the do
 `pyproject.toml` now requires Python 3.12+.
 The inspected workstation provides Python 3.13.5, Node.js 24.14.0 and npm 11.9.0.
 The M0.2 backend installation and checks passed on Python 3.13.5. Other Python
-versions and the frontend runtime have not yet been verified.
+versions have not yet been verified. M0.3 also verifies the frontend on Node.js
+24.14.0 / npm 11.9.0.
 
 ## D003: orchestration stays in process
 
@@ -51,6 +52,41 @@ HTTPX fallback. Use pinned HTTPX2 for tests; the final test run has no warnings.
 Default Swagger UI assets still use a CDN. The API and OpenAPI JSON operate
 offline after installation; self-hosted documentation assets are deferred.
 **[Design]**
+
+## D006: static frontend scaffold
+
+M0.3 adds a Next.js App Router / TypeScript / Tailwind workspace, with an explicit
+synthetic-data label, a network empty state and a description of the planned
+workflow. No supplier records, API status, graph interactions, replay controls
+or approvals are fabricated. The workflow link is an in-page anchor.
+
+Use `output: "export"` for standalone static output. The current page has no API
+calls, Server Actions or route handlers. System fonts and inline SVG artwork
+keep the exported page independent of external font/image services. Graph and
+SSE integrations remain deferred to their domain milestones. **[Design]**
+
+`package.json` pins direct dependencies; `package-lock.json` pins transitive
+resolutions. Node.js 24.x is the chosen frontend runtime. `typecheck` generates
+Next.js route types before running TypeScript so a clean checkout does not
+depend on a previous development or production build. **[Design]**
+
+### Development-tool limitations observed on 8 October 2026
+
+- ESLint 10 triggers peer-range conflicts in the current lint plugins. Use
+  ESLint 9.39.5 for compatibility; npm marks that release unsupported. Update the
+  lint stack when the plugins support the current ESLint release. **[TBD]**
+- Full npm audit reports five high-severity entries from one development-only
+  dependency chain: `eslint-config-next` → `@next/eslint-plugin-next` →
+  `fast-glob` → `micromatch` → `braces`. The
+  [braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+  concerns deeply nested glob patterns. The registry's latest `braces` release,
+  3.0.3, is still in the affected range. No patched upgrade is available at this
+  checkpoint; do not apply the audit suggestion to downgrade the Next.js lint
+  configuration across major versions. Recheck for an upstream patch before
+  accepting external glob configuration or preparing production tooling.
+  **[TBD]**
+- `npm audit --omit=dev` reports zero vulnerabilities for runtime dependencies
+  at this checkpoint. This is a point-in-time check, not a security guarantee.
 
 ## Open implementation decisions
 

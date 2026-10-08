@@ -3,7 +3,7 @@
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
 ![Stage](https://img.shields.io/badge/stage-prototype%20scaffold-6f42c1)
-![Build](https://img.shields.io/badge/build-health%20API%20tested-lightgrey)
+![Build](https://img.shields.io/badge/build-API%20and%20UI%20scaffold%20checked-lightgrey)
 ![Data](https://img.shields.io/badge/demo%20data-synthetic-f59e0b)
 ![Event](https://img.shields.io/badge/SAP%20Hackfest-Bengaluru%202026-0a6ed1)
 
@@ -11,7 +11,7 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** minimal FastAPI backend runs with a tested health endpoint (M0.2). The frontend, dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** minimal FastAPI backend with a tested health endpoint (M0.2), plus a Next.js workspace with verified static export (M0.3). The dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
 
 Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
 
@@ -31,7 +31,7 @@ Open [API health](http://127.0.0.1:8000/health) or [API documentation](http://12
 {"status":"ok","service":"substrata-api","data_mode":"synthetic"}
 ```
 
-Health reports process liveness only. Database readiness, scenario replay and UI functionality are not implemented yet.
+Health reports process liveness only. Database readiness, scenario replay and the supply-chain workflow are not implemented yet.
 
 Run the current checks:
 
@@ -41,6 +41,25 @@ Run the current checks:
 .\.venv\Scripts\python.exe -m ruff format --check .
 .\.venv\Scripts\python.exe -m pip check
 ```
+
+## Getting started: frontend scaffold
+
+Requires Node.js 24.x and npm; verified with Node.js 24.14.0 and npm 11.9.0. Run from the repository root:
+
+```powershell
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+Open [the local workspace](http://127.0.0.1:3000). Stop the server with `Ctrl+C`. This checkpoint shows the synthetic-data label, an empty network panel and the planned workflow. It does not yet connect to FastAPI or load supplier records.
+
+```powershell
+npm --prefix frontend run lint
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
+
+The production build exports `frontend/out/`, with no external font/image dependencies. Frontend dependency limitations are recorded in the [decision register](docs/DECISIONS.md#d006-static-frontend-scaffold).
 
 ## Read this first: what do 18, 90 and 72 days mean?
 
@@ -260,6 +279,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Stakeholder validation | Not completed <sup>[TBD]</sup> |
 | Project folder scaffold | Created (M0.1) |
 | Backend process health and OpenAPI contract | Implemented and tested (M0.2) |
+| Frontend workspace shell and static export | Implemented and checked (M0.3); no supplier data or API connection |
 | Synthetic dataset and prototype features | Planned; not built <sup>[Design]</sup> |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |

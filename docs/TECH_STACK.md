@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Status:** architecture choices. The minimal FastAPI/Pydantic backend, Uvicorn, pytest and Ruff are installed and verified in M0.2; exact pins are in `pyproject.toml` and `requirements-dev.lock`. Other technologies below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
+> **Status:** architecture choices. The minimal FastAPI backend and Python checks are verified in M0.2; the Next.js / TypeScript / Tailwind workspace and static build are checked in M0.3. Exact pins are in `pyproject.toml`, `requirements-dev.lock`, `frontend/package.json` and `frontend/package-lock.json`. Other technologies below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
 
 ## Decision principles
 

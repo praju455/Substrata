@@ -19,8 +19,8 @@ Working branch: `feat/prototype-vertical-slice`.
 | Checkpoint | Deliverable | Status |
 |---|---|---|
 | M0.1 | Specification review, project folders, Git ignore rules and this checklist | Complete and pushed |
-| M0.2 | Minimal FastAPI app, health endpoint, pinned Python dependencies, pytest and Ruff configuration | Complete; API scaffold only |
-| M0.3 | Minimal Next.js / TypeScript / Tailwind app, synthetic-data label and verified static build | Planned |
+| M0.2 | Minimal FastAPI app, health endpoint, pinned Python dependencies, pytest and Ruff configuration | Complete and pushed; API scaffold only |
+| M0.3 | Minimal Next.js / TypeScript / Tailwind app, synthetic-data label and verified static build | Complete; workspace scaffold only |
 | M0.4 | Verified setup, seed, test, lint, api, ui and demo entry points; `.env.example`; README commands | Planned |
 
 For M0.4, `seed` must clearly report that scenario seeding is pending until M1;
@@ -53,5 +53,16 @@ M0.2 verification on Windows / Python 3.13.5:
 - A real Uvicorn server returned the expected JSON from `/health` on port 8000;
   `/openapi.json` and `/docs` returned HTTP 200. Stopped the verification server.
 
-These checks verify the backend scaffold, not the full supply-chain workflow.
-The next checkpoint is M0.3 (minimal frontend).
+M0.3 verification on Windows / Node.js 24.14.0 / npm 11.9.0:
+
+- Lockfile installation, frontend lint, TypeScript checking and static build passed.
+- Served `frontend/out/` independently of Next.js and the API; checked the page in
+  the browser, including its synthetic-data label and working workflow link.
+- Inspected desktop and 390-pixel phone layouts; the phone layout stacks panels
+  without horizontal overflow. Browser console showed no warnings or errors.
+- Existing backend tests and Ruff checks still passed.
+- Runtime npm audit reported zero vulnerabilities. The development lint tool
+  limitations are recorded in D006; full dependency audit is not clean.
+
+These checks verify the scaffolds, not the full supply-chain workflow.
+The next checkpoint is M0.4 (development commands and example configuration).
