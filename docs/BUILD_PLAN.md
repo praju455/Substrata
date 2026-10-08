@@ -41,8 +41,8 @@ been executed with GNU Make here.
 | M1.1 | SQLite WAL engine, transaction helper, Alembic baseline and explicit migration command | Complete; infrastructure only |
 | M1.2 | Graph entities, edges, evidence and source snapshot schema with constraints | Complete; empty schema only |
 | M1.3 | Synthetic ERP schema with units, inventory timestamps and dataset versions | Complete; empty schema |
-| M1.4 | Deterministic seed and separate true/declared graphs | Planned |
-| M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Planned |
+| M1.4 | Deterministic seed and separate true/declared graphs | Complete |
+| M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Complete; combined with the fixture checkpoint |
 
 Run-state, approval, audit and evaluation tables will be introduced with their
 own feature checkpoints in M3/M4, rather than creating unused tables now.

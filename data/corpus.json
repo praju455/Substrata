@@ -1,0 +1,37 @@
+[
+  {
+    "id": "evidence_0",
+    "text": "SYNTHETIC filing. Cobalt Assemblies is owned by Meridian Semiconductors. This text is invented for the demo.",
+    "reliability": 0.9
+  },
+  {
+    "id": "evidence_1",
+    "text": "SYNTHETIC filing. Indigo Fabrication is owned by Meridian Semiconductors. This text is invented for the demo.",
+    "reliability": 0.86
+  },
+  {
+    "id": "evidence_2",
+    "text": "SYNTHETIC filing. Violet Circuits is owned by Meridian Semiconductors. This text is invented for the demo.",
+    "reliability": 0.55
+  },
+  {
+    "id": "evidence_3",
+    "text": "SYNTHETIC filing. Silver Materials is owned by Orion Devices. This text is invented for the demo.",
+    "reliability": 0.5
+  },
+  {
+    "id": "evidence_4",
+    "text": "SYNTHETIC unverified rumour. Silver Materials is owned by Meridian Semiconductors. This text is invented for the demo.",
+    "reliability": 0.3
+  },
+  {
+    "id": "distractor_region",
+    "text": "SYNTHETIC news. Aster Mobility and Meridian Semiconductors attend the same industry fair. Geography is not proof of supply.",
+    "reliability": 0.7
+  },
+  {
+    "id": "distractor_name",
+    "text": "SYNTHETIC profile. Meridian Logistics ships furniture and is unrelated to Meridian Semiconductors.",
+    "reliability": 0.8
+  }
+]

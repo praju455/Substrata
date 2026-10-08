@@ -238,7 +238,7 @@ def main() -> int:
                 engine.dispose()
             print(f"Database migrated: {path}. Scenario data is not seeded yet.")
         elif task == "seed":
-            print("Scenario seeding is planned for M1. No database or fixture was created.")
+            run([str(VENV_PYTHON), "-m", "scripts.seed"])
         elif task == "test":
             run([str(VENV_PYTHON), "-m", "pytest", "-q"])
             run(npm_command("run", "typecheck"))

@@ -185,6 +185,32 @@ Use the migration command for initialization; ORM `create_all()` alone does
 not install these triggers. Migration files contain their own frozen schema
 definitions and do not import current models.
 
+## D010: frozen synthetic scenario and ownership scope
+
+Generator v1 uses seed 42 and the evaluation document's minimum: one OEM/product,
+eight components, twelve sites, four regions, two plants, five alternative
+candidates, six events and three low-confidence confirmation candidates.
+`scenario.json` contains declared edges only; `true_graph.json` separately keeps
+hidden truth. Only evaluation and simulated replies may consult hidden truth.
+The mapper receives the observable graph and invented corpus, never hidden IDs
+or labels. Fixture hashes and generator parameters are recorded.
+
+The documented graph schema has no site-to-site supply edge. This demo therefore
+models a shared **ownership/control** dependency using the documented OWNED_BY
+edge: three apparently independent groups share one semiconductor parent.
+Cascade propagation from a disrupted parent to controlled sites is an explicit
+scenario assumption, not proof that ownership always implies supply disruption.
+This preserves documented edge directions rather than inventing real procurement
+relationships. All names, quantities, claims and events are invented. Public
+Nexperia context motivates the story only; there is no assertion about its
+private suppliers or inventory. A full component-to-producing-site procurement
+model remains a future extension.
+
+Reset downgrades/re-upgrades and reloads the synthetic database in one SQLite
+transaction. A failed reset rolls back schema and data. It never deletes paths
+or contacts an external system. Seeding requires an initialized database and
+clears prior demo runs/approvals when those tables exist.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked
