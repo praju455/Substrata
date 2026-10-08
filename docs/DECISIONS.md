@@ -230,6 +230,39 @@ expired and out-of-validity edges are excluded. Traversal bounds depth at 8,
 paths at 128 and work at 10,000, returning explicit truncation instead of looping
 on cycles. Approval policy must block incomplete/truncated impact results.
 
+## D012: mock extraction and measured fixture evaluation
+
+The first Mapper is a narrow exact-name/ownership-sentence baseline. Co-location
+and similar names can retrieve distractors but cannot establish a relationship.
+Embeddings/fuzzy/category heuristics are deferred; the client interface includes
+embedding methods for a later comparison. No trained or pretrained semantic
+model is claimed by the default mock. A configurable HTTP JSON adapter exists;
+live provider access is optional and not verified. SAP Generative AI Hub remains
+a documented adapter TODO rather than an unused implementation stub.
+
+All extraction JSON is Pydantic-validated; exact quotes must occur in the cited
+source and name both exact endpoints in the supported ownership sentence form.
+The whole batch validates before writes; invalid output fails closed and records
+a failed agent run. Provider/model, prompt, measured latency, schema outcome,
+validated extraction and tool summary are retained. Confidence is the explicit
+uncalibrated rule `0.8 * source_reliability + 0.2 * exact_endpoint_match`.
+Default inference threshold is 0.75. Lower scores queue confirmation without
+silently adding a graph edge. **[Assumption]**
+
+Simulated replies alone may consult the truth fixture, with configurable seeded
+noise. A matching persisted response is required before confirmation status can
+change. This models a supplier reply, not a real supplier communication or
+human procurement approval. Three low-confidence fixture candidates yield two
+confirmations and one rejection at zero noise.
+
+Evaluation runs on a fresh temporary database with configurable masking of
+the four hidden ownership relationships. It persists raw predictions/errors,
+counts and metrics and generates the results section only after execution.
+This frozen template fixture is not a held-out generalisation benchmark; no
+weights were tuned and no model was trained. Warning gain assumes Tier-1-only
+alerting at stock exhaustion and deep alerting at the event; it is calculated
+stock headroom under that assumption, not measured enterprise warning time.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked

@@ -209,7 +209,19 @@ def main() -> int:
     """Dispatch a task, bootstrapping first or using the local virtual environment."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "task", choices=("setup", "migrate", "seed", "test", "lint", "api", "ui", "demo", "build")
+        "task",
+        choices=(
+            "setup",
+            "migrate",
+            "seed",
+            "evaluate",
+            "test",
+            "lint",
+            "api",
+            "ui",
+            "demo",
+            "build",
+        ),
     )
     task = parser.parse_args().task
     signal.signal(
@@ -239,6 +251,8 @@ def main() -> int:
             print(f"Database migrated: {path}. Scenario data is not seeded yet.")
         elif task == "seed":
             run([str(VENV_PYTHON), "-m", "scripts.seed"])
+        elif task == "evaluate":
+            run([str(VENV_PYTHON), "-m", "scripts.evaluate"])
         elif task == "test":
             run([str(VENV_PYTHON), "-m", "pytest", "-q"])
             run(npm_command("run", "typecheck"))

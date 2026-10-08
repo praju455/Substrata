@@ -56,7 +56,7 @@ reviewable checkpoints and update this checklist. **[Design]**
 |---|---|---|
 | M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | In progress; M1.1–M1.2 complete |
 | M2 | GraphStore, deterministic cascade formulas and edge-case tests | Complete; formula assumptions recorded in D011 |
-| M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Planned |
+| M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Complete; narrow fixture baseline, limitations in D012 |
 | M4 | Event replay, ranked simulated actions, approval gate, hash-chained audit, API and SSE | Planned |
 | M5 | Graph, replay feed, cascade card, approval queue, audit view and demo script | Planned |
 
