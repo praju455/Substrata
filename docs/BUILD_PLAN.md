@@ -8,9 +8,13 @@ simulated actions only. **[Design]**
 
 At each small checkpoint: implement only that checkpoint, run applicable checks,
 commit locally, explain what exists and what was verified, then stop for the
-user's review. Handle pushing after that review and wait for the user's direction
-before starting the next checkpoint. This follows the user's explicit request
-on 8 October 2026.
+user's review. Wait for direction before starting the next checkpoint.
+
+The user updated the push policy on 8 October 2026: push after every five new
+commits, starting after `5a330b8` (the existing M0.3 commit). Include that existing
+unpushed commit in the first batch. Count actual commits with
+`git rev-list --count 5a330b8..HEAD`; push at each multiple of five. Do not create
+extra commits just to reach the batch size. The checkpoint review stops remain.
 
 Working branch: `feat/prototype-vertical-slice`.
 
@@ -21,12 +25,12 @@ Working branch: `feat/prototype-vertical-slice`.
 | M0.1 | Specification review, project folders, Git ignore rules and this checklist | Complete and pushed |
 | M0.2 | Minimal FastAPI app, health endpoint, pinned Python dependencies, pytest and Ruff configuration | Complete and pushed; API scaffold only |
 | M0.3 | Minimal Next.js / TypeScript / Tailwind app, synthetic-data label and verified static build | Complete; workspace scaffold only |
-| M0.4 | Verified setup, seed, test, lint, api, ui and demo entry points; `.env.example`; README commands | Planned |
+| M0.4 | Verified setup, seed, test, lint, api, ui and demo entry points; `.env.example`; README commands | Complete; scaffold commands only |
 
-For M0.4, `seed` must clearly report that scenario seeding is pending until M1;
-`demo` can launch the scaffold only. Neither command may imply that the complete
-scenario exists. **[Design]** Windows command support must be verified because
-GNU Make is not available in the current shell.
+`seed` reports that scenario seeding is pending until M1. `demo` launches the
+scaffold only. GNU Make is not available in the current shell: use the verified
+Python runner on Windows. Makefile forwarding targets are supplied but have not
+been executed with GNU Make here.
 
 ## Later milestones
 
@@ -64,5 +68,22 @@ M0.3 verification on Windows / Node.js 24.14.0 / npm 11.9.0:
 - Runtime npm audit reported zero vulnerabilities. The development lint tool
   limitations are recorded in D006; full dependency audit is not clean.
 
+M0.4 adds the common Python command runner, Makefile targets and `.env.example`.
+Port defaults, shell-over-file precedence, invalid values and conflicting API/UI
+ports are covered by tests. Setup preserves existing local configuration. The
+`seed` command remains an explicit placeholder.
+
+- Setup, test, lint, seed and static build tasks passed through the runner;
+  pytest reports nine passing tests.
+- Standalone API/UI and the combined demo served the expected health response
+  and synthetic workspace.
+- Ctrl+C stopped both demo servers and released both ports. Stopping a
+  standalone API left the separately started UI running.
+- An occupied port was rejected before starting another server.
+- Root `.env` is ignored; `.env.example` remains trackable. Python dependency
+  checks passed. The existing frontend development-tool advisory remains.
+- GNU Make forwarding and non-Windows process behavior remain unverified locally.
+
 These checks verify the scaffolds, not the full supply-chain workflow.
-The next checkpoint is M0.4 (development commands and example configuration).
+The next milestone is M1; split schema and synthetic seeding into small
+checkpoints before starting it.

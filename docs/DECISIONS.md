@@ -9,8 +9,13 @@ All business data and actions in the prototype are synthetic or simulated.
 The user's explicit instruction on 8 October 2026 overrides the pasted brief's
 continuous milestone execution and blanket no-push rule. M0 is split into four
 checkpoints. Commit locally, explain the result and stop after each checkpoint;
-push after user review, then start the next checkpoint only when directed.
-The requested working branch is `feat/prototype-vertical-slice`.
+start the next checkpoint only when directed. The requested working branch is
+`feat/prototype-vertical-slice`.
+
+The user subsequently requested pushes after every five new commits. The batch
+count begins after `5a330b8`, the existing M0.3 commit; that unpushed commit goes
+with the first batch. This changes push cadence, not checkpoint review stops.
+Do not pad the history with commits solely to trigger a push.
 
 ## D002: Python version follows the specification
 
@@ -87,6 +92,37 @@ depend on a previous development or production build. **[Design]**
   **[TBD]**
 - `npm audit --omit=dev` reports zero vulnerabilities for runtime dependencies
   at this checkpoint. This is a point-in-time check, not a security guarantee.
+
+## D007: one local command runner
+
+`scripts/dev.py` provides setup, seed, test, lint, api, ui, demo and build tasks.
+The Makefile forwards each target to that runner so platform-specific lifecycle
+logic has one implementation. GNU Make is absent on this workstation; Python
+commands are the verified Windows path. Makefile targets are supplied but not
+locally executed with GNU Make.
+
+Setup installs locked Python/frontend dependencies and copies `.env.example`
+only when `.env` does not exist. The root `.env` configures the launcher ports;
+shell values override it. Both servers bind to loopback. The runner rejects
+invalid/conflicting ports and detects occupied ports before launching servers.
+Pinned `python-dotenv` is a development dependency used to read this file.
+
+API and UI run as child processes owned by the runner. Windows children inherit
+the console so Ctrl+C reaches them; cleanup can terminate only an owned child
+tree with the native process tool. POSIX children use separate process groups.
+A supervisor stops the other server if one exits and cleans up through the
+local virtual-environment runner on interruption. This is local development
+tooling, not a production process manager. **[Design]**
+
+Next.js regenerates `next-env.d.ts` with different paths in development and
+production. Follow the installed framework guide: keep this generated file
+ignored and untracked. The typecheck command regenerates it on a clean checkout.
+
+At this checkpoint, `seed` creates nothing and says M1 is pending; `demo` starts
+the API health scaffold and frontend shell. It does not claim the six-step
+supply-chain scenario works. `test` runs pytest plus frontend type checking;
+`lint` checks Python lint/formatting and frontend ESLint. Browser automation
+tests remain deferred to interactive UI features. **[Design]**
 
 ## Open implementation decisions
 

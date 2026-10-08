@@ -11,55 +11,53 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** minimal FastAPI backend with a tested health endpoint (M0.2), plus a Next.js workspace with verified static export (M0.3). The dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** minimal FastAPI backend with a tested health endpoint (M0.2), a Next.js workspace with verified static export (M0.3), and common development commands (M0.4). The dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
 
 Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
 
-## Getting started: backend scaffold
+## Getting started
 
-Requires Python 3.12+. These PowerShell commands were verified on Windows with Python 3.13.5. Run them from the repository root. Dependency installation requires internet; the health endpoint has no external calls.
+Requires Python 3.12+, Node.js 24.x and npm. Verified on Windows with Python 3.13.5, Node.js 24.14.0 and npm 11.9.0. Run from the repository root. Setup needs internet to install dependencies.
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]" -c requirements-dev.lock
-.\.venv\Scripts\python.exe -m uvicorn substrata.app:app --host 127.0.0.1 --port 8000
+python scripts/dev.py setup
+python scripts/dev.py seed
+python scripts/dev.py demo
 ```
 
-Open [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). Stop the server with `Ctrl+C`. The documentation page uses FastAPI's default CDN assets; `/health` and `/openapi.json` work offline after installation.
+Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
 
 ```json
 {"status":"ok","service":"substrata-api","data_mode":"synthetic"}
 ```
 
-Health reports process liveness only. Database readiness, scenario replay and the supply-chain workflow are not implemented yet.
+This starts the scaffold only. `seed` reports that M1 is pending and creates no data. Health reports process liveness; database readiness, scenario replay and the supply-chain workflow are not implemented yet. The workspace does not yet connect to FastAPI.
 
 Run the current checks:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m ruff format --check .
-.\.venv\Scripts\python.exe -m pip check
+python scripts/dev.py test
+python scripts/dev.py lint
+python scripts/dev.py build
 ```
 
-## Getting started: frontend scaffold
+`test` runs pytest and frontend type checking. `lint` checks Python lint/formatting and frontend ESLint. `build` exports the frontend to `frontend/out/`. Frontend dependency limitations are recorded in the [decision register](docs/DECISIONS.md#d006-static-frontend-scaffold).
 
-Requires Node.js 24.x and npm; verified with Node.js 24.14.0 and npm 11.9.0. Run from the repository root:
+## Individual services and local configuration
+
+To run services separately, use these commands in separate terminals:
 
 ```powershell
-npm --prefix frontend ci
-npm --prefix frontend run dev
+python scripts/dev.py api
 ```
-
-Open [the local workspace](http://127.0.0.1:3000). Stop the server with `Ctrl+C`. This checkpoint shows the synthetic-data label, an empty network panel and the planned workflow. It does not yet connect to FastAPI or load supplier records.
 
 ```powershell
-npm --prefix frontend run lint
-npm --prefix frontend run typecheck
-npm --prefix frontend run build
+python scripts/dev.py ui
 ```
 
-The production build exports `frontend/out/`, with no external font/image dependencies. Frontend dependency limitations are recorded in the [decision register](docs/DECISIONS.md#d006-static-frontend-scaffold).
+Setup creates a root `.env` from `.env.example` when absent and preserves an existing file. Set `SUBSTRATA_API_PORT` / `SUBSTRATA_UI_PORT` there to change the default 8000 / 3000 ports; shell values take precedence. Stop running servers before rerunning setup. All commands after setup use `.venv` automatically.
+
+The Makefile forwards the same tasks for GNU Make users. GNU Make is unavailable on this workstation, so those wrappers have not been locally executed; use the Python commands above. See the [scripts guide](scripts/README.md) for all tasks.
 
 ## Read this first: what do 18, 90 and 72 days mean?
 
@@ -280,6 +278,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Project folder scaffold | Created (M0.1) |
 | Backend process health and OpenAPI contract | Implemented and tested (M0.2) |
 | Frontend workspace shell and static export | Implemented and checked (M0.3); no supplier data or API connection |
+| Development commands and local configuration | Implemented and checked (M0.4); Makefile forwarding supplied, GNU Make execution unverified locally |
 | Synthetic dataset and prototype features | Planned; not built <sup>[Design]</sup> |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |

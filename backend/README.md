@@ -6,7 +6,7 @@ The `substrata` Python package now provides a minimal FastAPI app:
 - `GET /openapi.json`: generated API contract.
 - `GET /docs`: default interactive API documentation (CDN assets need internet).
 
-Use the verified commands in the root [README](../README.md#getting-started-backend-scaffold).
+Use the verified commands in the root [README](../README.md#getting-started).
 `create_app()` constructs an independent app for tests; `substrata.app:app` is
 the Uvicorn entry point. Health does not assert database or scenario readiness.
 
