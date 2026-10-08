@@ -2,7 +2,7 @@
 
 from alembic import context
 
-from substrata import models  # noqa: F401 -- register the full mapped metadata
+from substrata import erp_models, models  # noqa: F401 -- register the full mapped metadata
 from substrata.database import Base
 
 connection = context.config.attributes.get("connection")

@@ -17,6 +17,10 @@ count begins after `5a330b8`, the existing M0.3 commit; that unpushed commit goe
 with the first batch. This changes push cadence, not checkpoint review stops.
 Do not pad the history with commits solely to trigger a push.
 
+The user's latest instruction supersedes the review stops: continue to the
+complete working vertical slice, provide progress updates, then report completion.
+Retain meaningful checkpoint commits and the five-commit push cadence.
+
 ## D002: Python version follows the specification
 
 TECH_STACK.md specifies Python 3.12+; the pasted brief says 3.11+. Follow the docs:

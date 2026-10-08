@@ -44,6 +44,13 @@ and nested regions. All business graph nodes remain explicitly synthetic.
 
 ## 1. Modelling rules
 
+M1.3 adds `erp_datasets`, `vendor_master`, `purchasing_documents`, `bom_items`,
+`plant_stock` and `lead_times`. Records pin dataset/graph versions, quantity
+units and inventory timestamps. Missing stock, consumption and qualification
+time remain nullable; negative/infinite quantities and blank units are rejected.
+The planning service will additionally check entity roles, dataset/snapshot
+agreement and unit consistency before calculating an impact.
+
 - The relational database is authoritative; the graph is a versioned projection. **[Design]**
 - Tier is calculated relative to a focal product/plant and path, not stored as universal truth. **[Design]**
 - Every relationship carries confidence, source, status and verification time. **[Design]**

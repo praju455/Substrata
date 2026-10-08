@@ -6,15 +6,17 @@ simulated actions only. **[Design]**
 
 ## Working agreement
 
-At each small checkpoint: implement only that checkpoint, run applicable checks,
-commit locally, explain what exists and what was verified, then stop for the
-user's review. Wait for direction before starting the next checkpoint.
+The user originally requested review stops after each checkpoint. Their latest
+instruction asks to continue until everything is done and then report completion.
+Continue through the remaining vertical slice, verify and commit each meaningful
+checkpoint, and provide progress updates without requiring intermediate review.
 
 The user updated the push policy on 8 October 2026: push after every five new
 commits, starting after `5a330b8` (the existing M0.3 commit). Include that existing
 unpushed commit in the first batch. Count actual commits with
 `git rev-list --count 5a330b8..HEAD`; push at each multiple of five. Do not create
-extra commits just to reach the batch size. The checkpoint review stops remain.
+extra commits just to reach the batch size. The latest instruction removes the
+intermediate review stops; it preserves the five-commit push cadence.
 
 Working branch: `feat/prototype-vertical-slice`.
 
@@ -38,7 +40,7 @@ been executed with GNU Make here.
 |---|---|---|
 | M1.1 | SQLite WAL engine, transaction helper, Alembic baseline and explicit migration command | Complete; infrastructure only |
 | M1.2 | Graph entities, edges, evidence and source snapshot schema with constraints | Complete; empty schema only |
-| M1.3 | Synthetic ERP schema with units, inventory timestamps and dataset versions | Planned |
+| M1.3 | Synthetic ERP schema with units, inventory timestamps and dataset versions | Complete; empty schema |
 | M1.4 | Deterministic seed and separate true/declared graphs | Planned |
 | M1.5 | Synthetic evidence corpus, seed integrity checks and reset/reseed verification | Planned |
 
@@ -125,4 +127,5 @@ handling, migration/ORM agreement and empty-database downgrade/re-upgrade.
   scenario data or confirmation workflow is claimed at this checkpoint.
 
 These checks verify the foundations, not the full supply-chain workflow.
-The next checkpoint is M1.3: synthetic ERP schema.
+M1.3 verified 86 passing tests and Ruff checks, then upgraded the local database.
+The next checkpoint is the deterministic scenario and synthetic evidence corpus.
