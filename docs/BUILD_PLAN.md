@@ -18,8 +18,8 @@ Working branch: `feat/prototype-vertical-slice`.
 
 | Checkpoint | Deliverable | Status |
 |---|---|---|
-| M0.1 | Specification review, project folders, Git ignore rules and this checklist | Complete; no runnable application yet |
-| M0.2 | Minimal FastAPI app, health endpoint, pinned Python dependencies, pytest and Ruff configuration | Planned |
+| M0.1 | Specification review, project folders, Git ignore rules and this checklist | Complete and pushed |
+| M0.2 | Minimal FastAPI app, health endpoint, pinned Python dependencies, pytest and Ruff configuration | Complete; API scaffold only |
 | M0.3 | Minimal Next.js / TypeScript / Tailwind app, synthetic-data label and verified static build | Planned |
 | M0.4 | Verified setup, seed, test, lint, api, ui and demo entry points; `.env.example`; README commands | Planned |
 
@@ -43,6 +43,15 @@ reviewable checkpoints and update this checklist. **[Design]**
 
 ## Current verification
 
-M0.1 checks are limited to repository structure, documentation consistency,
-ignored local artifacts and `git diff --check`. Tests and Ruff are not yet
-configured; no application test or lint success is claimed.
+M0.1 verified repository structure, ignored local artifacts and whitespace.
+
+M0.2 verification on Windows / Python 3.13.5:
+
+- Installed the editable project and development tools with the dependency lock.
+- Two pytest API contract tests passed with no warnings.
+- Ruff lint and formatting checks passed; `pip check` found no broken requirements.
+- A real Uvicorn server returned the expected JSON from `/health` on port 8000;
+  `/openapi.json` and `/docs` returned HTTP 200. Stopped the verification server.
+
+These checks verify the backend scaffold, not the full supply-chain workflow.
+The next checkpoint is M0.3 (minimal frontend).

@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Status:** architecture choices, not installed or implemented dependencies. **[Design]**
+> **Status:** architecture choices. The minimal FastAPI/Pydantic backend, Uvicorn, pytest and Ruff are installed and verified in M0.2; exact pins are in `pyproject.toml` and `requirements-dev.lock`. Other technologies below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
 
 ## Decision principles
 

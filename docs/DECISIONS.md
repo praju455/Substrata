@@ -14,11 +14,11 @@ The requested working branch is `feat/prototype-vertical-slice`.
 
 ## D002: Python version follows the specification
 
-TECH_STACK.md specifies Python 3.12+; the pasted brief says 3.11+. Follow the docs
-and require Python 3.12+ when Python project configuration is added. **[Design]**
+TECH_STACK.md specifies Python 3.12+; the pasted brief says 3.11+. Follow the docs:
+`pyproject.toml` now requires Python 3.12+.
 The inspected workstation provides Python 3.13.5, Node.js 24.14.0 and npm 11.9.0.
-These are observations, not a compatibility guarantee; compatibility will be
-checked when dependencies are installed.
+The M0.2 backend installation and checks passed on Python 3.13.5. Other Python
+versions and the frontend runtime have not yet been verified.
 
 ## D003: orchestration stays in process
 
@@ -32,6 +32,24 @@ pass. This is a planned choice; no orchestration code exists yet. **[Design]**
 Do not publish Getting started commands before they have been run successfully.
 GNU Make is absent from the inspected Windows shell, so the command checkpoint
 must include a verified Windows entry point alongside the requested Makefile.
+**[Design]**
+
+## D005: minimal backend package and pinned dependencies
+
+M0.2 adds the installable `backend/substrata` package, an app factory, a typed
+`/health` process-liveness response and generated OpenAPI documentation. Health
+does not check a database, invoke an LLM or claim scenario readiness.
+
+`pyproject.toml` pins direct runtime, development and build dependencies;
+`requirements-dev.lock` records the resolved runtime/development versions. The
+verified install command uses the lock as pip constraints. Add SQLAlchemy,
+NetworkX and other dependencies when their implementation starts, rather than
+installing unused libraries at this checkpoint. **[Design]**
+
+The resolved Starlette 1.7.0 test client recommends HTTPX2 and warns on the older
+HTTPX fallback. Use pinned HTTPX2 for tests; the final test run has no warnings.
+Default Swagger UI assets still use a CDN. The API and OpenAPI JSON operate
+offline after installation; self-hosted documentation assets are deferred.
 **[Design]**
 
 ## Open implementation decisions

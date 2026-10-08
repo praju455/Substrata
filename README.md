@@ -2,8 +2,8 @@
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
-![Stage](https://img.shields.io/badge/stage-proposal-6f42c1)
-![Build](https://img.shields.io/badge/build-folder%20scaffold%20only-lightgrey)
+![Stage](https://img.shields.io/badge/stage-prototype%20scaffold-6f42c1)
+![Build](https://img.shields.io/badge/build-health%20API%20tested-lightgrey)
 ![Data](https://img.shields.io/badge/demo%20data-synthetic-f59e0b)
 ![Event](https://img.shields.io/badge/SAP%20Hackfest-Bengaluru%202026-0a6ed1)
 
@@ -11,9 +11,36 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** project folder scaffold created (M0.1). No runnable application, trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** minimal FastAPI backend runs with a tested health endpoint (M0.2). The frontend, dataset and supply-chain workflow remain planned. No trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
 
-Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). Setup and run commands will be added once verified.
+Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
+
+## Getting started: backend scaffold
+
+Requires Python 3.12+. These PowerShell commands were verified on Windows with Python 3.13.5. Run them from the repository root. Dependency installation requires internet; the health endpoint has no external calls.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]" -c requirements-dev.lock
+.\.venv\Scripts\python.exe -m uvicorn substrata.app:app --host 127.0.0.1 --port 8000
+```
+
+Open [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). Stop the server with `Ctrl+C`. The documentation page uses FastAPI's default CDN assets; `/health` and `/openapi.json` work offline after installation.
+
+```json
+{"status":"ok","service":"substrata-api","data_mode":"synthetic"}
+```
+
+Health reports process liveness only. Database readiness, scenario replay and UI functionality are not implemented yet.
+
+Run the current checks:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
+.\.venv\Scripts\python.exe -m pip check
+```
 
 ## Read this first: what do 18, 90 and 72 days mean?
 
@@ -231,7 +258,8 @@ Key unresolved items include stakeholder validation, real data availability, sou
 |---|---|
 | Research, proposal and diagrams | Available in this repository <sup>[Design]</sup> |
 | Stakeholder validation | Not completed <sup>[TBD]</sup> |
-| Project folder scaffold | Created (M0.1); no runnable application yet <sup>[Design]</sup> |
+| Project folder scaffold | Created (M0.1) |
+| Backend process health and OpenAPI contract | Implemented and tested (M0.2) |
 | Synthetic dataset and prototype features | Planned; not built <sup>[Design]</sup> |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |

@@ -1,6 +1,6 @@
 # Substrata architecture proposal
 
-> **Status:** design specification only. No service, agent, integration or deployment described here exists yet. **[Design]**
+> **Status:** design specification. A minimal FastAPI health endpoint is implemented and tested (M0.2); the domain services, agents, integrations and deployment below remain planned. See [build checkpoints](BUILD_PLAN.md). **[Design]**
 
 ## 1. Goals and boundaries
 

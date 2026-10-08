@@ -1,7 +1,9 @@
 # Tests
 
-Reserved for pytest tests of API contracts, graph calculations, inference,
-approval rules, audit integrity and the complete synthetic replay. **[Design]**
+`test_api.py` verifies process health, the synthetic-data label and the published
+OpenAPI health response contract using an independent FastAPI app instance.
 
-The next checkpoint adds a backend health endpoint and its smoke test. There are
-no executable tests at this structure-only checkpoint.
+Run pytest and Ruff with the commands in the root [README](../README.md#getting-started-backend-scaffold).
+
+Graph calculations, inference, approval rules, audit integrity and the complete
+synthetic replay will receive tests when those features are implemented. **[Design]**
