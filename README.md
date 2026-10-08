@@ -3,7 +3,7 @@
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
 ![Stage](https://img.shields.io/badge/stage-proposal-6f42c1)
-![Build](https://img.shields.io/badge/build-not%20started-lightgrey)
+![Build](https://img.shields.io/badge/build-folder%20scaffold%20only-lightgrey)
 ![Data](https://img.shields.io/badge/demo%20data-synthetic-f59e0b)
 ![Event](https://img.shields.io/badge/SAP%20Hackfest-Bengaluru%202026-0a6ed1)
 
@@ -11,7 +11,9 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** proposal only. No application, trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+> **Current status:** project folder scaffold created (M0.1). No runnable application, trained model, SAP integration, benchmark result or customer validation exists yet. All demonstration data will be synthetic. <sup>[Design]</sup>
+
+Implementation proceeds in small checkpoints with a review stop after each. See the [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). Setup and run commands will be added once verified.
 
 ## Read this first: what do 18, 90 and 72 days mean?
 
@@ -218,6 +220,8 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | [Data model](docs/DATA_MODEL.md) | Graph entities, relationships, provenance and persistence |
 | [Tech stack](docs/TECH_STACK.md) | Proposed technologies, alternatives and SAP preflight checklist |
 | [Evaluation](docs/EVALUATION.md) | Synthetic dataset, leakage controls, metrics and reporting template |
+| [Build checklist](docs/BUILD_PLAN.md) | Small implementation checkpoints and current progress |
+| [Decisions](docs/DECISIONS.md) | Implementation choices, assumptions and deferred work |
 | [Judge Q&A](docs/JUDGE_QA.md) | Twelve candid answers for expected judge questions |
 | [Diagram manifest](docs/diagrams/README.md) | Questions answered, editable sources and export notes |
 
@@ -227,7 +231,8 @@ Key unresolved items include stakeholder validation, real data availability, sou
 |---|---|
 | Research, proposal and diagrams | Available in this repository <sup>[Design]</sup> |
 | Stakeholder validation | Not completed <sup>[TBD]</sup> |
-| Synthetic dataset and prototype | Not built <sup>[Design]</sup> |
+| Project folder scaffold | Created (M0.1); no runnable application yet <sup>[Design]</sup> |
+| Synthetic dataset and prototype features | Planned; not built <sup>[Design]</sup> |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |
 | Evaluation results | None <sup>[Design]</sup> |
