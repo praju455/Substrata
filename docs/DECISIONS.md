@@ -289,6 +289,32 @@ that hashing proves source truth. Reset intentionally discards demo history.
 The local single-process runtime serializes mutations; distributed workers and
 production concurrency are outside scope.
 
+## D014: local API, replay recovery and SSE
+
+The README contains no API sketch; the implemented contract uses `/state`,
+`/graph`, `/mapper/run`, `/confirmations/simulate`, `/replay/start|pause|reset`,
+`/events/{id}/resolve`, `/scenarios/{id}/refresh`, `/approvals/{id}/decision`,
+`/audit/verify` and `/stream`. OpenAPI publishes request bodies and the workspace
+schema. CORS permits the configured loopback UI port. SSE reads persisted events
+directly from FastAPI, with generation/cursor IDs, heartbeat and reset handling;
+`once=true` provides a bounded diagnostic response.
+
+Exact event names match deterministically. Non-exact candidates enter analyst
+review; no uncertain match triggers a cascade automatically. Severity comes
+from the validated synthetic event fixture. Replay handles the next unseen
+event, can pause between events and resets only synthetic data. Refresh creates
+a new frozen scenario instead of editing previous calculations. An input-file
+hash also pins the replay source for approval validity.
+
+The app factory/health endpoint still perform no database or network work.
+First workflow access checks readiness and gives setup/seed guidance if missing.
+Environment settings are loaded by the launcher; mock mode remains default.
+One local process serializes mutations and replay. All raw audit timestamps,
+agent run IDs and SSE generations are intentionally variable; repeatability
+tests compare canonical graph, calculated reports and action/decision outputs.
+Ten complete seeded mock replays produce identical semantic hashes, with a
+valid audit chain on every run. This does not assert identical wall-clock logs.
+
 ## Open implementation decisions
 
 - **M2 formulas:** the README defines the 18-day cover and 72-day exposure worked

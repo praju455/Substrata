@@ -175,12 +175,17 @@ def serve(task: str) -> int:
     for _, port, _ in commands:
         require_free_port(port)
     children = []
-    environment = {**os.environ, "NEXT_TELEMETRY_DISABLED": "1"}
+    from dotenv import dotenv_values
+
+    environment = {
+        **{k: v for k, v in dotenv_values(ROOT / ".env").items() if v is not None},
+        **os.environ,
+        "NEXT_TELEMETRY_DISABLED": "1",
+    }
+    environment.setdefault("NEXT_PUBLIC_API_URL", f"http://{HOST}:{ports.api}")
     try:
         if task == "demo":
-            print(
-                "Starting scaffold only. Supplier data and scenario replay are planned.", flush=True
-            )
+            print("Starting the synthetic demo. All actions are simulated only.", flush=True)
         for name, port, command in commands:
             print(f"Starting {name}: http://{HOST}:{port}", flush=True)
             children.append(
@@ -248,7 +253,9 @@ def main() -> int:
                 upgrade_database(engine)
             finally:
                 engine.dispose()
-            print(f"Database migrated: {path}. Scenario data is not seeded yet.")
+            print(
+                f"Database migrated: {path}. Run seed to initialize/reset the synthetic scenario."
+            )
         elif task == "seed":
             run([str(VENV_PYTHON), "-m", "scripts.seed"])
         elif task == "evaluate":
