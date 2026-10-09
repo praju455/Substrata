@@ -1165,3 +1165,27 @@ button:disabled {
   box-shadow: none !important;
   color: #facc15 !important;
 }
+
+.notice {
+  background: #fff !important;
+  color: #000 !important;
+  border: 4px solid #000 !important;
+  box-shadow: 8px 8px 0px 0px #000 !important;
+}
+
+.notice.warning {
+  background: #facc15 !important;
+}
+
+.notice.error {
+  background: #ff3333 !important;
+}
+
+.notice span, .notice p {
+  color: #000 !important;
+}
+
+.notice .quiet {
+  color: #000 !important;
+  text-decoration: underline;
+}
