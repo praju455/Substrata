@@ -1,19 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;700;800&display=swap');
 @import "tailwindcss";
 @theme {
-  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
-  --color-ink: #262334;
-  --color-muted: #686574;
-  --color-graph: #6f42c1;
-  --color-agent: #147d78;
-  --color-human: #98590c;
-  --color-risk: #c0393e;
+  --font-sans: "Sora", sans-serif;
+  --font-disp: "Syne", sans-serif;
+  --color-ink: #EDE7DC;
+  --color-muted: #9EA5A8;
+  --color-graph: #2E6B72;
+  --color-agent: #E8913C;
+  --color-human: #E8913C;
+  --color-risk: #E8913C;
 }
 .provider-status {
   margin-top: 16px;
   padding: 12px;
-  border: 1px solid #dedce5;
+  border: 1px solid rgba(237,231,220,0.13);
   border-radius: 8px;
-  background: #f6f7fa;
+  background: #0A0C0E;
   font-size: 11px;
 }
 .provider-status p {
@@ -47,7 +49,7 @@ html {
 }
 body {
   margin: 0;
-  background: #f6f7fa;
+  background: #0A0C0E;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -89,6 +91,10 @@ h3,
 p {
   margin: 0;
 }
+h1, h2, h3, .brand {
+  font-family: var(--font-disp);
+  letter-spacing: -0.02em;
+}
 h1 {
   font-size: clamp(28px, 3vw, 39px);
   font-weight: 650;
@@ -115,9 +121,9 @@ select,
 textarea {
   width: 100%;
   min-width: 0;
-  border: 1px solid #dedce5;
+  border: 1px solid rgba(237,231,220,0.13);
   border-radius: 6px;
-  background: #fff;
+  background: #101317;
   color: var(--color-ink);
   padding: 9px 10px;
   margin-top: 6px;
@@ -127,7 +133,7 @@ textarea {
   resize: vertical;
 }
 input[type="checkbox"] {
-  accent-color: #6f42c1;
+  accent-color: #E8913C;
 }
 summary {
   cursor: pointer;
@@ -135,7 +141,7 @@ summary {
   font-weight: 600;
 }
 pre {
-  background: #f7f6fa;
+  background: #101317;
   padding: 13px;
   border-radius: 6px;
   font-size: 11px;
@@ -149,8 +155,8 @@ pre {
   margin-inline: auto;
 }
 .site-header {
-  background: #fff;
-  border-bottom: 1px solid #e9e7ee;
+  background: #101317;
+  border-bottom: 1px solid rgba(237,231,220,0.13);
 }
 .header-inner {
   min-height: 72px;
@@ -169,7 +175,7 @@ pre {
 .brand svg {
   width: 28px;
   height: 32px;
-  color: #6f42c1;
+  color: #E8913C;
 }
 nav {
   display: flex;
@@ -178,13 +184,13 @@ nav {
   font-size: 12px;
 }
 nav a:hover {
-  color: #6f42c1;
+  color: #E8913C;
 }
 .synthetic-label {
   margin-left: auto;
-  background: #fff5e4;
-  color: #8b601e;
-  border: 1px solid #f1dfbe;
+  background: #101317;
+  color: #E8913C;
+  border: 1px solid rgba(237,231,220,0.13);
   padding: 5px 10px;
   border-radius: 5px;
   font-size: 10px;
@@ -209,7 +215,7 @@ nav a:hover {
   margin-bottom: 7px;
 }
 .purple {
-  color: #6f42c1;
+  color: #E8913C;
 }
 .teal {
   color: #147d78;
@@ -263,30 +269,30 @@ nav a:hover {
   background: #168b83;
 }
 .primary {
-  background: #6f42c1;
-  color: #fff;
+  background: #E8913C;
+  color: #101317;
 }
 .secondary {
-  background: #fff;
-  border-color: #dedce5;
-  color: #4b425b;
+  background: #101317;
+  border-color: rgba(237,231,220,0.13);
+  color: #EDE7DC;
 }
 .quiet {
   background: transparent;
-  color: #6f42c1;
+  color: #E8913C;
 }
 .approve-button {
-  background: #147d78;
-  color: #fff;
+  background: #2E6B72;
+  color: #EDE7DC;
 }
 .danger-button {
-  background: #b42c39;
-  color: #fff;
+  background: #E8913C;
+  color: #0A0C0E;
 }
 .text-button {
   padding: 0;
   background: none;
-  color: #6f42c1;
+  color: #E8913C;
   text-align: left;
 }
 .row,
@@ -326,7 +332,7 @@ nav a:hover {
 }
 .summary-grid > div {
   border: 1px solid #e5e2eb;
-  background: #fff;
+  background: #101317;
   border-radius: 9px;
   padding: 16px 19px;
 }
@@ -357,7 +363,7 @@ nav a:hover {
 .panel {
   border: 1px solid #e3e0e9;
   border-radius: 10px;
-  background: #fff;
+  background: #101317;
   min-width: 0;
   overflow: hidden;
 }
@@ -404,7 +410,7 @@ nav a:hover {
 .step-number {
   flex-shrink: 0;
   border: 1px solid #e4d7f5;
-  color: #6f42c1;
+  color: #E8913C;
   background: #f7f2ff;
   font-size: 10px;
   padding: 4px 6px;
@@ -446,8 +452,8 @@ nav a:hover {
   padding: 5px 8px;
 }
 .network-grid {
-  background-color: #fbfaff;
-  background-image: radial-gradient(#e1dceb 1px, transparent 1px);
+  background-color: #0A0C0E;
+  background-image: radial-gradient(rgba(237,231,220,0.13) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 .graph-canvas {
@@ -494,13 +500,13 @@ nav a:hover {
 .shared-callout {
   display: grid;
   gap: 4px;
-  border-left: 3px solid #c0393e;
-  background: #fff4f4;
+  border-left: 3px solid #E8913C;
+  background: #101317;
   padding: 13px 20px;
   font-size: 11px;
 }
 .shared-callout span {
-  color: #86616a;
+  color: #9EA5A8;
   font-size: 10px;
 }
 .inspector {
@@ -555,7 +561,7 @@ blockquote p {
 }
 .badge.inferred {
   background: #f2eafa;
-  color: #6f42c1;
+  color: #E8913C;
   border-color: #e0d0ef;
 }
 .badge.confirmed,
@@ -867,7 +873,7 @@ footer {
   position: absolute;
   top: -100px;
   left: 20px;
-  background: #fff;
+  background: #101317;
   padding: 8px;
   z-index: 10;
 }
@@ -1023,4 +1029,139 @@ footer {
   button {
     transition: none;
   }
+}
+
+/* BRUTALIST OVERRIDES */
+
+:root {
+  --font-disp: 'Archivo Black', sans-serif !important;
+  --font-sans: 'JetBrains Mono', monospace !important;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+body {
+  background-color: #1c1c1c !important;
+  background-image: 
+    linear-gradient(rgba(250, 204, 21, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 204, 21, 0.05) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+  color: #fff !important;
+  font-family: var(--font-sans) !important;
+  text-transform: uppercase !important;
+}
+
+h1, h2, h3, .brand {
+  font-family: var(--font-disp) !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.05em !important;
+  color: #fff !important;
+}
+
+.brand {
+  color: #facc15 !important;
+}
+
+.shell, .site-header, .main-content {
+  background: transparent !important;
+  border: none !important;
+}
+
+.header-inner {
+  border-bottom: 4px solid #000 !important;
+  background: #1c1c1c !important;
+  box-shadow: 0px 8px 0px 0px #000 !important;
+  margin-bottom: 24px;
+}
+
+.provider-status, .graph-canvas, .inspector, .option-card, textarea, input, select, pre {
+  background: #facc15 !important; /* Cyber Yellow */
+  color: #000 !important;
+  border: 4px solid #000 !important;
+  box-shadow: 8px 8px 0px 0px #000 !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+p, span, .muted, .eyebrow, .small, .connection, .synthetic-label, summary, label, .inspector {
+  color: #fff !important;
+}
+
+.provider-status p, .provider-status span, .inspector p, .inspector span, .inspector .muted, .option-card p, .option-card span, .option-card .muted, button, button span {
+  color: #000 !important;
+}
+
+.option-card:hover {
+  transform: scale(1.02) translateY(-4px) !important;
+  box-shadow: 12px 12px 0px 0px #000 !important;
+}
+
+.graph-canvas {
+  background: transparent !important;
+}
+
+button {
+  border: 4px solid #000 !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+}
+
+button:hover:not(:disabled) {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px 0px #000 !important;
+}
+
+button:disabled {
+  background: #333 !important;
+  color: #888 !important;
+  border-color: #000 !important;
+  opacity: 1 !important;
+  box-shadow: 4px 4px 0px 0px #000 !important;
+}
+
+.primary, .approve-button {
+  background: #facc15 !important;
+  color: #000 !important;
+}
+
+.secondary {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.danger-button {
+  background: #ff3333 !important;
+  color: #000 !important;
+}
+
+.badge, .synthetic-label {
+  background: #000 !important;
+  color: #facc15 !important;
+  border: 2px solid #facc15 !important;
+  font-family: var(--font-sans) !important;
+  border-radius: 0 !important;
+}
+
+.shared-callout {
+  background: #ff3333 !important;
+  color: #000 !important;
+  border: 4px solid #000 !important;
+  box-shadow: 8px 8px 0px 0px #000 !important;
+}
+.shared-callout span, .shared-callout strong {
+  color: #000 !important;
+}
+
+.network-grid {
+  background: #1c1c1c !important;
+}
+
+.quiet {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #facc15 !important;
 }

@@ -620,7 +620,6 @@ export default function Dashboard() {
                 >
                   <p className="eyebrow teal">FROM CONNECTION TO DECISION</p>
                   <h2 id="workflow-title">Run the scenario</h2>
-                  {workspace.llm && <ProviderStatus llm={workspace.llm} />}
                   <div className="workflow-step">
                     <span className="step-number">01</span>
                     <div>
