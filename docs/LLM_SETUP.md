@@ -1,8 +1,8 @@
-# Gemini primary, Grok backup
+# Gemini primary, Groq backup
 
-The application's extraction provider is **Google Gemini**, with **xAI Grok** as
-backup. It calls the providers directly from Python; no OpenAI service or SDK is
-used. API keys are never sent to the browser or stored in agent results.
+The application's extraction provider is **Google Gemini**, with **Groq** as
+backup. It calls the providers directly from Python without a provider SDK. API
+keys are never sent to the browser or stored in agent results.
 
 ## Configure
 
@@ -11,14 +11,14 @@ Setup creates a root `.env` without overwriting an existing file. Set:
 ```dotenv
 SUBSTRATA_LLM_PROVIDER=gemini
 GEMINI_API_KEY=your-google-api-key
-XAI_API_KEY=your-xai-api-key
+GROQ_API_KEY=your-groq-api-key
 SUBSTRATA_GEMINI_MODEL=gemini-3.8-flash
-SUBSTRATA_GROK_MODEL=grok-4.7
+SUBSTRATA_GROQ_MODEL=openai/gpt-oss-120b
 SUBSTRATA_LLM_TIMEOUT_SECONDS=20
 ```
 
 Use keys from [Google AI Studio](https://aistudio.google.com/apikey) and the
-[xAI console](https://console.x.ai/). Model access and billing belong to those
+[Groq console](https://console.groq.com/keys). Model access and billing belong to those
 accounts. Keep `.env` local and ignored by Git. Shell environment values override
 it. Restart `python scripts/dev.py demo` (or the API process) after changing keys.
 Do not put keys in `NEXT_PUBLIC_*` variables or share them in chat.
@@ -31,7 +31,7 @@ Previous saved mock results remain historical mock results.
 ## Failover and evidence
 
 Each extraction starts with Gemini. On a connection/HTTP failure, incomplete
-response or invalid extraction JSON, it tries Grok once. The next extraction starts
+response or invalid extraction JSON, it tries Groq once. The next extraction starts
 with Gemini again. Explicit refusals are not retried through another provider.
 Both providers use the same JSON schema and evidence. Each request has a configured
 socket timeout (maximum 120 seconds), a 4,096-token output cap and a 1 MiB response
@@ -54,15 +54,16 @@ Real provider embedding methods remain deferred.
 Set `SUBSTRATA_LLM_PROVIDER=mock` explicitly for the reproducible offline demo.
 Tests and `python scripts/dev.py evaluate` always use offline fixtures/mocks,
 regardless of the application's provider setting. Evaluation results do not measure
-Gemini or Grok quality. Provider tests intercept HTTP to exercise request formats,
+Gemini or Groq quality. Provider tests intercept HTTP to exercise request formats,
 primary success, failover, recovery, malformed responses and missing credentials.
 Live provider calls have not been verified yet; the user will add keys later.
 
-Official API contracts checked on 8 October 2026:
+Official API contracts checked on 9 October 2026:
 
 - [Gemini Interactions API](https://ai.google.dev/api/interactions-api) and
   [structured output](https://ai.google.dev/gemini-api/docs/structured-output).
-- [Grok structured output](https://docs.x.ai/developers/model-capabilities/text/structured-outputs)
-  and [Chat Completions](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions).
-  The supported stateless endpoint is used directly; xAI recommends Responses for
-  new stateful integrations. This adapter uses no conversation storage or tools.
+- [Groq structured outputs](https://console.groq.com/docs/structured-outputs),
+  [Chat Completions API](https://console.groq.com/docs/api-reference) and the
+  [`openai/gpt-oss-120b` model](https://console.groq.com/docs/model/openai/gpt-oss-120b).
+  The OpenAI-compatible Groq endpoint is used directly; this adapter uses no
+  conversation storage or tools.

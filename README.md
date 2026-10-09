@@ -11,7 +11,7 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** the complete synthetic vertical slice is implemented: evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, ranked mitigation drafts, named approval and hash-chained audit. Gemini is the primary LLM and Grok is its backup. Live extraction needs your provider keys; explicit mock mode works offline after installation. No model training, SAP connection, live supplier contact or real purchase execution is claimed.
+> **Current status:** the complete synthetic vertical slice is implemented: evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, ranked mitigation drafts, named approval and hash-chained audit. Gemini is the primary LLM and Groq is its backup. Live extraction needs your provider keys; explicit mock mode works offline after installation. No model training, SAP connection, live supplier contact or real purchase execution is claimed.
 
 See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
 
@@ -26,7 +26,7 @@ python scripts/dev.py seed
 python scripts/dev.py demo
 ```
 
-Before starting the demo, add `GEMINI_API_KEY` and `XAI_API_KEY` to the root `.env`. See [LLM setup and failover](docs/LLM_SETUP.md). To follow the exact offline demo instead, set `SUBSTRATA_LLM_PROVIDER=mock`.
+Before starting the demo, add `GEMINI_API_KEY` and `GROQ_API_KEY` to the root `.env`. See [LLM setup and failover](docs/LLM_SETUP.md). To follow the exact offline demo instead, set `SUBSTRATA_LLM_PROVIDER=mock`.
 
 Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
 
@@ -271,7 +271,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | [Tech stack](docs/TECH_STACK.md) | Proposed technologies, alternatives and SAP preflight checklist |
 | [Evaluation](docs/EVALUATION.md) | Synthetic dataset, leakage controls, metrics and reporting template |
 | [Build checklist](docs/BUILD_PLAN.md) | Small implementation checkpoints and current progress |
-| [LLM setup](docs/LLM_SETUP.md) | Gemini/Grok credentials, failover and offline mode |
+| [LLM setup](docs/LLM_SETUP.md) | Gemini/Groq credentials, failover and offline mode |
 | [Decisions](docs/DECISIONS.md) | Implementation choices, assumptions and deferred work |
 | [Judge Q&A](docs/JUDGE_QA.md) | Twelve candid answers for expected judge questions |
 | [Diagram manifest](docs/diagrams/README.md) | Questions answered, editable sources and export notes |
@@ -289,7 +289,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Database connection, transactions and migration history | Implemented and checked (M1.1) |
 | Graph entities, relationships and evidence provenance | Implemented with typed/versioned records, evidence citations and GraphStore API |
 | Synthetic dataset and workflow | Implemented: fixed seed 42, separate truth/declared graphs, 32 nodes, seven evidence snippets and six events |
-| Mapper and supplier replies | Gemini primary / Grok backup with validated ownership extraction; explicit offline mock baseline. Provider transport/failover tested with simulated responses; live keys pending |
+| Mapper and supplier replies | Gemini primary / Groq backup with validated ownership extraction; explicit offline mock baseline. Provider transport/failover tested with simulated responses; live keys pending |
 | Action, approval and audit | Implemented simulated templates, stale-input checks and hash-chain verification; self-declared local roles |
 | Model training | Not planned <sup>[Design]</sup> |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |

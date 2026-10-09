@@ -8,7 +8,7 @@ from substrata.database import build_engine, transaction, upgrade_database
 from substrata.evaluation import evaluate
 from substrata.llm import (
     GeminiClient,
-    GrokClient,
+    GroqClient,
     MockLLMClient,
     PrimaryFallbackClient,
     ProviderError,
@@ -92,7 +92,7 @@ def test_measured_evaluation_is_repeatable_and_stored(mapped_database):
 
 def test_mapper_records_actual_backup_and_attempts(mapped_database, monkeypatch):
     engine, _ = mapped_database
-    client = PrimaryFallbackClient(GeminiClient("test"), GrokClient("test"))
+    client = PrimaryFallbackClient(GeminiClient("test"), GroqClient("test"))
 
     def unavailable(**kwargs):
         raise ProviderError("gemini", "http_429", "Rate limited.")
@@ -100,9 +100,9 @@ def test_mapper_records_actual_backup_and_attempts(mapped_database, monkeypatch)
     monkeypatch.setattr(client.primary, "generate_structured", unavailable)
     monkeypatch.setattr(client.backup, "generate_structured", MockLLMClient().generate_structured)
     result = map_evidence(engine, client)
-    assert result["provider"] == "grok"
+    assert result["provider"] == "groq"
     assert [a["status"] for a in result["llm_attempts"]] == ["failed", "completed"]
     with transaction(engine) as session:
         run = session.get(AgentRun, result["run_id"])
-        assert run.provider == "grok"
+        assert run.provider == "groq"
         assert run.output["llm_attempts"] == result["llm_attempts"]

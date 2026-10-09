@@ -161,10 +161,10 @@ No live provider, SAP connection, supplier contact, production authentication,
 model training or external procurement execution was verified or implemented.
 GNU Make and non-Windows process-tree cleanup remain unverified locally.
 
-## Gemini/Grok provider change — 8 October 2026
+## Gemini/Groq provider change — 8 October 2026
 
 The user's provider preference supersedes the initial mock default. Gemini is
-primary, Grok is backup, and mock extraction is an explicit offline option.
+primary, Groq is backup, and mock extraction is an explicit offline option.
 See [LLM setup](LLM_SETUP.md) and decision D016 for configuration and boundaries.
 
 - 133 pytest tests and frontend type checking passed through the common runner.
@@ -172,9 +172,9 @@ See [LLM setup](LLM_SETUP.md) and decision D016 for configuration and boundaries
   invalid/oversized/truncated responses, missing keys and credential redaction.
 - Ruff lint/format and frontend ESLint passed; the production static build passed.
 - Reran the offline fixture evaluation with the current prompt-version metadata;
-  its measurements remain mock-only, not Gemini/Grok quality measurements.
+  its measurements remain mock-only, not Gemini/Groq quality measurements.
 - Restarted the local demo without reseeding. Health/state return 200 and expose
-  Gemini/Grok models and credential-presence flags. Missing keys return a guided
+  Gemini/Groq models and credential-presence flags. Missing keys return a guided
   extraction 503; the graph and audit history remain unchanged and valid.
 - The new provider status panel compiles and passes frontend checks. Browser
   visual verification was blocked by the preview browser's URL security policy;

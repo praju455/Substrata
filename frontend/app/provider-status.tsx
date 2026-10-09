@@ -1,11 +1,17 @@
 import type { LLMProvider, Workspace } from "./types";
 
+function providerLabel(provider: string) {
+  if (provider === "gemini") return "Gemini";
+  if (provider === "groq") return "Groq";
+  return provider;
+}
+
 function Provider({ label, provider }: { label: string; provider: LLMProvider }) {
   return (
     <div className="provider-row">
       <div>
         <span className="muted">{label}</span>
-        <strong>{provider.provider === "gemini" ? "Gemini" : "Grok"}</strong>
+        <strong>{providerLabel(provider.provider)}</strong>
         <span className="provider-model">{provider.model}</span>
       </div>
       <span>{provider.credential_configured ? "Key configured" : "Key needed"}</span>
@@ -33,7 +39,7 @@ export default function ProviderStatus({ llm }: { llm: Workspace["llm"] }) {
       {last && (
         <p role="status">
           {last.status === "completed"
-            ? `Last extraction answered by ${last.provider === "gemini" ? "Gemini" : "Grok"}.`
+            ? `Last extraction answered by ${providerLabel(last.provider)}.`
             : "Last extraction failed. Check the provider configuration."}
         </p>
       )}

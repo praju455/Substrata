@@ -337,15 +337,15 @@ The HTTP LLM adapter was contract-tested with mocked transport, not a real provi
 Full npm audit retains the development lint-chain advisory in D006; runtime audit
 must be reported separately. The dashboard is a local single-worker prototype.
 
-## D016: Gemini primary and Grok backup — 8 October 2026
+## D016: Gemini primary and Groq backup — 8 October 2026
 
-At the user's request, Gemini is the application's primary LLM and xAI Grok is
-its backup. Fixed official HTTPS endpoints replace the generic compatible HTTP
-adapter; no OpenAI service or SDK is used. Models, keys and a bounded timeout
+At the user's request, Gemini is the application's primary LLM and Groq is its
+backup. Fixed official HTTPS endpoints replace the generic compatible HTTP
+adapter; no provider SDK is used. Models, keys and a bounded timeout
 are configured through backend environment variables. See [LLM setup](LLM_SETUP.md)
 for current defaults, source API contracts and activation instructions.
 
-Every extraction tries Gemini first, then Grok once on transport/provider or
+Every extraction tries Gemini first, then Groq once on transport/provider or
 JSON-schema failure. It never silently substitutes mock output. Missing keys
 leave the dashboard available and produce a guided 503 on extraction. The UI
 shows credential presence, not a claimed successful connection. Attempt metadata

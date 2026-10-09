@@ -1,4 +1,4 @@
-"""Gemini primary, Grok backup, and explicit offline mock; never graph math."""
+"""Gemini primary, Groq backup, and explicit offline mock; never graph math."""
 
 import hashlib
 import json
@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 PROMPT_VERSION = "ownership-extraction-v2"
 GEMINI_MODEL = "gemini-3.8-flash"
-GROK_MODEL = "grok-4.7"
+GROQ_MODEL = "openai/gpt-oss-120b"
 
 
 class ExtractedLink(BaseModel):
@@ -215,17 +215,17 @@ class GeminiClient(HTTPProvider):
         return validated_extraction(text, self.provider)
 
 
-class GrokClient(HTTPProvider):
-    provider = "grok"
-    key_name = "XAI_API_KEY"
+class GroqClient(HTTPProvider):
+    provider = "groq"
+    key_name = "GROQ_API_KEY"
 
-    def __init__(self, api_key: str, model: str = GROK_MODEL, timeout: float = 20):
+    def __init__(self, api_key: str, model: str = GROQ_MODEL, timeout: float = 20):
         super().__init__(api_key, model, timeout)
 
     def generate_structured(self, *, task: str, schema: dict, evidence: list[dict]) -> dict:
         self.require_key()
         result = post_json(
-            "https://api.x.ai/v1/chat/completions",
+            "https://api.groq.com/openai/v1/chat/completions",
             {"Authorization": f"Bearer {self.api_key}"},
             {
                 "model": self.model,
@@ -251,16 +251,16 @@ class GrokClient(HTTPProvider):
             choice = result["choices"][0]
             if choice["message"].get("refusal") or choice.get("finish_reason") == "content_filter":
                 raise ProviderError(
-                    self.provider, "refused", "Grok declined extraction.", fallback=False
+                    self.provider, "refused", "Groq declined extraction.", fallback=False
                 )
             if choice.get("finish_reason") != "stop":
                 raise ProviderError(
-                    self.provider, "incomplete", "Grok extraction did not complete."
+                    self.provider, "incomplete", "Groq extraction did not complete."
                 )
             text = choice["message"]["content"]
         except (KeyError, IndexError, TypeError, AttributeError):
             raise ProviderError(
-                self.provider, "invalid_response", "Grok response is invalid."
+                self.provider, "invalid_response", "Groq response is invalid."
             ) from None
         return validated_extraction(text, self.provider)
 
@@ -268,7 +268,7 @@ class GrokClient(HTTPProvider):
 class PrimaryFallbackClient:
     """Try Gemini anew on each call; never silently replace real AI with the mock."""
 
-    def __init__(self, primary: GeminiClient, backup: GrokClient):
+    def __init__(self, primary: GeminiClient, backup: GroqClient):
         self.primary, self.backup = primary, backup
         self.last_client: HTTPProvider | None = None
         self.attempts: list[dict] = []
@@ -301,10 +301,11 @@ class PrimaryFallbackClient:
                 self.attempts.append(attempt)
         codes = ", ".join(f"{item['provider']}: {item['error_code']}" for item in self.attempts)
         raise ProviderError(
-            "gemini+grok",
+            "gemini+groq",
             "all_failed",
-            f"Gemini and Grok could not complete extraction ({codes}). "
-            "Check GEMINI_API_KEY and XAI_API_KEY in .env, model access and provider availability; "
+            f"Gemini and Groq could not complete extraction ({codes}). "
+            "Check GEMINI_API_KEY and GROQ_API_KEY in .env, model access and "
+            "provider availability; "
             "restart the API after changing configuration.",
         )
 
@@ -354,9 +355,9 @@ def configured_client() -> LLMClient:
             os.environ.get("SUBSTRATA_GEMINI_MODEL", GEMINI_MODEL),
             timeout,
         ),
-        GrokClient(
-            os.environ.get("XAI_API_KEY", ""),
-            os.environ.get("SUBSTRATA_GROK_MODEL", GROK_MODEL),
+        GroqClient(
+            os.environ.get("GROQ_API_KEY", ""),
+            os.environ.get("SUBSTRATA_GROQ_MODEL", GROQ_MODEL),
             timeout,
         ),
     )

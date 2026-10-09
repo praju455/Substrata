@@ -18,7 +18,7 @@ def gemini_response(text='{"links": []}'):
     }
 
 
-def grok_response(text='{"links": []}'):
+def groq_response(text='{"links": []}'):
     return {"choices": [{"finish_reason": "stop", "message": {"content": text}}]}
 
 
@@ -39,7 +39,7 @@ def transport(monkeypatch, responses):
 
 def providers():
     return llm.PrimaryFallbackClient(
-        llm.GeminiClient("gemini-test-secret"), llm.GrokClient("grok-test-secret")
+        llm.GeminiClient("gemini-test-secret"), llm.GroqClient("groq-test-secret")
     )
 
 
@@ -73,16 +73,16 @@ def test_gemini_native_request_and_primary_success(monkeypatch):
     ],
 )
 def test_fallback_then_returns_to_primary_next_call(monkeypatch, failure):
-    calls = transport(monkeypatch, [failure, grok_response(), gemini_response()])
+    calls = transport(monkeypatch, [failure, groq_response(), gemini_response()])
     client = providers()
     assert client.generate_structured(**REQUEST) == {"links": []}
-    assert client.provider == "grok"
+    assert client.provider == "groq"
     assert [a["status"] for a in client.attempts] == ["failed", "completed"]
     request, _ = calls[1]
-    assert request.full_url == "https://api.x.ai/v1/chat/completions"
-    assert request.get_header("Authorization") == "Bearer grok-test-secret"
+    assert request.full_url == "https://api.groq.com/openai/v1/chat/completions"
+    assert request.get_header("Authorization") == "Bearer groq-test-secret"
     payload = json.loads(request.data)
-    assert payload["model"] == llm.GROK_MODEL
+    assert payload["model"] == llm.GROQ_MODEL
     assert payload["response_format"]["json_schema"]["strict"] is True
     assert payload["response_format"]["json_schema"]["schema"] == REQUEST["schema"]
     assert client.generate_structured(**REQUEST) == {"links": []}
@@ -93,17 +93,17 @@ def test_fallback_then_returns_to_primary_next_call(monkeypatch, failure):
 @pytest.mark.parametrize(
     "response",
     [
-        grok_response("not JSON"),
+        groq_response("not JSON"),
         {"choices": []},
         {"choices": [None]},
-        grok_response(None),
+        groq_response(None),
         {"choices": [{"finish_reason": "length", "message": {"content": '{"links": []}'}}]},
     ],
 )
 def test_invalid_backup_fails_closed_without_mock(monkeypatch, response):
     transport(monkeypatch, [gemini_response("not JSON"), response])
     client = providers()
-    with pytest.raises(llm.ProviderError, match="Gemini and Grok") as error:
+    with pytest.raises(llm.ProviderError, match="Gemini and Groq") as error:
         client.generate_structured(**REQUEST)
     assert error.value.code == "all_failed"
     assert [a["status"] for a in client.attempts] == ["failed", "failed"]
@@ -114,9 +114,9 @@ def test_invalid_backup_fails_closed_without_mock(monkeypatch, response):
 
 def test_missing_keys_make_no_requests(monkeypatch):
     calls = transport(monkeypatch, [])
-    client = llm.PrimaryFallbackClient(llm.GeminiClient(""), llm.GrokClient(""))
+    client = llm.PrimaryFallbackClient(llm.GeminiClient(""), llm.GroqClient(""))
     assert not llm.client_status(client)["primary"]["credential_configured"]
-    with pytest.raises(llm.ProviderError, match="GEMINI_API_KEY and XAI_API_KEY"):
+    with pytest.raises(llm.ProviderError, match="GEMINI_API_KEY and GROQ_API_KEY"):
         client.generate_structured(**REQUEST)
     assert calls == []
     assert [a["error_code"] for a in client.attempts] == ["missing_key", "missing_key"]
@@ -148,11 +148,11 @@ def test_provider_configuration(monkeypatch):
     monkeypatch.delenv("SUBSTRATA_LLM_PROVIDER", raising=False)
     monkeypatch.delenv("SUBSTRATA_LLM_TIMEOUT_SECONDS", raising=False)
     monkeypatch.setenv("SUBSTRATA_GEMINI_MODEL", "custom-gemini")
-    monkeypatch.setenv("SUBSTRATA_GROK_MODEL", "custom-grok")
+    monkeypatch.setenv("SUBSTRATA_GROQ_MODEL", "custom-groq")
     client = llm.configured_client()
     assert isinstance(client, llm.PrimaryFallbackClient)
     assert client.primary.model == "custom-gemini"
-    assert client.backup.model == "custom-grok"
+    assert client.backup.model == "custom-groq"
     monkeypatch.setenv("SUBSTRATA_LLM_PROVIDER", "mock")
     assert isinstance(llm.configured_client(), llm.MockLLMClient)
     monkeypatch.setenv("SUBSTRATA_LLM_PROVIDER", "http")
