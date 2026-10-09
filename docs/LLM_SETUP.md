@@ -56,7 +56,14 @@ Tests and `python scripts/dev.py evaluate` always use offline fixtures/mocks,
 regardless of the application's provider setting. Evaluation results do not measure
 Gemini or Groq quality. Provider tests intercept HTTP to exercise request formats,
 primary success, failover, recovery, malformed responses and missing credentials.
-Live provider calls have not been verified yet; the user will add keys later.
+Live extraction was exercised on 9 October 2026 with an isolated synthetic
+workspace. Gemini returned `connection_failed`; Groq successfully answered the
+fallback request using `openai/gpt-oss-120b`. The Mapper accepted two supported
+links and queued three uncertain claims for simulated supplier confirmation.
+This verifies the live Groq path and fallback for that run, not Gemini extraction
+success or real-world extraction quality. Requests identify the application with
+`User-Agent: Substrata/0.1`; the default Python user agent was rejected by Groq
+with HTTP 403 during the initial check. Credentials remain local and ignored.
 
 Official API contracts checked on 9 October 2026:
 
