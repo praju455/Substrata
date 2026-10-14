@@ -142,9 +142,12 @@ description](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/). An NWS ac
 weather-alert adapter accepts a two-letter U.S. area code, validates the official
 API response and requires a configured identifying User-Agent. Configure
 `api.weather.gov` in the host allowlist and review [NWS API guidance](https://www.weather.gov/documentation/services-web-api)
-before production polling. This feed is U.S.-only; port/congestion and
-sanctions/export-control registries still need dedicated adapters, and no source
-key or licensing rights are bundled.
+before production polling. This feed is U.S.-only. Port/congestion and
+sanctions/export-control registries still need source-specific parsers; licensed
+providers that expose bounded event JSON can be connected through the field-mapped
+`json_api` adapter. It does not perform legal screening, download bulk sanctions
+lists, or bundle a port/sanctions provider. No source key or licensing rights are
+bundled.
 
 Example tenant-scoped feed configuration:
 
@@ -165,7 +168,12 @@ Set `SUBSTRATA_EVENT_FEEDS_FILE`, add `api.weather.gov` to
 identifying application string with an operator contact. Each feed must include
 its own reviewed license/attribution note. The adapter reads active alerts only,
 does not poll every state automatically, and applies the normal tenant rules,
-deduplication, event matching and analyst review pipeline.
+deduplication, event matching and analyst review pipeline. A `json_api` feed uses
+`url`, `records_path`, `id_field`, `title_field` and `observed_at_field` to map a
+provider's event JSON; `description_field`, `category_hint` and `api_key_file` are
+optional. Credentials are read from a file and sent as a bearer token only to the
+allowlisted HTTPS host. This generic interface does not establish provider
+licensing or sanctions-screening suitability.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
@@ -228,8 +236,9 @@ heads separately to detect privileged tail truncation.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
-   slice; broader international weather/port feeds, agent specialisations, approval notifications,
-   managed queue orchestration and production operations remain.
+   slice; broader international weather feeds, native port/sanctions parsers,
+   agent specialisations, approval notifications, managed queue orchestration and
+   production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior
 or a documented external configuration gate. Real supplier contact is disabled in

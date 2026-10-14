@@ -52,7 +52,7 @@ It is not an ERP, master-data replacement, sanctions-screening product, legal du
 | Procurement/planning approver | Action review, reason and approve/reject decision | Cannot approve a stale snapshot **[Design]** |
 | Synthetic ERP adapter | Vendor master, purchasing documents, BOM, plant stock and lead times | Stand-in for SAP-shaped data **[Design]** |
 | Declared-network adapter | Declared supplier relationships | Stand-in for SAP Business Network / Ariba-shaped records **[Design]** |
-| Public-signal adapter | Tenant RSS, GDELT DOC and configured U.S. NWS active weather alerts | Host allowlists, source attribution and area selection are operator-controlled |
+| Public-signal adapter | Tenant RSS, GDELT DOC, U.S. NWS alerts and field-mapped JSON APIs | Host allowlists, source attribution, provider field maps and area selection are operator-controlled |
 | Ownership adapter | Direct/ultimate parent data shaped like GLEIF output | Not a beneficial-ownership register **[Design]** |
 | Supplier confirmation adapter | Signed portal reply and optional SMTP-over-TLS request email | Development email delivery is disabled; production requires explicit configuration |
 | Simulated execution adapter | Alert, requisition draft, safety-stock change and supplier-message preview | Cannot mutate a real external system **[Design]** |

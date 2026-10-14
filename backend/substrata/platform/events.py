@@ -295,6 +295,130 @@ class NWSWeatherFeed:
         return result
 
 
+class JSONAPIEventFeed:
+    """Field-mapped JSON feed adapter for operator-licensed public event APIs."""
+
+    def __init__(
+        self,
+        url: str,
+        allowed_hosts: set[str],
+        *,
+        records_path: str,
+        id_field: str,
+        title_field: str,
+        observed_at_field: str,
+        description_field: str = "",
+        category_hint: str = "",
+        api_key_file: str = "",
+        timeout: float = 10,
+    ):
+        parsed = urllib.parse.urlsplit(url)
+        host = (parsed.hostname or "").casefold().rstrip(".")
+        permitted = {item.casefold().rstrip(".") for item in allowed_hosts}
+        if (
+            parsed.scheme != "https"
+            or not host
+            or parsed.username
+            or parsed.password
+            or host not in permitted
+        ):
+            raise ValueError("JSON event API must use HTTPS on a configured host allowlist.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        paths = (records_path, id_field, title_field, observed_at_field)
+        if any(not self._valid_path(path) for path in paths) or (
+            description_field and not self._valid_path(description_field)
+        ):
+            raise ValueError("JSON event API field paths are invalid.")
+        if not isinstance(category_hint, str) or len(category_hint) > 128:
+            raise ValueError("JSON event API category hint must be at most 128 characters.")
+        self.url = url
+        self.host = host
+        self.records_path = records_path
+        self.id_field = id_field
+        self.title_field = title_field
+        self.observed_at_field = observed_at_field
+        self.description_field = description_field
+        self.category_hint = category_hint
+        self.api_key_file = api_key_file
+        self.timeout = timeout
+
+    @staticmethod
+    def _valid_path(path: str):
+        return isinstance(path, str) and bool(
+            re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*", path)
+        )
+
+    @staticmethod
+    def _at_path(value, path: str):
+        for part in path.split("."):
+            if not isinstance(value, dict):
+                return None
+            value = value.get(part)
+        return value
+
+    def read(self) -> list[FeedItem]:
+        headers = {"Accept": "application/json", "User-Agent": "Substrata-event-adapter/1.0"}
+        if self.api_key_file:
+            token = Path(self.api_key_file).read_text(encoding="utf-8").strip()
+            if not token or "\r" in token or "\n" in token:
+                raise ValueError("JSON event API credential file is invalid.")
+            headers["Authorization"] = "Bearer " + token
+        request = urllib.request.Request(self.url, headers=headers)
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.url:
+                    raise ValueError("JSON event API redirects are not allowed.")
+                body = response.read(MAX_FEED_BYTES + 1)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured JSON event API could not be reached.") from None
+        if len(body) > MAX_FEED_BYTES:
+            raise ValueError("JSON event API response exceeds the configured size limit.")
+        try:
+            payload = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ValueError("JSON event API response is invalid JSON.") from None
+        items = self._at_path(payload, self.records_path)
+        if not isinstance(items, list):
+            raise ValueError("JSON event API records field is not a list.")
+        result = []
+        for item in items[:MAX_FEED_ITEMS]:
+            item_id = self._at_path(item, self.id_field)
+            title = self._at_path(item, self.title_field)
+            observed = self._at_path(item, self.observed_at_field)
+            description = (
+                self._at_path(item, self.description_field) if self.description_field else ""
+            )
+            if not isinstance(item_id, (str, int)) or isinstance(item_id, bool):
+                continue
+            if not isinstance(title, str) or not title.strip() or not isinstance(observed, str):
+                continue
+            try:
+                timestamp = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                    continue
+            except ValueError:
+                continue
+            description_parts = [str(description).strip()] if description not in (None, "") else []
+            if self.category_hint:
+                description_parts.append(f"Operator category hint: {self.category_hint}")
+            result.append(
+                FeedItem(
+                    id=str(item_id)[:2048],
+                    title=title.strip()[:256],
+                    description="\n".join(description_parts)[:10000],
+                    observed_at=timestamp,
+                )
+            )
+        return result
+
+
 def configured_feeds(tenant_id: str) -> list[dict]:
     path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
     if not path:
@@ -532,6 +656,18 @@ def poll(store, tenant_id: str):
                 config.get("area", ""),
                 allowed,
                 os.environ.get("SUBSTRATA_NWS_USER_AGENT", ""),
+            )
+        elif feed_type == "json_api":
+            feed = JSONAPIEventFeed(
+                config.get("url", ""),
+                allowed,
+                records_path=config.get("records_path", ""),
+                id_field=config.get("id_field", ""),
+                title_field=config.get("title_field", ""),
+                observed_at_field=config.get("observed_at_field", ""),
+                description_field=config.get("description_field", ""),
+                category_hint=config.get("category_hint", ""),
+                api_key_file=config.get("api_key_file", ""),
             )
         else:
             raise ValueError("Configured event feed type is not supported.")

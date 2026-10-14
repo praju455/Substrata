@@ -13,6 +13,7 @@ from substrata.platform.events import (
     EventSubmission,
     FeedItem,
     GDELTFeed,
+    JSONAPIEventFeed,
     NWSWeatherFeed,
     RSSFeed,
     ingest,
@@ -237,6 +238,112 @@ def test_nws_weather_feed_uses_tenant_pipeline(platform, monkeypatch, tmp_path):
     assert len(events) == 1
     assert events[0]["payload"]["category"] == "weather"
     assert events[0]["payload"]["provenance"]["note"].startswith("nws-california;")
+    assert poll(platform, "beta") == []
+
+
+def test_field_mapped_json_api_feed_is_bounded_and_uses_file_credential(monkeypatch, tmp_path):
+    credential = tmp_path / "api.secret"
+    credential.write_text("private-token\n", encoding="utf-8")
+    feed = JSONAPIEventFeed(
+        "https://port-api.example.test/v1/alerts",
+        {"port-api.example.test"},
+        records_path="data.events",
+        id_field="id",
+        title_field="headline",
+        observed_at_field="created_at",
+        description_field="details.summary",
+        category_hint="port congestion",
+        api_key_file=str(credential),
+    )
+    body = {
+        "data": {
+            "events": [
+                {
+                    "id": "port-42",
+                    "headline": "Queue length rising",
+                    "created_at": "2026-10-14T10:00:00Z",
+                    "details": {"summary": "Terminal delays exceed two days."},
+                },
+                {"id": "bad-time", "headline": "Ignore", "created_at": "not-a-date"},
+            ]
+        }
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return feed.url
+
+        def read(self, limit):
+            import json
+
+            return json.dumps(body).encode()
+
+    class Opener:
+        def open(self, request, timeout):
+            assert request.get_header("Authorization") == "Bearer private-token"
+            return Response()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: Opener())
+    items = feed.read()
+    assert len(items) == 1
+    assert items[0].id == "port-42"
+    assert "port congestion" in items[0].description
+    with pytest.raises(ValueError, match="allowlist"):
+        JSONAPIEventFeed(
+            "https://evil.example.test/v1/alerts",
+            {"port-api.example.test"},
+            records_path="data.events",
+            id_field="id",
+            title_field="headline",
+            observed_at_field="created_at",
+        )
+    with pytest.raises(ValueError, match="field paths"):
+        JSONAPIEventFeed(
+            "https://port-api.example.test/v1/alerts",
+            {"port-api.example.test"},
+            records_path="data..events",
+            id_field="id",
+            title_field="headline",
+            observed_at_field="created_at",
+        )
+
+
+def test_configured_json_api_signal_uses_shared_event_pipeline(platform, monkeypatch, tmp_path):
+    seeded(platform)
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"json_api","name":"port-status","tenant_id":"alpha",'
+        '"url":"https://port-api.example.test/v1/alerts","license":"provider license",'
+        '"records_path":"data.events","id_field":"id","title_field":"headline",'
+        '"observed_at_field":"created_at","description_field":"details",'
+        '"category_hint":"port congestion"}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", "port-api.example.test")
+    monkeypatch.setattr(
+        JSONAPIEventFeed,
+        "read",
+        lambda self: [
+            FeedItem(
+                id="port-42",
+                title="Queue length rising",
+                description=(
+                    "Terminal delays exceed two days. Operator category hint: port congestion"
+                ),
+                observed_at=datetime.now(UTC),
+            )
+        ],
+    )
+    events = poll(platform, "alpha")
+    assert len(events) == 1
+    assert events[0]["payload"]["category"] == "transport"
     assert poll(platform, "beta") == []
 
 
