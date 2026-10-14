@@ -298,6 +298,28 @@ class NWSWeatherFeed:
         return result
 
 
+class MeteoAlarmFeed:
+    """Read one official country Atom feed maintained by MeteoAlarm."""
+
+    HOST = "feeds.meteoalarm.org"
+    FEED_PREFIX = "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-"
+
+    def __init__(self, country: str, allowed_hosts: set[str], *, timeout: float = 10):
+        if not isinstance(country, str) or not re.fullmatch(r"[a-z][a-z-]{1,62}", country):
+            raise ValueError("MeteoAlarm country must be a lowercase country slug.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("MeteoAlarm host must be added to the event feed allowlist.")
+        self.country = country
+        self.reader = RSSFeed(f"{self.FEED_PREFIX}{country}", allowed_hosts, timeout=timeout)
+
+    def read(self) -> list[FeedItem]:
+        # The source has migrated from RSS to Atom; the bounded common parser handles both.
+        return [
+            item.model_copy(update={"title": f"MeteoAlarm weather alert: {item.title}"[:256]})
+            for item in self.reader.read()
+        ]
+
+
 class JSONAPIEventFeed:
     """Field-mapped JSON feed adapter for operator-licensed public event APIs."""
 
@@ -690,7 +712,10 @@ def classify(title: str, description: str):
     text = f"{title} {description}".casefold()
     rules = (
         ("sanctions", ("sanction", "export control", "restricted party", "embargo")),
-        ("weather", ("flood", "storm", "earthquake", "wildfire", "hurricane", "typhoon")),
+        (
+            "weather",
+            ("weather alert", "flood", "storm", "earthquake", "wildfire", "hurricane", "typhoon"),
+        ),
         ("transport", ("port closure", "congestion", "canal", "shipping delay", "strike")),
         (
             "supply_disruption",
@@ -876,6 +901,8 @@ def poll(store, tenant_id: str):
                 allowed,
                 os.environ.get("SUBSTRATA_NWS_USER_AGENT", ""),
             )
+        elif feed_type == "meteoalarm":
+            feed = MeteoAlarmFeed(config.get("country", ""), allowed)
         elif feed_type == "json_api":
             feed = JSONAPIEventFeed(
                 config.get("url", ""),

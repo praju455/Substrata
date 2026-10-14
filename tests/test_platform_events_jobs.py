@@ -15,6 +15,7 @@ from substrata.platform.events import (
     FeedItem,
     GDELTFeed,
     JSONAPIEventFeed,
+    MeteoAlarmFeed,
     NWSWeatherFeed,
     OFACSDNFeed,
     RSSFeed,
@@ -240,6 +241,56 @@ def test_nws_weather_feed_uses_tenant_pipeline(platform, monkeypatch, tmp_path):
     assert len(events) == 1
     assert events[0]["payload"]["category"] == "weather"
     assert events[0]["payload"]["provenance"]["note"].startswith("nws-california;")
+    assert poll(platform, "beta") == []
+
+
+def test_meteoalarm_feed_uses_bounded_official_atom_country_url(monkeypatch):
+    feed = MeteoAlarmFeed("ireland", {MeteoAlarmFeed.HOST})
+    assert feed.reader.url == ("https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-ireland")
+    with pytest.raises(ValueError, match="country"):
+        MeteoAlarmFeed("../ireland", {MeteoAlarmFeed.HOST})
+    with pytest.raises(ValueError, match="allowlist"):
+        MeteoAlarmFeed("ireland", set())
+    monkeypatch.setattr(
+        feed.reader,
+        "read",
+        lambda: [
+            FeedItem(
+                id="https://feeds.meteoalarm.org/warning/42",
+                title="Yellow warning for heavy rain",
+                observed_at=datetime.now(UTC),
+            )
+        ],
+    )
+    warning = feed.read()[0]
+    assert warning.title == "MeteoAlarm weather alert: Yellow warning for heavy rain"
+
+
+def test_meteoalarm_feed_uses_tenant_event_pipeline(platform, monkeypatch, tmp_path):
+    seeded(platform)
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"meteoalarm","name":"meteoalarm-ireland","tenant_id":"alpha",'
+        '"country":"ireland","license":"MeteoAlarm CC BY 4.0; attribution reviewed"}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", MeteoAlarmFeed.HOST)
+    monkeypatch.setattr(
+        MeteoAlarmFeed,
+        "read",
+        lambda self: [
+            FeedItem(
+                id="https://feeds.meteoalarm.org/warning/42",
+                title="MeteoAlarm weather alert: Yellow warning for heavy rain",
+                observed_at=datetime.now(UTC),
+            )
+        ],
+    )
+    events = poll(platform, "alpha")
+    assert len(events) == 1
+    assert events[0]["payload"]["category"] == "weather"
+    assert events[0]["payload"]["provenance"]["note"].startswith("meteoalarm-ireland;")
     assert poll(platform, "beta") == []
 
 

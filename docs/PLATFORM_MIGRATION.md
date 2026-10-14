@@ -153,6 +153,15 @@ providers that expose bounded event JSON can be connected through the field-mapp
 lists, or bundle a port/sanctions provider. No source key or licensing rights are
 bundled.
 
+For European weather warnings, configure a `meteoalarm` feed with a country slug,
+such as `ireland`, and allowlist `feeds.meteoalarm.org`. This adapter uses the
+maintained country-specific Atom feeds; the provider sunset its legacy RSS feeds
+on 14 January 2026. The shared bounded Atom parser normalizes warning titles into
+the weather category. Review country availability, attribution and the provider's
+[CC BY 4.0 terms](https://feeds.meteoalarm.org/) before polling. This does not
+cover MeteoAlarm's authenticated query API or countries outside its published
+feed catalog.
+
 Example tenant-scoped feed configuration:
 
 ```json
@@ -167,8 +176,8 @@ Example tenant-scoped feed configuration:
 ]
 ```
 
-Set `SUBSTRATA_EVENT_FEEDS_FILE`, add `api.weather.gov` to
-`SUBSTRATA_EVENT_ALLOWED_HOSTS`, and set `SUBSTRATA_NWS_USER_AGENT` to an
+Set `SUBSTRATA_EVENT_FEEDS_FILE`, add each feed host to
+`SUBSTRATA_EVENT_ALLOWED_HOSTS`, and, for NWS, set `SUBSTRATA_NWS_USER_AGENT` to an
 identifying application string with an operator contact. Each feed must include
 its own reviewed license/attribution note. The adapter reads active alerts only,
 does not poll every state automatically, and applies the normal tenant rules,
@@ -178,6 +187,13 @@ provider's event JSON; `description_field`, `category_hint` and `api_key_file` a
 optional. Credentials are read from a file and sent as a bearer token only to the
 allowlisted HTTPS host. This generic interface does not establish provider
 licensing or sanctions-screening suitability.
+
+Example European warning feed:
+
+```json
+[{"tenant_id":"demo","name":"meteoalarm-ireland","type":"meteoalarm",
+  "country":"ireland","license":"MeteoAlarm CC BY 4.0; attribution reviewed"}]
+```
 
 The `ofac_sdn` adapter reads OFAC's current SDN XML from the official
 [Sanctions List Service](https://ofac.treasury.gov/sanctions-list-service); add
