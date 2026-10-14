@@ -7,6 +7,8 @@ Install the optional platform dependencies with `python -m pip install -e ".[dev
 Platform API access requires verified tokens; see the migration guide for setup.
 The platform includes automotive, pharma and food fixtures and a deterministic
 assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
+CSV/Excel imports are staged with column mapping, validation and identity review;
+history and safe rollback preserve graph revisions.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

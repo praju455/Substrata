@@ -9,6 +9,9 @@ selected by request headers; the legacy reset route is absent in platform mode.
 The tenant cascade uses deterministic services, conservative evidence-support
 bounds and full-interruption exposure ranges. It reuses the existing runway and
 bounded path calculations; LLMs have no arithmetic authority.
+Tenant workflow records store staged import validation, human entity resolution,
+applied versions and rollback reasons. Import application and graph/audit writes
+use a shared transaction.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

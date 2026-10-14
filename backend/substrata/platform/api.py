@@ -44,6 +44,14 @@ class SeedInput(Contract):
     seed: int = 42
 
 
+class ReasonInput(Contract):
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class ResolutionInput(ReasonInput):
+    decisions: dict[str, str | None]
+
+
 @router.get("/identity")
 def identity(actor: Actor):
     return actor
@@ -121,6 +129,58 @@ def seed(body: SeedInput, request: Request, actor: Actor):
         actor.subject,
         expected_version=body.expected_version,
         event_type="synthetic.seed.loaded",
+    )
+
+
+@router.get("/records")
+def records(request: Request, actor: Actor, kind: str | None = None, status: str | None = None):
+    from substrata.platform.records import list_records
+
+    actor.require("viewer")
+    return list_records(request.app.state.platform_store, actor.tenant_id, kind=kind, status=status)
+
+
+from substrata.platform.ingestion import TabularImport  # noqa: E402
+
+
+@router.post("/imports/stage")
+def stage_import(body: TabularImport, request: Request, actor: Actor):
+    from substrata.platform.ingestion import stage
+
+    actor.require("analyst")
+    return stage(request.app.state.platform_store, actor.tenant_id, body, actor.subject)
+
+
+@router.post("/imports/{id}/apply")
+def import_apply(id: str, request: Request, actor: Actor):
+    from substrata.platform.ingestion import apply_import
+
+    actor.require("analyst")
+    return apply_import(request.app.state.platform_store, actor.tenant_id, id, actor.subject)
+
+
+@router.post("/imports/{id}/resolve")
+def import_resolve(id: str, body: ResolutionInput, request: Request, actor: Actor):
+    from substrata.platform.ingestion import resolve_import
+
+    actor.require("analyst")
+    return resolve_import(
+        request.app.state.platform_store,
+        actor.tenant_id,
+        id,
+        body.decisions,
+        actor.subject,
+        body.reason,
+    )
+
+
+@router.post("/imports/{id}/rollback")
+def import_rollback(id: str, body: ReasonInput, request: Request, actor: Actor):
+    from substrata.platform.ingestion import rollback
+
+    actor.require("admin")
+    return rollback(
+        request.app.state.platform_store, actor.tenant_id, id, actor.subject, body.reason
     )
 
 

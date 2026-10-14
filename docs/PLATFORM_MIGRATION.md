@@ -27,6 +27,13 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+CSV/XLSX ingestion supports a mapping preview, validated staged rows, duplicate
+identities, schema fingerprint checks, import history, idempotent apply and safe
+rollback. Uploads are bounded to 3 MB, 10000 rows and 100 columns; expanded Excel
+archives are bounded to 20 MB. Ambiguous normalised-name matches pause in review.
+Rollback creates a new graph revision and refuses to overwrite subsequent work.
+The source URI, observation time, units and source kind are supplied explicitly.
+
 The platform cascade reuses the tested runway arithmetic and bounded traversal,
 adds elapsed-stock handling, eligible PO arrivals, shared ancestors, supply-share
 concentration, affected products and sourced gross revenue at risk. It reports

@@ -126,34 +126,40 @@ class PlatformStore:
     ) -> Snapshot:
         with tenant_transaction(self.engine, tenant_id) as session:
             org = self.organisation(session, tenant_id)
-            if org.version != expected_version:
-                raise Conflict("Graph changed; refresh before saving.")
-            for link in data.links:
-                for citation in link.evidence:
-                    document = session.get(Document, (tenant_id, citation.document_id))
-                    if (
-                        document is None
-                        or document.text[citation.start : citation.end] != citation.passage
-                    ):
-                        raise ValueError("Every citation must match a document in this tenant.")
-            payload = data.model_dump(mode="json")
-            sha = hashlib.sha256(canonical(payload).encode()).hexdigest()
-            recorded_at = datetime.now(UTC)
-            version = org.version + 1
-            session.add(
-                GraphRevision(
-                    tenant_id=tenant_id,
-                    version=version,
-                    recorded_at=recorded_at,
-                    sha256=sha,
-                    payload=payload,
-                )
+            return self.save_in(
+                session, org, data, actor, expected_version=expected_version, event_type=event_type
             )
-            org.version = version
-            self.append(session, org, event_type, actor, {"version": version, "sha256": sha})
-            return Snapshot(
-                tenant_id=tenant_id, version=version, recorded_at=recorded_at, sha256=sha, data=data
+
+    def save_in(self, session, org, data, actor, *, expected_version, event_type="graph.revised"):
+        tenant_id = org.tenant_id
+        if org.version != expected_version:
+            raise Conflict("Graph changed; refresh before saving.")
+        for link in data.links:
+            for citation in link.evidence:
+                document = session.get(Document, (tenant_id, citation.document_id))
+                if (
+                    document is None
+                    or document.text[citation.start : citation.end] != citation.passage
+                ):
+                    raise ValueError("Every citation must match a document in this tenant.")
+        payload = data.model_dump(mode="json")
+        sha = hashlib.sha256(canonical(payload).encode()).hexdigest()
+        recorded_at = datetime.now(UTC)
+        version = org.version + 1
+        session.add(
+            GraphRevision(
+                tenant_id=tenant_id,
+                version=version,
+                recorded_at=recorded_at,
+                sha256=sha,
+                payload=payload,
             )
+        )
+        org.version = version
+        self.append(session, org, event_type, actor, {"version": version, "sha256": sha})
+        return Snapshot(
+            tenant_id=tenant_id, version=version, recorded_at=recorded_at, sha256=sha, data=data
+        )
 
     def add_document(
         self, tenant_id: str, document_id: str, text: str, provenance: Provenance, actor: str

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import JSON, ForeignKey, ForeignKeyConstraint, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from substrata.database import Base as LegacyBase
@@ -54,3 +54,14 @@ class Document(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     provenance: Mapped[dict] = mapped_column(JSON)
     __table_args__ = (ForeignKeyConstraint(["tenant_id"], ["organisations.tenant_id"]),)
+
+
+class WorkRecord(Base):
+    __tablename__ = "work_records"
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("organisations.tenant_id"), primary_key=True)
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(48))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    payload: Mapped[dict] = mapped_column(JSON)
+    __table_args__ = (Index("ix_work_records_inbox", "tenant_id", "kind", "status"),)
