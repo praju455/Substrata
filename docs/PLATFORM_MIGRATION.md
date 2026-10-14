@@ -137,9 +137,34 @@ wait for an authenticated analyst. Alert acknowledgement and event resolution ar
 audited. A GDELT DOC ArticleList adapter consumes its RSS output with bounded query
 windows and result counts; configure `api.gdeltproject.org` in the host allowlist
 and provide an operator-reviewed attribution/license note. See the [GDELT DOC API
-description](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/). Weather,
-port/congestion and sanctions/export-control registries still need dedicated
-adapters, and no source key or licensing rights are bundled.
+description](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/). An NWS active
+weather-alert adapter accepts a two-letter U.S. area code, validates the official
+API response and requires a configured identifying User-Agent. Configure
+`api.weather.gov` in the host allowlist and review [NWS API guidance](https://www.weather.gov/documentation/services-web-api)
+before production polling. This feed is U.S.-only; port/congestion and
+sanctions/export-control registries still need dedicated adapters, and no source
+key or licensing rights are bundled.
+
+Example tenant-scoped feed configuration:
+
+```json
+[
+  {
+    "tenant_id": "demo",
+    "name": "california-weather",
+    "type": "nws_weather",
+    "area": "CA",
+    "license": "U.S. government public data; attribution reviewed by operator"
+  }
+]
+```
+
+Set `SUBSTRATA_EVENT_FEEDS_FILE`, add `api.weather.gov` to
+`SUBSTRATA_EVENT_ALLOWED_HOSTS`, and set `SUBSTRATA_NWS_USER_AGENT` to an
+identifying application string with an operator contact. Each feed must include
+its own reviewed license/attribution note. The adapter reads active alerts only,
+does not poll every state automatically, and applies the normal tenant rules,
+deduplication, event matching and analyst review pipeline.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
@@ -192,7 +217,7 @@ heads separately to detect privileged tail truncation.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
-   slice; GDELT/weather/port feeds, agent specialisations, approval notifications,
+   slice; broader international weather/port feeds, agent specialisations, approval notifications,
    managed queue orchestration and production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior

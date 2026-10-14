@@ -13,6 +13,7 @@ from substrata.platform.events import (
     EventSubmission,
     FeedItem,
     GDELTFeed,
+    NWSWeatherFeed,
     RSSFeed,
     ingest,
     poll,
@@ -145,6 +146,97 @@ def test_gdelt_feed_configuration_runs_through_tenant_event_pipeline(
     received = poll(platform, "alpha")
     assert len(received) == 1
     assert received[0]["payload"]["provenance"]["note"].startswith("global-news;")
+    assert poll(platform, "beta") == []
+
+
+def test_nws_weather_adapter_bounds_configuration_and_normalizes_alerts(monkeypatch):
+    feed = NWSWeatherFeed("CA", {NWSWeatherFeed.HOST}, "Substrata tests (ops@example.test)")
+    assert feed.url == "https://api.weather.gov/alerts/active?area=CA"
+    with pytest.raises(ValueError, match="area"):
+        NWSWeatherFeed("california", {NWSWeatherFeed.HOST}, "Substrata tests")
+    with pytest.raises(ValueError, match="allowlist"):
+        NWSWeatherFeed("CA", set(), "Substrata tests")
+    with pytest.raises(ValueError, match="User-Agent"):
+        NWSWeatherFeed("CA", {NWSWeatherFeed.HOST}, "")
+
+    body = {
+        "features": [
+            {
+                "id": "https://api.weather.gov/alerts/urn:oid:test-1",
+                "properties": {
+                    "headline": "Flood Warning",
+                    "event": "Flood Warning",
+                    "description": "Flooding threatens roads.",
+                    "areaDesc": "Example County",
+                    "severity": "Severe",
+                    "sent": "2026-10-14T10:00:00+00:00",
+                },
+            },
+            {
+                "id": "https://attacker.example/alerts/2",
+                "properties": {"headline": "Untrusted"},
+            },
+        ]
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return feed.url
+
+        def read(self, limit):
+            import json
+
+            return json.dumps(body).encode()
+
+    class Opener:
+        def open(self, request, timeout):
+            assert request.get_header("User-agent") == "Substrata tests (ops@example.test)"
+            assert timeout == 10
+            return Response()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: Opener())
+    alerts = feed.read()
+    assert len(alerts) == 1
+    assert alerts[0].id == body["features"][0]["id"]
+    assert alerts[0].title == "Flood Warning"
+    assert "Example County" in alerts[0].description
+    assert "NWS severity: Severe" in alerts[0].description
+    assert alerts[0].observed_at == datetime.fromisoformat("2026-10-14T10:00:00+00:00")
+
+
+def test_nws_weather_feed_uses_tenant_pipeline(platform, monkeypatch, tmp_path):
+    seeded(platform)
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"nws_weather","name":"nws-california","tenant_id":"alpha",'
+        '"area":"CA","license":"U.S. government public data attribution"}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", NWSWeatherFeed.HOST)
+    monkeypatch.setenv("SUBSTRATA_NWS_USER_AGENT", "Substrata tests (ops@example.test)")
+    monkeypatch.setattr(
+        NWSWeatherFeed,
+        "read",
+        lambda self: [
+            FeedItem(
+                id="https://api.weather.gov/alerts/urn:oid:weather-1",
+                title="Flood Warning for Example County",
+                description="Flash flooding expected.",
+                observed_at=datetime.now(UTC),
+            )
+        ],
+    )
+    events = poll(platform, "alpha")
+    assert len(events) == 1
+    assert events[0]["payload"]["category"] == "weather"
+    assert events[0]["payload"]["provenance"]["note"].startswith("nws-california;")
     assert poll(platform, "beta") == []
 
 

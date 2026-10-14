@@ -21,8 +21,9 @@ Supplier portal replies use signed, expiring tokens and preserve historical link
 states while producing confirm/reject training labels. Development contact is disabled.
 The scorer training script calibrates a small gradient-boosted model on supplier
 labels with grouped holdouts and a versioned registry; it never fine-tunes an LLM.
-Tenant event feeds use HTTPS host allowlists and explicit license notes; event polls
-and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
+Tenant event feeds use HTTPS host allowlists and explicit license notes; RSS, GDELT
+DOC and U.S. NWS active weather alerts run through the same tenant event pipeline.
+Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, so clients cannot delegate exposure arithmetic to an LLM.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see

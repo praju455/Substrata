@@ -52,7 +52,7 @@ It is not an ERP, master-data replacement, sanctions-screening product, legal du
 | Procurement/planning approver | Action review, reason and approve/reject decision | Cannot approve a stale snapshot **[Design]** |
 | Synthetic ERP adapter | Vendor master, purchasing documents, BOM, plant stock and lead times | Stand-in for SAP-shaped data **[Design]** |
 | Declared-network adapter | Declared supplier relationships | Stand-in for SAP Business Network / Ariba-shaped records **[Design]** |
-| Public-signal adapter | Replay file first; RSS/GDELT-style event source later | Licensing and live availability **[TBD]** |
+| Public-signal adapter | Tenant RSS, GDELT DOC and configured U.S. NWS active weather alerts | Host allowlists, source attribution and area selection are operator-controlled |
 | Ownership adapter | Direct/ultimate parent data shaped like GLEIF output | Not a beneficial-ownership register **[Design]** |
 | Supplier confirmation adapter | Confirm/reject response | Simulated in the prototype **[Design]** |
 | Simulated execution adapter | Alert, requisition draft, safety-stock change and supplier-message preview | Cannot mutate a real external system **[Design]** |
@@ -67,7 +67,7 @@ It is not an ERP, master-data replacement, sanctions-screening product, legal du
 
 - Synthetic ERP-style vendor, purchasing, BOM, stock and lead-time records. **[Design]**
 - Declared supplier relationships as a Business Network / Ariba-shaped stand-in. **[Design]**
-- Replayed news/event records, with optional live RSS/GDELT-style adapter. **[Design]**
+- Replayed and submitted events, with tenant-configured RSS, GDELT DOC and U.S. NWS active weather adapters. **[Design]**
 - Direct and ultimate parent records; never represent these as beneficial ownership. **[Design]**
 - Simulated supplier confirmations. **[Design]**
 

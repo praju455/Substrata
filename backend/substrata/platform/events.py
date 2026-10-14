@@ -191,6 +191,110 @@ class GDELTFeed:
         return self.reader.read()
 
 
+class NWSWeatherFeed:
+    """Bounded adapter for active U.S. National Weather Service area alerts."""
+
+    HOST = "api.weather.gov"
+
+    def __init__(
+        self,
+        area: str,
+        allowed_hosts: set[str],
+        user_agent: str,
+        *,
+        timeout: float = 10,
+    ):
+        if not isinstance(area, str) or not re.fullmatch(r"[A-Z]{2}", area):
+            raise ValueError("NWS weather area must be a two-letter uppercase area code.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("NWS weather host must be added to the event feed allowlist.")
+        if not isinstance(user_agent, str) or not 10 <= len(user_agent) <= 256:
+            raise ValueError(
+                "NWS weather requires an identifying User-Agent of 10 to 256 characters."
+            )
+        if "\r" in user_agent or "\n" in user_agent:
+            raise ValueError("NWS weather User-Agent cannot contain line breaks.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.url = f"https://{self.HOST}/alerts/active?area={area}"
+        self.user_agent = user_agent
+        self.timeout = timeout
+
+    def read(self) -> list[FeedItem]:
+        request = urllib.request.Request(
+            self.url,
+            headers={
+                "Accept": "application/geo+json, application/ld+json",
+                "User-Agent": self.user_agent,
+            },
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.url:
+                    raise ValueError("NWS weather redirects are not allowed.")
+                body = response.read(MAX_FEED_BYTES + 1)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured NWS weather feed could not be reached.") from None
+        if len(body) > MAX_FEED_BYTES:
+            raise ValueError("NWS weather response exceeds the configured size limit.")
+        try:
+            payload = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ValueError("NWS weather response is invalid JSON.") from None
+        features = payload.get("features") if isinstance(payload, dict) else None
+        if not isinstance(features, list):
+            raise ValueError("NWS weather response has no feature list.")
+        result = []
+        for feature in features[:MAX_FEED_ITEMS]:
+            if not isinstance(feature, dict):
+                continue
+            uri = feature.get("id")
+            properties = feature.get("properties")
+            if (
+                not isinstance(uri, str)
+                or urllib.parse.urlsplit(uri).scheme != "https"
+                or urllib.parse.urlsplit(uri).hostname != self.HOST
+                or not isinstance(properties, dict)
+            ):
+                continue
+            title = properties.get("headline") or properties.get("event")
+            if not isinstance(title, str) or not title.strip():
+                continue
+            observed = properties.get("sent") or properties.get("effective")
+            try:
+                timestamp = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                    continue
+            except (AttributeError, ValueError):
+                continue
+            description_parts = [
+                value.strip()
+                for value in (
+                    properties.get("description"),
+                    properties.get("areaDesc"),
+                    f"NWS severity: {properties['severity']}"
+                    if isinstance(properties.get("severity"), str)
+                    else None,
+                )
+                if isinstance(value, str) and value.strip()
+            ]
+            result.append(
+                FeedItem(
+                    id=uri[:2048],
+                    title=title.strip()[:256],
+                    description="\n".join(description_parts)[:10000],
+                    observed_at=timestamp,
+                )
+            )
+        return result
+
+
 def configured_feeds(tenant_id: str) -> list[dict]:
     path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
     if not path:
@@ -422,6 +526,12 @@ def poll(store, tenant_id: str):
                 allowed,
                 timespan=config.get("timespan", "24h"),
                 max_records=config.get("max_records", 50),
+            )
+        elif feed_type == "nws_weather":
+            feed = NWSWeatherFeed(
+                config.get("area", ""),
+                allowed,
+                os.environ.get("SUBSTRATA_NWS_USER_AGENT", ""),
             )
         else:
             raise ValueError("Configured event feed type is not supported.")
