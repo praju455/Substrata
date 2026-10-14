@@ -9,7 +9,7 @@ from sqlalchemy import Engine, select, text, update
 from substrata.audit import digest, verify_chain
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import GraphData, Provenance, Snapshot
-from substrata.platform.models import AuditRecord, Document, GraphRevision, Organisation
+from substrata.platform.models import AuditRecord, Document, GraphRevision, Organisation, WorkRecord
 from substrata.seed import canonical
 
 
@@ -130,11 +130,41 @@ class PlatformStore:
                 session, org, data, actor, expected_version=expected_version, event_type=event_type
             )
 
-    def save_in(self, session, org, data, actor, *, expected_version, event_type="graph.revised"):
+    def save_in(
+        self,
+        session,
+        org,
+        data,
+        actor,
+        *,
+        expected_version,
+        event_type="graph.revised",
+        confirmation_record_id=None,
+    ):
         tenant_id = org.tenant_id
+        data = GraphData.model_validate(data.model_dump())
         if org.version != expected_version:
             raise Conflict("Graph changed; refresh before saving.")
+        previous = session.get(GraphRevision, (tenant_id, org.version))
+        old_links = {link["id"]: link for link in previous.payload["links"]} if previous else {}
         for link in data.links:
+            if link.status == "confirmed" and canonical(old_links.get(link.id)) != canonical(
+                link.model_dump(mode="json")
+            ):
+                confirmation = (
+                    session.get(WorkRecord, (tenant_id, confirmation_record_id))
+                    if confirmation_record_id
+                    else None
+                )
+                if (
+                    confirmation is None
+                    or confirmation.kind != "confirmation"
+                    or confirmation.status != "confirmed"
+                    or confirmation.payload["link_id"] != link.id
+                ):
+                    raise ValueError(
+                        "New confirmations require a verified supplier response workflow."
+                    )
             for citation in link.evidence:
                 document = session.get(Document, (tenant_id, citation.document_id))
                 if (

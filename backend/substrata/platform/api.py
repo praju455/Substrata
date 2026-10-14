@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import Field
 
 from substrata.platform.auth import Principal, principal
+from substrata.platform.confirmations import ConfirmationInput, SupplierReply
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
 from substrata.platform.governance import Policy, ProposalInput
 from substrata.platform.oidc import CodeExchange
@@ -68,6 +69,10 @@ class RestImport(GraphChange):
 
 class EvidenceQuery(Contract):
     query: str = Field(min_length=1, max_length=2000)
+
+
+class PortalToken(Contract):
+    token: str = Field(min_length=1, max_length=16384)
 
 
 @router.get("/identity")
@@ -399,6 +404,27 @@ def evidence_discover(body: EvidenceQuery, request: Request, actor: Actor):
     from substrata.platform.evidence import discover
 
     return discover(request.app.state.platform_store, actor, body.query)
+
+
+@router.post("/confirmations")
+def confirmation_request(body: ConfirmationInput, request: Request, actor: Actor):
+    from substrata.platform.confirmations import create_request
+
+    return create_request(request.app.state.platform_store, actor, body)
+
+
+@router.post("/supplier-portal/describe")
+def portal_describe(body: PortalToken, request: Request):
+    from substrata.platform.confirmations import describe_request
+
+    return describe_request(request.app.state.platform_store, body.token)
+
+
+@router.post("/supplier-portal/reply")
+def portal_reply(body: SupplierReply, request: Request):
+    from substrata.platform.confirmations import reply
+
+    return reply(request.app.state.platform_store, body)
 
 
 def install(application, store, verifier):

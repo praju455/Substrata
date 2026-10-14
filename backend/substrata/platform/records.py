@@ -28,7 +28,11 @@ def encode(record):
         "kind": record.kind,
         "status": record.status,
         "created_at": record.created_at.isoformat(),
-        "payload": record.payload,
+        "payload": {
+            key: value
+            for key, value in record.payload.items()
+            if key not in {"recipient_ciphertext", "portal_url", "portal_ciphertext", "token"}
+        },
     }
 
 

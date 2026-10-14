@@ -17,6 +17,8 @@ Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
 approval review, notifications and audit/CSV exports.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
+Supplier portal replies use signed, expiring tokens and preserve historical link
+states while producing confirm/reject training labels. Development contact is disabled.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

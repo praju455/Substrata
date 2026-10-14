@@ -27,6 +27,15 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+Supplier confirmations use signed, expiring, single-use portal tokens. Tokens live
+in the URL fragment and are posted in the body, not server request URLs. They bind
+to one tenant/request and reject changed link inputs. Confirm/reject replies create
+immutable graph revisions and supplier-provenance training labels. Direct analyst
+graph writes cannot introduce or modify confirmed relationships without a verified
+response workflow. Inbox payloads redact portal credentials/contact ciphertext.
+Supplier email and portal credentials are encrypted using a restricted Fernet key.
+Development returns a preview portal link and sends no real supplier contact.
+
 Documents are immutable and indexed into offset-preserving chunks. PostgreSQL uses
 pgvector cosine retrieval with tenant policies; SQLite uses the same bounded vector
 contracts offline. The default hashing-word baseline is explicitly lexical, not
