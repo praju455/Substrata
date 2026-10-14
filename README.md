@@ -5,6 +5,8 @@ The approved industry-neutral platform migration is tracked in
 remains available during the migration; new tenant features use a separate schema.
 Install the optional platform dependencies with `python -m pip install -e ".[dev,platform]"`.
 Platform API access requires verified tokens; see the migration guide for setup.
+The platform includes automotive, pharma and food fixtures and a deterministic
+assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

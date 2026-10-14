@@ -30,6 +30,20 @@ class DocumentInput(Contract):
     provenance: Provenance
 
 
+class AssessmentInput(Contract):
+    source_id: Identifier
+    severity: float = Field(ge=0, le=1, allow_inf_nan=False)
+    as_of: datetime
+    version: int | None = Field(default=None, ge=1)
+    max_depth: int = Field(default=8, ge=1, le=32)
+
+
+class SeedInput(Contract):
+    industry: str
+    expected_version: int = Field(ge=0)
+    seed: int = 42
+
+
 @router.get("/identity")
 def identity(actor: Actor):
     return actor
@@ -79,6 +93,35 @@ def document(body: DocumentInput, request: Request, actor: Actor):
 def audit(request: Request, actor: Actor, expected_head: str | None = None):
     actor.require("viewer")
     return request.app.state.platform_store.audit(actor.tenant_id, expected_head)
+
+
+@router.post("/scenarios/assess")
+def assess_scenario(body: AssessmentInput, request: Request, actor: Actor):
+    from substrata.platform.cascade import assess
+
+    actor.require("analyst")
+    snapshot = request.app.state.platform_store.snapshot(actor.tenant_id, version=body.version)
+    return assess(
+        snapshot, body.source_id, body.severity, as_of=body.as_of, max_depth=body.max_depth
+    )
+
+
+@router.post("/seeds")
+def seed(body: SeedInput, request: Request, actor: Actor):
+    import os
+
+    from substrata.platform.seeds import generate
+
+    actor.require("admin")
+    if os.environ.get("SUBSTRATA_ENV", "development") != "development":
+        raise HTTPException(403, "Synthetic seed loading is restricted to development.")
+    return request.app.state.platform_store.save(
+        actor.tenant_id,
+        generate(body.industry, seed=body.seed),
+        actor.subject,
+        expected_version=body.expected_version,
+        event_type="synthetic.seed.loaded",
+    )
 
 
 def install(application, store, verifier):

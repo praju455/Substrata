@@ -27,6 +27,17 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+The platform cascade reuses the tested runway arithmetic and bounded traversal,
+adds elapsed-stock handling, eligible PO arrivals, shared ancestors, supply-share
+concentration, affected products and sourced gross revenue at risk. It reports
+exposure ranges when dependencies are inferred. Evidence-support bounds use
+Fréchet/union bounds without an independence assumption; these are not calibrated
+disruption probabilities. Missing inventory is incomplete rather than unaffected.
+Tests include multi-industry golden results and generated stock monotonicity.
+`POST /platform/seeds` supplies clearly synthetic automotive, pharma and food
+fixtures only in development. `/platform/scenarios/assess` accepts an explicit
+source, date, graph version and bounded traversal depth.
+
 Authenticated `/platform` endpoints derive tenant and actor from verified access
 tokens. Roles are `viewer`, `analyst`, `approver`, `admin`; body/header tenant
 overrides are never trusted. Tokens require issuer, audience, expiry, issued/not

@@ -113,6 +113,19 @@ class GraphData(Contract):
         for link in self.links:
             if link.source not in kinds or link.target not in kinds:
                 raise ValueError("Every link endpoint must exist in the same snapshot.")
+            source, target = kinds[link.source], kinds[link.target]
+            directions = {
+                "SUPPLIES": source in {"Supplier", "Site"} and target == "Material",
+                "USED_IN": source in {"Material", "Product"} and target in {"Product", "Plant"},
+                "OWNED_BY": source in {"Supplier", "Site"} and target == "Supplier",
+                "LOCATED_IN": target == "Region",
+                "DEPENDS_ON": True,
+            }
+            if not directions[link.type]:
+                raise ValueError("Link endpoints do not match the relationship type.")
+            share = link.measures.get("share")
+            if share and (share.unit != "fraction" or share.value > 1):
+                raise ValueError("Supply share must be a fraction between zero and one.")
         for row in [*self.inventory, *self.purchase_orders]:
             if kinds.get(row.material_id) != "Material" or kinds.get(row.plant_id) != "Plant":
                 raise ValueError("Inventory and orders require a material and a plant.")
@@ -122,6 +135,8 @@ class GraphData(Contract):
         for bom in self.boms:
             if kinds.get(bom.material_id) != "Material" or kinds.get(bom.product_id) != "Product":
                 raise ValueError("BOMs require a material and a product.")
+            if bom.quantity.value == 0:
+                raise ValueError("BOM quantity must be positive.")
         keys = [(i.material_id, i.plant_id) for i in self.inventory]
         if len(set(keys)) != len(keys):
             raise ValueError("Inventory must be unique per material and plant.")
