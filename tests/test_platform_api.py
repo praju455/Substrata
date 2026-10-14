@@ -118,7 +118,27 @@ def test_agent_card_and_mcp_tools_keep_exposure_deterministic_and_authenticated(
         headers=headers(role="viewer"),
         json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
     ).json()
-    assert listed["result"]["tools"][0]["name"] == "cascade.assess"
+    names = {tool["name"] for tool in listed["result"]["tools"]}
+    assert {
+        "cascade.assess",
+        "graph.snapshot",
+        "audit.verify",
+        "event.submit",
+        "evidence.discover",
+        "mitigation.propose",
+        "approval.decide",
+    } <= names
+    graph = client.post(
+        "/platform/mcp",
+        headers=headers(role="viewer"),
+        json={
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "graph.snapshot", "arguments": {"version": 1}},
+        },
+    ).json()
+    assert graph["result"]["structuredContent"]["version"] == 1
     result = client.post(
         "/platform/mcp",
         headers=headers(role="analyst"),

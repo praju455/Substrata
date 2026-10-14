@@ -152,12 +152,14 @@ notification channel today; email/SMS delivery is not configured. Retries stop
 after four attempts and expired leases are recoverable. There is no managed broker
 or automatic worker orchestration yet.
 
-The stateless authenticated `/platform/mcp` endpoint exposes the deterministic
-`cascade.assess` tool. `/.well-known/agent.json` advertises the authenticated A2A
-`/platform/a2a` task endpoint. Both validate typed inputs and invoke the same plain
-Python cascade; neither exposes model-generated exposure calculations. Current
-protocol tests cover discovery, authentication, tenant isolation and results, but
-do not claim broad client interoperability or streaming support.
+The stateless authenticated `/platform/mcp` endpoint exposes typed tenant tools for
+`graph.snapshot`, `evidence.discover`, `event.submit`, `cascade.assess`,
+`mitigation.propose`, `approval.decide` and `audit.verify`. The A2A agent card
+advertises the same task skills at `/platform/a2a`; each call applies the same
+tenant and role checks as the REST service. The cascade remains plain Python and
+no model computes exposure numbers. Tests cover discovery, representative tool
+calls, authentication, tenant isolation and results, but do not claim broad client
+interoperability or streaming support.
 
 Authenticated `/platform` endpoints derive tenant and actor from verified access
 tokens. Roles are `viewer`, `analyst`, `approver`, `admin`; body/header tenant
