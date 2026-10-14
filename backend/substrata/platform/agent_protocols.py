@@ -309,6 +309,14 @@ A2A_SKILLS = [
         ["audit", "compliance"],
         ["Verify this tenant's audit chain."],
     ),
+    (
+        "risk-review",
+        "Durable risk review",
+        "Queue a version-pinned cascade assessment and audit verification "
+        "with resumable checkpoints.",
+        ["agent", "assessment", "audit", "workflow"],
+        ["Assess upstream at graph version 3 and verify the audit chain."],
+    ),
 ]
 
 
@@ -341,7 +349,23 @@ def handle_a2a(store, actor, body):
     if not isinstance(body, dict) or body.get("jsonrpc") != "2.0":
         return mcp_response(None, error={"code": -32600, "message": "Invalid JSON-RPC request."})
     request_id = body.get("id")
-    if body.get("method") != "tasks/send":
+    method = body.get("method")
+    if method == "tasks/get":
+        params = body.get("params")
+        if not isinstance(params, dict) or not isinstance(params.get("id"), str):
+            return mcp_response(
+                request_id, error={"code": -32602, "message": "Task id is required."}
+            )
+        try:
+            from substrata.platform.jobs import get_agent_plan_job
+
+            job = get_agent_plan_job(store, actor, params["id"])
+        except (ValueError, TypeError) as error:
+            return mcp_response(request_id, error={"code": -32602, "message": str(error)})
+        if job is None:
+            return mcp_response(request_id, error={"code": -32001, "message": "Task not found."})
+        return mcp_response(request_id, _a2a_plan_snapshot(params["id"], job))
+    if method != "tasks/send":
         return mcp_response(request_id, error={"code": -32601, "message": "Method not found."})
     params = body.get("params")
     if not isinstance(params, dict) or not isinstance(params.get("id"), str):
@@ -357,6 +381,20 @@ def handle_a2a(store, actor, body):
         if part.get("type") != "data" or not isinstance(part.get("data"), dict):
             raise ValueError("Assessment input must be a typed JSON data part.")
         skill_id = params.get("skillId", "cascade-assessment")
+        if skill_id == "risk-review":
+            from substrata.platform.jobs import JobInput, enqueue
+
+            arguments = AssessmentArguments.model_validate(part["data"]).model_dump(mode="json")
+            job = enqueue(
+                store,
+                actor,
+                JobInput(
+                    kind="agent_plan",
+                    idempotency_key=params["id"],
+                    payload={"plan": "risk_review", "arguments": arguments},
+                ),
+            )
+            return mcp_response(request_id, _a2a_plan_snapshot(params["id"], job))
         tool_name = SKILL_TO_TOOL.get(skill_id)
         if tool_name is None:
             raise ValueError("A2A skill is not registered.")
@@ -376,3 +414,23 @@ def handle_a2a(store, actor, body):
             ],
         },
     )
+
+
+def _a2a_plan_snapshot(task_id, job):
+    state = {
+        "pending": "submitted",
+        "running": "working",
+        "succeeded": "completed",
+        "failed": "failed",
+    }[job["status"]]
+    task = {"id": task_id, "status": {"state": state}, "artifacts": []}
+    if job["status"] == "succeeded":
+        task["artifacts"].append(
+            {
+                "name": "risk-review",
+                "parts": [{"type": "data", "data": job["payload"]["result"]}],
+            }
+        )
+    elif job["status"] == "failed":
+        task["status"]["message"] = "Risk review failed after its retry limit."
+    return task

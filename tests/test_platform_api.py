@@ -114,6 +114,7 @@ def test_agent_card_and_mcp_tools_keep_exposure_deterministic_and_authenticated(
         "cascade-caller",
         "action-draft",
         "compliance-audit",
+        "risk-review",
     } <= {skill["id"] for skill in card["skills"]}
     assert (
         client.post(
@@ -199,6 +200,79 @@ def test_a2a_assessment_is_typed_and_tenant_scoped(client):
         },
     ).json()
     assert response["error"]["code"] == -32602
+
+
+def test_a2a_risk_review_queues_and_polls_tenant_scoped_checkpointed_task(client):
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "test-admin")
+    data = __import__("substrata.platform.seeds", fromlist=["generate"]).generate("pharma")
+    store.save("alpha", data, "test-admin", expected_version=0)
+    task_input = {
+        "source_id": "upstream",
+        "severity": 0.75,
+        "as_of": datetime.now(UTC).isoformat(),
+        "max_depth": 4,
+        "graph_version": 1,
+    }
+    sent = client.post(
+        "/platform/a2a",
+        headers=headers(role="analyst"),
+        json={
+            "jsonrpc": "2.0",
+            "id": "rpc-send",
+            "method": "tasks/send",
+            "params": {
+                "id": "risk-review-1",
+                "skillId": "risk-review",
+                "message": {
+                    "role": "user",
+                    "parts": [{"type": "data", "data": task_input}],
+                },
+            },
+        },
+    ).json()["result"]
+    assert sent["id"] == "risk-review-1"
+    assert sent["status"]["state"] == "submitted"
+    pending = client.post(
+        "/platform/a2a",
+        headers=headers(role="viewer"),
+        json={
+            "jsonrpc": "2.0",
+            "id": "rpc-get-pending",
+            "method": "tasks/get",
+            "params": {"id": "risk-review-1"},
+        },
+    ).json()["result"]
+    assert pending["status"]["state"] == "submitted"
+
+    dispatched = client.post("/platform/jobs/dispatch", headers=headers(role="analyst"))
+    assert dispatched.status_code == 200
+    completed = client.post(
+        "/platform/a2a",
+        headers=headers(role="viewer"),
+        json={
+            "jsonrpc": "2.0",
+            "id": "rpc-get-complete",
+            "method": "tasks/get",
+            "params": {"id": "risk-review-1"},
+        },
+    ).json()["result"]
+    assert completed["status"]["state"] == "completed"
+    result = completed["artifacts"][0]["parts"][0]["data"]
+    assert result["checkpoints"]["cascade_caller.assessment"]["graph_version"] == 1
+    assert result["checkpoints"]["compliance_audit.verification"]["valid"] is True
+
+    elsewhere = client.post(
+        "/platform/a2a",
+        headers=headers(tenant="beta", role="viewer"),
+        json={
+            "jsonrpc": "2.0",
+            "id": "rpc-get-other-tenant",
+            "method": "tasks/get",
+            "params": {"id": "risk-review-1"},
+        },
+    ).json()
+    assert elsewhere["error"]["code"] == -32001
 
 
 def test_verified_tenant_cannot_be_overridden_and_viewer_cannot_write(client):

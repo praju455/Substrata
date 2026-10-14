@@ -5,7 +5,7 @@ import math
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, TypeAdapter, model_validator
 from sqlalchemy import func, or_, select
 
 from substrata.platform.database import tenant_transaction
@@ -337,3 +337,15 @@ def _run_agent_plan(store, actor, job_id, payload):
 
 def jobs(store, tenant_id: str, limit=50):
     return list_records(store, tenant_id, kind="job", limit=min(max(limit, 1), 200))
+
+
+def get_agent_plan_job(store, actor, task_id):
+    """Read one tenant-owned A2A risk-review job using its client task ID."""
+    actor.require("viewer")
+    TypeAdapter(Identifier).validate_python(task_id)
+    key = hashlib.sha256(f"{actor.tenant_id}|agent_plan|{task_id}".encode()).hexdigest()
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        record = session.get(WorkRecord, (actor.tenant_id, f"job-{key}"))
+        if record is None:
+            return None
+        return encode(record)

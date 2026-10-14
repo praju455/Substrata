@@ -34,8 +34,8 @@ Authenticated MCP tools and an A2A task endpoint call the same deterministic cas
 engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
 skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and
 results. The fixed risk-review plan checkpoints a pinned cascade assessment and
-audit verification across retries; clients cannot delegate exposure arithmetic to
-an LLM.
+audit verification across retries. A2A clients can enqueue that plan and poll its
+tenant-scoped task; clients cannot delegate exposure arithmetic to an LLM.
 Run a synthetic graph traversal load check with
 `python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
 Its local timings are not production service-level objectives.

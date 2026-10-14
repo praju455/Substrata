@@ -99,7 +99,8 @@ plan coordinates Cascade-caller assessment with Compliance/Audit verification an
 stores a checkpoint after each role step. The flow creates an assessment only; it
 does not propose or execute a mitigation. Adaptive plan authoring, cross-role flows
 beyond this path, push notifications and hosted agent interoperability remain
-deployment/integration work.
+deployment/integration work. A2A `tasks/send` queues this plan and `tasks/get`
+returns its tenant-scoped state and completed artifacts.
 
 ### Layer 5 — API and experience
 
