@@ -39,6 +39,15 @@ not re-run PostgreSQL initialization SQL. The tenant worker also enforces approv
 SLA expiries; without it, API approval decisions still reject expired requests,
 but portal expiry notices are delayed until the worker runs.
 
+The PostgreSQL integration suite uses the migration administrator only for schema
+and test-role setup. Workflow checks run as a separate `NOSUPERUSER`, `NOBYPASSRLS`
+role. It verifies forced RLS on every tenant table, no tenant-context leakage
+through pooled connections, pgvector retrieval and model versions, staged import
+history/rollback, atomic concurrent graph/audit writes, and durable risk-review
+checkpoints followed by named approval and idempotent dry-run execution. Six
+checks passed against the local Docker PostgreSQL 17/pgvector instance on
+14 October 2026. These synthetic workflow checks do not establish customer scale.
+
 ## Health, logs and metrics
 
 `/health` is liveness only. `/ready` checks each configured SQLAlchemy database

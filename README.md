@@ -44,6 +44,9 @@ Run a synthetic graph traversal load check with
 Its local timings are not production service-level objectives.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see
 [Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
+PostgreSQL integration checks exercise forced tenant policies on every business
+table, pgvector retrieval/model versions, import history and rollback, concurrent
+graph/audit writes, and resumed risk-review jobs followed by named approval.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

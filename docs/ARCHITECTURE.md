@@ -34,6 +34,10 @@ Tenant-scoped RSS/Atom event ingestion, durable work records, and authenticated
 MCP/A2A facades now connect to the same deterministic services. Request logs,
 readiness checks and process counters are implemented; deployment/backups and
 feed coverage remain subject to the operational gates in PLATFORM_MIGRATION.md.
+PostgreSQL regression checks run through the restricted runtime role and cover
+every tenant table, transaction-local context reset, pgvector retrieval, immutable
+import history, concurrent graph/audit commits and a checkpointed agent plan
+resumed through a new connection pool before governed dry-run execution.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 
