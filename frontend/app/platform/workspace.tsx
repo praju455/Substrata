@@ -158,6 +158,12 @@ export default function PlatformWorkspace() {
 
   const [reason, setReason] = useState("");
 
+  const [alertReasons, setAlertReasons] = useState<Record<string, string>>({});
+
+  const [eventResolutions, setEventResolutions] = useState<
+    Record<string, { entityId: string; reason: string }>
+  >({});
+
   const [file, setFile] = useState<File | null>(null);
 
   const [target, setTarget] = useState("entities");
@@ -1299,14 +1305,141 @@ export default function PlatformWorkspace() {
                     .filter((r) => ["alert", "notification"].includes(r.kind))
                     .map((r) => (
                       <article className="record-row" key={r.id}>
-                        <strong>
-                          {String(r.payload.title || r.payload.type)}
-                        </strong>
-                        <span>{r.status}</span>
+                        <div>
+                          <strong>
+                            {String(r.payload.title || r.payload.type)}
+                          </strong>
+                          <p className="muted">{r.status}</p>
+                          {r.kind === "alert" && r.status === "open" && (
+                            <div className="button-row">
+                              <label>
+                                Acknowledgement reason
+                                <input
+                                  value={alertReasons[r.id] || ""}
+                                  onChange={(event) =>
+                                    setAlertReasons((current) => ({
+                                      ...current,
+                                      [r.id]: event.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <button
+                                className="secondary"
+                                disabled={
+                                  busy ||
+                                  !alertReasons[r.id]?.trim() ||
+                                  !can("analyst")
+                                }
+                                onClick={() =>
+                                  void run(() =>
+                                    call(
+                                      `/alerts/${encodeURIComponent(r.id)}/acknowledge`,
+                                      token,
+                                      { reason: alertReasons[r.id].trim() },
+                                    ),
+                                  )
+                                }
+                              >
+                                Acknowledge alert
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </article>
                     ))}
-                  {!records.some((r) =>
-                    ["alert", "notification"].includes(r.kind),
+                  {records
+                    .filter(
+                      (r) => r.kind === "event" && r.status === "needs_review",
+                    )
+                    .map((r) => {
+                      const resolution = eventResolutions[r.id] || {
+                        entityId: "",
+                        reason: "",
+                      };
+                      return (
+                        <article className="record-row" key={r.id}>
+                          <div>
+                            <strong>
+                              {String(
+                                r.payload.title ||
+                                  r.payload.headline ||
+                                  "Unmatched event",
+                              )}
+                            </strong>
+                            <p className="muted">Event needs entity review</p>
+                            <div className="button-row">
+                              <label>
+                                Match to entity
+                                <select
+                                  value={resolution.entityId}
+                                  onChange={(event) =>
+                                    setEventResolutions((current) => ({
+                                      ...current,
+                                      [r.id]: {
+                                        ...resolution,
+                                        entityId: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                >
+                                  <option value="">Select an entity</option>
+                                  {(state.snapshot?.data.entities || []).map(
+                                    (entity) => (
+                                      <option key={entity.id} value={entity.id}>
+                                        {entity.name} ({entity.kind})
+                                      </option>
+                                    ),
+                                  )}
+                                </select>
+                              </label>
+                              <label>
+                                Resolution reason
+                                <input
+                                  value={resolution.reason}
+                                  onChange={(event) =>
+                                    setEventResolutions((current) => ({
+                                      ...current,
+                                      [r.id]: {
+                                        ...resolution,
+                                        reason: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <button
+                                className="secondary"
+                                disabled={
+                                  busy ||
+                                  !resolution.entityId ||
+                                  !resolution.reason.trim() ||
+                                  !can("analyst")
+                                }
+                                onClick={() =>
+                                  void run(() =>
+                                    call(
+                                      `/events/${encodeURIComponent(r.id)}/resolve`,
+                                      token,
+                                      {
+                                        entity_id: resolution.entityId,
+                                        reason: resolution.reason.trim(),
+                                      },
+                                    ),
+                                  )
+                                }
+                              >
+                                Resolve event
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  {!records.some(
+                    (r) =>
+                      ["alert", "notification"].includes(r.kind) ||
+                      (r.kind === "event" && r.status === "needs_review"),
                   ) && (
                     <p className="muted">
                       No alerts or approval notifications yet.
