@@ -43,8 +43,9 @@ to one tenant/request and reject changed link inputs. Confirm/reject replies cre
 immutable graph revisions and supplier-provenance training labels. Direct analyst
 graph writes cannot introduce or modify confirmed relationships without a verified
 response workflow. Inbox payloads redact portal credentials/contact ciphertext.
-Supplier email and portal credentials are encrypted using a restricted Fernet key.
-Development returns a preview portal link and sends no real supplier contact.
+Supplier recipient addresses and portal links are Fernet-encrypted. Development
+returns a preview portal link and disables supplier email delivery; production may
+deliver queued confirmations using an explicitly configured SMTP-over-TLS transport.
 
 Documents are immutable and indexed into offset-preserving chunks. PostgreSQL uses
 pgvector cosine retrieval with tenant policies; SQLite uses the same bounded vector
@@ -172,10 +173,20 @@ supervised process; each worker is bound to one tenant. The queue currently hand
 event polls and deterministic assessments. The worker also scans tenant approval
 deadlines on each poll, expires overdue pending decisions, closes the original
 portal notice and creates an audited expiry notice. Approval endpoints enforce the
-same deadline even when the worker is offline. Portal records are the only
-notification channel today; email/SMS delivery is not configured. Retries stop
-after four attempts and expired leases are recoverable. There is no managed broker
-or automatic worker orchestration yet.
+same deadline even when the worker is offline. Approval notices remain portal-only;
+supplier confirmations and one reminder can be delivered through configured SMTP
+over implicit TLS. The worker uses bounded attempts and delivery leases; SMTP's
+external side effect is at-least-once if a process fails after sending but before
+its database acknowledgement. Delivery stays disabled in development, even when
+SMTP settings exist. SMS is not configured. There is no managed broker or automatic
+worker orchestration yet.
+
+For production supplier email, configure `SUBSTRATA_SMTP_HOST`,
+`SUBSTRATA_SMTP_PORT` (implicit TLS, default 465), `SUBSTRATA_SMTP_FROM`, and,
+when required by the mail server, `SUBSTRATA_SMTP_USERNAME` with a restricted
+`SUBSTRATA_SMTP_PASSWORD_FILE`. Keep `SUBSTRATA_PII_KEY_FILE` separate from the
+SMTP credentials. Delivery only processes tenant confirmation outbox records and
+requires `SUBSTRATA_ENV` to be a non-development deployment mode.
 
 The stateless authenticated `/platform/mcp` endpoint exposes typed tenant tools for
 `graph.snapshot`, `evidence.discover`, `event.submit`, `cascade.assess`,

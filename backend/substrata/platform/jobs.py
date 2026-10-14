@@ -147,11 +147,17 @@ def _claim(store, tenant_id: str):
 def run_next(store, actor):
     actor.require("analyst")
     from substrata.platform.governance import expire_pending_approvals
+    from substrata.platform.notifications import deliver_pending_confirmations
 
     expire_pending_approvals(store, actor)
+    notification_result = deliver_pending_confirmations(store, actor)
     claimed = _claim(store, actor.tenant_id)
     if claimed is None:
-        return None
+        return (
+            {"kind": "notification_delivery", **notification_result}
+            if notification_result.get("attempted", 0)
+            else None
+        )
     job_id, payload = claimed
     try:
         if payload["job_type"] == "event_poll":
