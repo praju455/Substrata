@@ -152,6 +152,20 @@ managed point-in-time recovery, keep encryption keys outside the database accoun
 and retain copies in a separate failure domain. Protect audit exports and their
 chain heads separately.
 
+`substrata.platform.backups` supplies a versioned AES-256-GCM envelope for custom
+PostgreSQL archives, using a separate raw 32-byte key. Both the manifest and dump
+are encrypted; the version/nonce header is authenticated as additional data. Keys
+and output artifacts refuse overwrite. Encryption streams the native dump directly,
+and recovery stages only ciphertext in a private temporary file. The entire tag is
+verified before any restore callback is exposed; the staged copy also prevents
+changes to the original path between verification and restore. Wrong keys,
+truncation, nonce/ciphertext/tag modifications and unsupported formats fail closed.
+These helpers follow [Cryptography's GCM guidance](https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/#cryptography.hazmat.primitives.ciphers.modes.GCM).
+Keep backup keys in the deployment secret manager, separately from artifacts and
+database credentials; Windows hosts need restrictive parent-directory/file ACLs.
+The ignored `data/backups/` and `data/recovery-drills/` paths are local output areas,
+not offsite storage or a production retention policy.
+
 For each release, restore a recent backup into an isolated PostgreSQL instance,
 run migrations there, validate tenant row-level policies using both allowed and
 denied tenant identities, verify exported audit chains, and exercise API readiness

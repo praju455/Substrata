@@ -36,3 +36,5 @@ out/
 .hypothesis/
 data/models/
 data/dev-telemetry/
+data/backups/
+data/recovery-drills/

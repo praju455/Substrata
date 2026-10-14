@@ -56,6 +56,12 @@ resumed through a new connection pool before governed dry-run execution.
 loopback port and supplies the test admin URL only to its pytest child process.
 It uses a generated local password and removes its owned container/anonymous
 volume afterward; it does not reuse the application's Compose database.
+The `platform.backups` envelope uses a distinct 32-byte key and a random GCM nonce
+per archive. Its encrypted manifest and custom-format dump share one authentication
+tag. Recovery stages a private ciphertext copy, verifies the whole tag, then streams
+dump bytes to its consumer. Changes to the original archive cannot affect that
+verified stream. Key/artifact creation is exclusive; existing evidence is never
+overwritten, and interrupted encryption removes only its own incomplete artifact.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

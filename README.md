@@ -45,6 +45,9 @@ Run a synthetic graph traversal load check with
 Its local timings are not production service-level objectives.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see
 [Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
+Backup primitives encrypt custom PostgreSQL archives and their manifests with
+AES-256-GCM and authenticate the complete artifact before exposing restore input.
+Plaintext dumps are streamed; only ciphertext is staged temporarily for recovery.
 HTTP observability includes route-template latency/status metrics and W3C trace
 context correlation. Optional OTLP/HTTP export uses a bounded queue and local
 sampling; credentials, query strings, path parameters and business inputs are
