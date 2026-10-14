@@ -141,13 +141,30 @@ def expire_pending_approvals(store, actor: Principal, *, limit=500):
     now = datetime.now(UTC)
     expired_ids = []
     with tenant_transaction(store.engine, actor.tenant_id) as session:
+        due_before_lock = list(
+            session.scalars(
+                select(WorkRecord.id)
+                .where(
+                    WorkRecord.tenant_id == actor.tenant_id,
+                    WorkRecord.kind == "mitigation",
+                    WorkRecord.status == "pending",
+                    WorkRecord.payload["expires_at"].as_string() <= now.isoformat(),
+                )
+                .order_by(WorkRecord.created_at, WorkRecord.id)
+                .limit(min(max(limit, 1), 500))
+            )
+        )
+        if not due_before_lock:
+            return []
         org = store.organisation(session, actor.tenant_id)
         pending = session.scalars(
             select(WorkRecord)
             .where(
                 WorkRecord.tenant_id == actor.tenant_id,
+                WorkRecord.id.in_(due_before_lock),
                 WorkRecord.kind == "mitigation",
                 WorkRecord.status == "pending",
+                WorkRecord.payload["expires_at"].as_string() <= now.isoformat(),
             )
             .order_by(WorkRecord.created_at, WorkRecord.id)
             .limit(min(max(limit, 1), 500))
@@ -165,9 +182,6 @@ def expire_pending_approvals(store, actor: Principal, *, limit=500):
             )
         )
         for action in pending:
-            expires_at = datetime.fromisoformat(action.payload["expires_at"])
-            if expires_at > now:
-                continue
             action.status = "expired"
             action.payload = {
                 **action.payload,
