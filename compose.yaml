@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: substrata
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${SUBSTRATA_DB_ADMIN_PASSWORD:-local-only-change-me}
+    volumes:
+      - platform-data:/var/lib/postgresql/data
+      - ./ops/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d substrata"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  migrate:
+    build: .
+    command: ["python", "-m", "substrata.platform.cli", "migrate"]
+    environment:
+      SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://postgres:${SUBSTRATA_DB_ADMIN_PASSWORD:-local-only-change-me}@db:5432/substrata
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      SUBSTRATA_PLATFORM_ENABLED: "true"
+      SUBSTRATA_ENV: development
+      SUBSTRATA_AUTH_ALGORITHM: HS256
+      SUBSTRATA_OIDC_ISSUER: http://localhost/dev
+      SUBSTRATA_AUTH_KEY_FILE: /run/secrets/auth.secret
+      SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://substrata_app:local-only-change-me@db:5432/substrata
+      SUBSTRATA_PLATFORM_LLM_PROVIDER: mock
+    volumes:
+      - ./data/dev-auth:/run/secrets:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  worker:
+    profiles: ["worker"]
+    build: .
+    command: ["python", "scripts/platform_worker.py", "--tenant", "${SUBSTRATA_WORKER_TENANT:-demo}"]
+    environment:
+      SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://substrata_app:local-only-change-me@db:5432/substrata
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  platform-data:

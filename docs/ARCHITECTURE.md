@@ -18,12 +18,19 @@ Read-only OData, REST and signed webhooks enter through adapter contracts and
 validated graph/import services; external endpoint credentials stay on the server.
 The feature-flagged tenant surface uses OIDC/PKCE and in-memory bearer tokens;
 product workflows call typed tenant endpoints and reuse the existing graph view.
+The platform adds tenant-scoped event feeds, durable leased work records and
+stateless authenticated MCP/A2A adapters around deterministic services. Request
+correlation, database readiness and basic process metrics support local operations.
 Tenant document vectors, exact passages and provider-neutral extraction feed only
 inferred link proposals. Durable cost reservations gate live provider calls.
 Single-use supplier tokens bind confirmation to tenant/request/link inputs;
 responses revise the graph and emit attributable training labels atomically.
 Supplier labels feed a versioned gradient-boosted scorer with independent
 calibration/test supplier groups and explicit activation gates.
+Tenant-scoped RSS/Atom event ingestion, durable work records, and authenticated
+MCP/A2A facades now connect to the same deterministic services. Request logs,
+readiness checks and process counters are implemented; deployment/backups and
+feed coverage remain subject to the operational gates in PLATFORM_MIGRATION.md.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

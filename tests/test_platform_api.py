@@ -1,5 +1,6 @@
 """Real signed claims exercise tenant boundaries, RBAC and fail-closed auth."""
 
+import json
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -66,10 +67,19 @@ def test_wrong_claims_fail_closed(client, changes):
     assert client.get("/platform/identity", headers=headers(**changes)).status_code == 401
 
 
-def test_required_auth_and_demo_reset_absent_in_platform_mode(client):
+def test_required_auth_and_demo_reset_absent_in_platform_mode(client, caplog):
+    caplog.set_level("INFO", logger="substrata.http")
     assert client.get("/platform/identity").status_code == 401
     assert client.post("/replay/reset").status_code == 404
     assert client.get("/health").json()["data_mode"] == "tenant"
+    ready = client.get("/ready", headers={"X-Request-ID": "smoke-123"})
+    assert ready.status_code == 200
+    assert ready.headers["X-Request-ID"] == "smoke-123"
+    assert client.get("/metrics").text.startswith("# HELP substrata_http_requests_total")
+    assert '"event":"http.request"' in caplog.text
+    logged = [json.loads(line) for line in caplog.messages if '"event":"http.request"' in line]
+    assert any(entry["request_id"] == "smoke-123" for entry in logged)
+    assert all("Authorization" not in line for line in caplog.messages)
     wrong = jwt.encode(
         {"sub": "fake"}, "a-different-secret-with-at-least-32-bytes", algorithm="HS256"
     )
@@ -77,6 +87,18 @@ def test_required_auth_and_demo_reset_absent_in_platform_mode(client):
         client.get("/platform/identity", headers={"Authorization": f"Bearer {wrong}"}).status_code
         == 401
     )
+
+
+def test_readiness_fails_when_database_cannot_connect(client, monkeypatch):
+    engine = client.app.state.platform_store.engine
+
+    def unavailable():
+        raise OSError("database unavailable")
+
+    monkeypatch.setattr(engine, "connect", unavailable)
+    response = client.get("/ready")
+    assert response.status_code == 503
+    assert response.json()["detail"]["dependencies"]["platform_database"] == "OSError"
 
 
 def test_agent_card_and_mcp_tools_keep_exposure_deterministic_and_authenticated(client):

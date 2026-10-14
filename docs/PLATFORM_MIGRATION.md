@@ -76,8 +76,10 @@ offered when the server explicitly identifies development mode.
 Graph positioning derives dependency depth from edges, independent of ID naming.
 Browser verification used an isolated synthetic tenant: sign-in, organisation
 creation, pharma seed loading and the 17.54/120/102.46-day runway rendered correctly.
-The full Python suite at this checkpoint passed 169 tests; static export and
-frontend type/lint checks passed. This does not verify a live customer IdP.
+At the scorer checkpoint the Python suite passed 181 tests. The event/job/agent
+checkpoint passed 189 tests and the current operations checkpoint adds readiness
+and observability checks. Static export and frontend type/lint checks passed. This
+does not verify a live customer IdP or production PostgreSQL deployment.
 
 REST ingestion accepts typed graphs with tenant-scoped idempotency keys; webhooks
 add an HMAC signature over exact request bytes plus authenticated machine identity.
@@ -184,3 +186,8 @@ The final review must map every requirement to executable tests, runtime behavio
 or a documented external configuration gate. Real supplier contact is disabled in
 development, execution defaults to dry-run, and no SAP affiliation is claimed.
 No claims of production readiness follow merely from passing offline tests.
+The local PostgreSQL/API/worker Compose scaffold and CI checks are in place;
+request correlation, readiness and process counters are implemented. Production
+secret management, TLS deployment, scheduled encrypted backups/restore drills,
+distributed tracing, managed metrics, and a managed job broker remain explicit
+pilot gates. See [Operations](OPERATIONS.md).

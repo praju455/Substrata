@@ -25,6 +25,8 @@ Tenant event feeds use HTTPS host allowlists and explicit license notes; event p
 and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, so clients cannot delegate exposure arithmetic to an LLM.
+For the local PostgreSQL/API/worker scaffold and production operations gates, see
+[Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
@@ -54,7 +56,7 @@ python scripts/dev.py demo
 
 Before starting the demo, add `GEMINI_API_KEY` and `GROQ_API_KEY` to the root `.env`. See [LLM setup and failover](docs/LLM_SETUP.md). To follow the exact offline demo instead, set `SUBSTRATA_LLM_PROVIDER=mock`.
 
-Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
+Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health), [readiness](http://127.0.0.1:8000/ready), process metrics at `/metrics`, or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
 
 ```json
 {"status":"ok","service":"substrata-api","data_mode":"synthetic"}

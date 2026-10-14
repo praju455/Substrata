@@ -39,9 +39,11 @@ def main():
             raise ValueError("Development keys/tokens require SUBSTRATA_ENV=development.")
         path = Path(os.environ["SUBSTRATA_AUTH_KEY_FILE"])
         if args.command == "dev-key":
-            with path.open("x", encoding="utf-8") as handle:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 handle.write(secrets.token_urlsafe(48))
-            print("Development key created. Restrict its filesystem permissions.")
+            print("Development key created with owner-only permissions where supported.")
         else:
             import jwt
 
