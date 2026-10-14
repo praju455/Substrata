@@ -21,7 +21,7 @@ RETRY = (5, 30, 120)
 
 
 class JobInput(Contract):
-    kind: Literal["event_poll", "assessment", "agent_task"]
+    kind: Literal["event_poll", "assessment", "agent_task", "agent_plan"]
     idempotency_key: Identifier
     payload: dict = Field(default_factory=dict)
 
@@ -70,12 +70,30 @@ class JobInput(Contract):
             model.model_validate(arguments)
             if len(canonical(self.payload).encode()) > 65_536:
                 raise ValueError("Agent task input exceeds the configured size limit.")
+        if self.kind == "agent_plan":
+            if set(self.payload) != {"plan", "arguments"} or self.payload["plan"] != "risk_review":
+                raise ValueError("Agent plan is not registered or its fields are invalid.")
+            from substrata.platform.agent_protocols import AssessmentArguments
+
+            arguments = self.payload["arguments"]
+            if not isinstance(arguments, dict):
+                raise ValueError("Risk review requires typed assessment arguments.")
+            AssessmentArguments.model_validate(arguments)
+            graph_version = arguments.get("graph_version")
+            if (
+                isinstance(graph_version, bool)
+                or not isinstance(graph_version, int)
+                or graph_version < 1
+            ):
+                raise ValueError("Risk review must pin an explicit graph version.")
+            if len(canonical(self.payload).encode()) > 65_536:
+                raise ValueError("Agent plan input exceeds the configured size limit.")
         return self
 
 
 def enqueue(store, actor, body: JobInput):
     actor.require("analyst")
-    if body.kind not in {"event_poll", "assessment", "agent_task"}:
+    if body.kind not in {"event_poll", "assessment", "agent_task", "agent_plan"}:
         raise ValueError("Job type is not registered.")
     key = hashlib.sha256(
         f"{actor.tenant_id}|{body.kind}|{body.idempotency_key}".encode()
@@ -212,6 +230,8 @@ def run_next(store, actor):
                 task["arguments"],
                 idempotency_key=job_id,
             )
+        elif payload["job_type"] == "agent_plan":
+            result = _run_agent_plan(store, actor, job_id, payload)
         else:
             raise ValueError("Persisted job type is not registered.")
     except Exception as error:
@@ -222,9 +242,10 @@ def run_next(store, actor):
         with tenant_transaction(store.engine, actor.tenant_id) as session:
             org = store.organisation(session, actor.tenant_id)
             record = session.get(WorkRecord, (actor.tenant_id, job_id))
+            latest_payload = record.payload
             record.status = "failed" if failed else "pending"
             record.payload = {
-                **payload,
+                **latest_payload,
                 "lease_until": None,
                 "retry_at": retry_at.isoformat(),
                 "error": type(error).__name__,
@@ -250,7 +271,7 @@ def run_next(store, actor):
         org = store.organisation(session, actor.tenant_id)
         record = session.get(WorkRecord, (actor.tenant_id, job_id))
         record.status = "succeeded"
-        record.payload = {**payload, "result": result, "lease_until": None}
+        record.payload = {**record.payload, "result": result, "lease_until": None}
         store.append(
             session,
             org,
@@ -259,6 +280,59 @@ def run_next(store, actor):
             {"id": job_id, "attempt": payload["attempts"]},
         )
         return encode(record)
+
+
+def _run_agent_plan(store, actor, job_id, payload):
+    """Run a version-pinned Cascade-caller → Compliance/Audit plan with durable checkpoints."""
+    from substrata.platform.agent_protocols import AssessmentArguments, execute_tool
+    from substrata.platform.governance import save_assessment
+
+    plan = payload["input"]
+    arguments = AssessmentArguments.model_validate(plan["arguments"])
+    checkpoints = dict(payload.get("checkpoints", {}))
+    steps = (
+        "cascade_caller.assessment",
+        "compliance_audit.verification",
+    )
+    for step in steps:
+        if step in checkpoints:
+            continue
+        if step == "cascade_caller.assessment":
+            assessment = save_assessment(
+                store,
+                actor,
+                arguments.source_id,
+                arguments.severity,
+                as_of=arguments.as_of,
+                version=arguments.graph_version,
+                max_depth=arguments.max_depth,
+                idempotency_key=f"{job_id}-assessment",
+            )
+            checkpoint = {
+                "assessment_id": assessment["id"],
+                "status": assessment["status"],
+                "graph_version": assessment["payload"]["report"]["graph_version"],
+            }
+        else:
+            verification = execute_tool(store, actor, "audit.verify", {})
+            checkpoint = {
+                "valid": verification["valid"],
+                "head": verification["head"],
+                "count": verification["count"],
+            }
+        checkpoints[step] = checkpoint
+        with tenant_transaction(store.engine, actor.tenant_id) as session:
+            org = store.organisation(session, actor.tenant_id)
+            record = session.get(WorkRecord, (actor.tenant_id, job_id))
+            record.payload = {**record.payload, "checkpoints": checkpoints}
+            store.append(
+                session,
+                org,
+                "agent_plan.step_completed",
+                actor.subject,
+                {"id": job_id, "step": step, "result": checkpoint},
+            )
+    return {"plan": "risk_review", "checkpoints": checkpoints}
 
 
 def jobs(store, tenant_id: str, limit=50):

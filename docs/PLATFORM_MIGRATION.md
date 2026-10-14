@@ -247,12 +247,17 @@ consolidated CSV, not historical entries or every jurisdiction's restricted-part
 lists.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
-records. Run `python scripts/platform_worker.py --tenant demo` as a separately
+records. Its fixed `risk_review` plan runs a version-pinned Cascade-caller assessment
+and Compliance/Audit verification, saving each step result as a durable checkpoint;
+a retry resumes at the first incomplete role step. It creates an assessment only and
+does not draft, approve or execute a mitigation. Run
+`python scripts/platform_worker.py --tenant demo` as a separately
 supervised process; each worker is bound to one tenant. The queue handles event
 polls, deterministic assessments and typed agent tasks for Mapper, Sensor,
 Cascade-caller, Action and Compliance/Audit roles. Agent task schemas are validated
 against the same typed tools exposed over MCP/A2A; each tenant can hold at most 100
-active jobs. Results, attempts and terminal states persist in the tenant job record.
+active jobs. Results, role checkpoints, attempts and terminal states persist in the
+tenant job record.
 Retries reuse the job's idempotency key for the underlying deterministic assessment;
 external email retains its documented at-least-once delivery boundary. LLM-derived
 link discovery keeps the existing per-tenant daily cost reservation, and no model
@@ -340,7 +345,7 @@ heads separately to detect privileged tail truncation.
 | 3. Evidence and inference | Tenant document store, citation-checked extraction, optional embeddings, provider interface/mock/cost logs, scorer training/evaluation and registry | Semantic provider keys and customer-labelled evaluation data are external; offline fixtures do not establish field precision/recall |
 | 4. Event sensing | Tenant RSS/Atom, GDELT, NWS, MeteoAlarm, user/API events, OFAC SDN and ITA CSL flow through review rules | Port signals require a licensed provider configuration; more jurisdictions/lists need source-specific review adapters |
 | 5. Cascade engine | Deterministic traversal, runway/ranges, golden scenarios and generated stock invariants; see `cascade.py` and cascade tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
-| 6. Agents | Five typed role skills, durable tenant jobs, bounded retries/queue, MCP/A2A facades and deterministic math | Multi-role coordinated plans, durable cross-role checkpoints and broad external protocol interoperability remain |
+| 6. Agents | Five typed role skills, durable tenant jobs, bounded retries/queue, checkpointed risk-review plan, MCP/A2A facades and deterministic math | General adaptive multi-role plan authoring, durable coordination beyond the fixed risk-review flow and broad external protocol interoperability remain |
 | 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
 | 8. Product surface | Onboarding, quality counts, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports | Labels are currently English-only; full translation catalog and locale QA remain |
 | 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, request correlation, health/metrics and worker | Production secret manager, TLS topology, encrypted backup/restore drills, distributed tracing/metrics and managed broker require deployment work |

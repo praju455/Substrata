@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 import pytest
 from fastapi import HTTPException
 
+from substrata.platform import agent_protocols
 from substrata.platform.auth import Principal
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Entity, Provenance
@@ -717,6 +718,60 @@ def test_specialized_agent_task_runs_typed_deterministic_work_durably(platform):
     assert completed["status"] == "succeeded"
     assert completed["payload"]["result"]["graph_version"] == snapshot.version
     assert completed["payload"]["result"]["source_id"] == "upstream"
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_risk_review_plan_resumes_from_durable_role_checkpoint(platform, monkeypatch):
+    seeded(platform)
+    snapshot = platform.snapshot("alpha")
+    item = JobInput(
+        kind="agent_plan",
+        idempotency_key="risk-review-plan-1",
+        payload={
+            "plan": "risk_review",
+            "arguments": {
+                "source_id": "upstream",
+                "severity": 0.8,
+                "as_of": datetime.now(UTC).isoformat(),
+                "max_depth": 4,
+                "graph_version": snapshot.version,
+            },
+        },
+    )
+    queued = enqueue(platform, actor(), item)
+    original_execute = agent_protocols.execute_tool
+    fail_audit = True
+    calls = []
+
+    def flaky_execute(store, caller, name, arguments, **kwargs):
+        nonlocal fail_audit
+        calls.append(name)
+        if name == "audit.verify" and fail_audit:
+            fail_audit = False
+            raise TimeoutError("temporary audit provider failure")
+        return original_execute(store, caller, name, arguments, **kwargs)
+
+    monkeypatch.setattr(agent_protocols, "execute_tool", flaky_execute)
+    assert run_next(platform, actor())["status"] == "retry_scheduled"
+    with tenant_transaction(platform.engine, "alpha") as session:
+        record = session.get(WorkRecord, ("alpha", queued["id"]))
+        assert set(record.payload.get("checkpoints", {})) == {"cascade_caller.assessment"}, (
+            record.payload.get("error")
+        )
+        record.payload = {
+            **record.payload,
+            "retry_at": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+        }
+
+    completed = run_next(platform, actor())
+    assert completed["status"] == "succeeded"
+    checkpoints = completed["payload"]["checkpoints"]
+    assert set(checkpoints) == {
+        "cascade_caller.assessment",
+        "compliance_audit.verification",
+    }
+    assert checkpoints["compliance_audit.verification"]["valid"] is True
+    assert calls == ["audit.verify", "audit.verify"]
     assert platform.audit("alpha")["verification"]["valid"]
 
 
