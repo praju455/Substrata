@@ -212,6 +212,20 @@ event-to-entity mapping is not a sanctions disposition. Historical candidates
 remain event records, so operators must consider each event's source observation
 time when reviewing it.
 
+The `ita_csl` adapter downloads ITA's public consolidated CSV from `data.trade.gov`,
+bounded to 30 MB and 100,000 rows. It compares supplier primary names and aliases
+using exact matching and a bounded 0.90 local string-similarity heuristic.
+Potential rows from Commerce, State or Treasury sources always create `needs_review`
+events in the shared sanctions review category. The local score is not ITA's fuzzy
+score, and the CSL is only a screening aid: analysts must check the source list and
+Federal Register and perform additional due diligence. It does not determine legal
+restrictions, export licensing or clearance. The required ITA non-endorsement notice
+is visible on the review card. See the [official CSL guidance](https://www.trade.gov/consolidated-screening-list)
+and [ITA API terms](https://developer.trade.gov/terms-of-service); each feed's
+license note must preserve attribution. The adapter covers current rows in this
+consolidated CSV, not historical entries or every jurisdiction's restricted-party
+lists.
+
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
 supervised process; each worker is bound to one tenant. The queue currently handles
@@ -273,8 +287,9 @@ heads separately to detect privileged tail truncation.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
-   slice; broader international weather and port feeds, additional sanctions and
-   export-control lists, agent specialisations, approval notifications, managed
+   slice; weather feeds beyond MeteoAlarm and NWS, port feeds, additional
+   jurisdiction-specific sanctions/export-control sources, agent specialisations,
+   approval notifications, managed
    queue orchestration and production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior

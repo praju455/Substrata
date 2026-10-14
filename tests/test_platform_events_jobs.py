@@ -1,5 +1,7 @@
 """Tenant feed isolation, transparent heuristic confidence and durable job recovery."""
 
+import csv
+import io
 from datetime import UTC, datetime, timedelta
 from urllib.error import HTTPError
 
@@ -14,6 +16,7 @@ from substrata.platform.events import (
     EventSubmission,
     FeedItem,
     GDELTFeed,
+    ITACSLFeed,
     JSONAPIEventFeed,
     MeteoAlarmFeed,
     NWSWeatherFeed,
@@ -549,6 +552,130 @@ def test_ofac_sdn_reader_follows_only_the_official_signed_s3_download(monkeypatc
     monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: UntrustedOpener())
     with pytest.raises(ValueError, match="untrusted download redirect"):
         feed.screen([entity])
+
+
+def test_ita_csl_reader_matches_primary_and_alias_names_with_bounded_csv(monkeypatch):
+    entities = [
+        Entity(
+            id="supplier-acme",
+            kind="Supplier",
+            name="Acme Components Incorporated",
+            provenance=source(),
+        ),
+        Entity(
+            id="supplier-alpha",
+            kind="Supplier",
+            name="Alpha Parts Corporation",
+            provenance=source(),
+        ),
+    ]
+    feed = ITACSLFeed({ITACSLFeed.HOST})
+    with pytest.raises(ValueError, match="allowlist"):
+        ITACSLFeed(set())
+    output = io.StringIO(newline="")
+    fields = ["_id", "source", "name", "alt_names", "programs", "source_information_url"]
+    writer = csv.DictWriter(output, fieldnames=fields)
+    writer.writeheader()
+    writer.writerow(
+        {
+            "_id": "csl-1",
+            "source": "Entity List - BIS",
+            "name": "Unrelated Overseas Company",
+            "alt_names": "Acme Components Incorporated;Acme C",
+            "programs": "EAR99",
+            "source_information_url": "https://www.bis.gov/entity-list",
+        }
+    )
+    writer.writerow(
+        {
+            "_id": "csl-2",
+            "source": "Denied Persons List - BIS",
+            "name": "Alpha Part Corporation",
+            "alt_names": "",
+            "programs": "",
+            "source_information_url": "https://www.bis.gov/denied-persons-list",
+        }
+    )
+    body = output.getvalue().encode()
+
+    class Response:
+        headers = {"Last-Modified": "Wed, 14 Oct 2026 14:02:23 GMT"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return feed.URL
+
+        def read(self, limit):
+            assert limit == 30_000_001
+            return body
+
+    class Opener:
+        def open(self, request, timeout):
+            assert request.full_url == feed.URL
+            assert request.get_header("Accept") == "text/csv"
+            assert timeout == 30
+            return Response()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: Opener())
+    matches = feed.screen(entities)
+    assert {match["entity"].id for match in matches} == {"supplier-acme", "supplier-alpha"}
+    assert {match["method"] for match in matches} == {"exact", "heuristic_name_similarity"}
+    assert next(match for match in matches if match["uid"] == "csl-1")["source"].startswith(
+        "Entity List"
+    )
+
+
+def test_ita_csl_feed_creates_review_only_tenant_candidate(platform, monkeypatch, tmp_path):
+    data = generate("pharma")
+    platform.save("alpha", data, "risk-user", expected_version=0)
+    subscription(
+        platform, actor(), EventRule(categories={"sanctions"}, minimum_severity=0.5), "csl"
+    )
+    entity = next(entity for entity in data.entities if entity.id == "supplier-0")
+    observed = datetime.now(UTC)
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"ita_csl","name":"ita-csl","tenant_id":"alpha",'
+        '"license":"ITA terms; required notice displayed"}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", ITACSLFeed.HOST)
+    monkeypatch.setattr(
+        ITACSLFeed,
+        "screen",
+        lambda self, entities: [
+            {
+                "entity": entity,
+                "uid": "csl-123",
+                "listed_name": "Listed Supplier Ltd",
+                "aliases": [entity.name],
+                "source": "Entity List - BIS",
+                "programs": "EAR99",
+                "source_url": "https://www.bis.gov/entity-list",
+                "score": 1.0,
+                "method": "exact",
+                "observed_at": observed,
+            }
+        ],
+    )
+    events = poll(platform, "alpha")
+    assert len(events) == 1
+    event = events[0]["payload"]
+    assert events[0]["status"] == "needs_review"
+    assert event["category"] == "sanctions"
+    assert (
+        "not endorsed or certified by the International Trade Administration"
+        in event["description"]
+    )
+    assert "not a legal determination" in event["description"]
+    assert len(list_records(platform, "alpha", kind="alert")) == 1
+    assert list_records(platform, "beta", kind="event") == []
 
 
 def test_job_is_idempotent_durable_and_dispatches_scoped_feed_poll(platform, monkeypatch):

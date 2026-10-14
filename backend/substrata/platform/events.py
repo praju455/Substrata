@@ -1,5 +1,6 @@
 """Tenant event feeds, rules, entity matching, deduplication and alert records."""
 
+import csv
 import hashlib
 import html
 import io
@@ -27,6 +28,8 @@ MAX_FEED_BYTES = 1_000_000
 MAX_FEED_ITEMS = 200
 MAX_OFAC_BYTES = 40_000_000
 MAX_OFAC_ENTRIES = 50_000
+MAX_CSL_BYTES = 30_000_000
+MAX_CSL_ENTRIES = 100_000
 
 
 class EventSubmission(Contract):
@@ -658,6 +661,147 @@ class OFACSDNFeed:
         return sorted(matches.values(), key=lambda item: (item["entity"].id, item["uid"]))
 
 
+class ITACSLFeed:
+    """Bounded name-candidate reader for ITA's consolidated public screening-list CSV."""
+
+    HOST = "data.trade.gov"
+    URL = "https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.csv"
+
+    def __init__(self, allowed_hosts: set[str], *, timeout: float = 30):
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("ITA CSL host must be added to the event feed allowlist.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.timeout = timeout
+
+    def screen(self, entities) -> list[dict]:
+        suppliers = [entity for entity in entities if entity.kind == "Supplier"]
+        if not suppliers:
+            return []
+        request = urllib.request.Request(
+            self.URL,
+            headers={"Accept": "text/csv", "User-Agent": "Substrata public-list adapter"},
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.URL:
+                    raise ValueError("ITA CSL download redirects are not allowed.")
+                body = response.read(MAX_CSL_BYTES + 1)
+                last_modified = response.headers.get("Last-Modified")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured ITA CSL feed could not be reached.") from None
+        if len(body) > MAX_CSL_BYTES:
+            raise ValueError("ITA CSL response exceeds the configured size limit.")
+        try:
+            observed_at = (
+                parsedate_to_datetime(last_modified) if last_modified else datetime.now(UTC)
+            )
+            if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+                observed_at = observed_at.replace(tzinfo=UTC)
+            text = body.decode("utf-8-sig")
+        except (UnicodeDecodeError, TypeError, ValueError):
+            raise ValueError("ITA CSL CSV encoding or update metadata is invalid.") from None
+
+        exact_index: dict[str, list] = {}
+        fuzzy_index: dict[tuple[str, int], list[tuple[object, str]]] = {}
+        for entity in suppliers:
+            normalized = OFACSDNFeed._normalize(entity.name)
+            if not normalized:
+                continue
+            exact_index.setdefault(normalized, []).append(entity)
+            if len(normalized) >= 8:
+                fuzzy_index.setdefault((normalized[0], len(normalized) // 4), []).append(
+                    (entity, normalized)
+                )
+
+        matches: dict[str, dict] = {}
+        entry_count = 0
+        fuzzy_comparisons = 0
+        try:
+            rows = csv.DictReader(io.StringIO(text, newline=""))
+            required_columns = {
+                "_id",
+                "source",
+                "name",
+                "alt_names",
+                "programs",
+                "source_information_url",
+            }
+            if not rows.fieldnames or not required_columns.issubset(rows.fieldnames):
+                raise ValueError("ITA CSL returned an unsupported CSV schema.")
+            for row in rows:
+                entry_count += 1
+                if entry_count > MAX_CSL_ENTRIES:
+                    raise ValueError("ITA CSL contains more entries than the configured limit.")
+                uid = (row.get("_id") or "").strip()[:256]
+                primary = (row.get("name") or "").strip()[:1000]
+                if not uid or not primary:
+                    continue
+                aliases = [
+                    value.strip()[:1000]
+                    for value in (row.get("alt_names") or "").split(";")[:100]
+                    if value.strip()
+                ]
+                candidates_by_entity: dict[str, tuple[object, str, float, str]] = {}
+                for listed_name in dict.fromkeys([primary, *aliases]):
+                    normalized = OFACSDNFeed._normalize(listed_name)
+                    if not normalized:
+                        continue
+                    candidates = [
+                        (entity, 1.0, "exact") for entity in exact_index.get(normalized, [])
+                    ]
+                    if not candidates and len(normalized) >= 8:
+                        bucket = len(normalized) // 4
+                        possible = []
+                        for length_bucket in range(bucket - 1, bucket + 2):
+                            possible.extend(fuzzy_index.get((normalized[0], length_bucket), []))
+                        if len(possible) <= 1000:
+                            fuzzy_comparisons += len(possible)
+                            if fuzzy_comparisons > 250_000:
+                                raise ValueError(
+                                    "ITA CSL matching exceeded the configured comparison limit."
+                                )
+                            for entity, supplier_name in possible:
+                                if abs(len(supplier_name) - len(normalized)) > max(
+                                    2, int(max(len(supplier_name), len(normalized)) * 0.1)
+                                ):
+                                    continue
+                                score = SequenceMatcher(
+                                    None, supplier_name, normalized, autojunk=False
+                                ).ratio()
+                                if score >= 0.9:
+                                    candidates.append((entity, score, "heuristic_name_similarity"))
+                    for entity, score, method in candidates:
+                        previous = candidates_by_entity.get(entity.id)
+                        if previous is None or score > previous[2]:
+                            candidates_by_entity[entity.id] = (entity, listed_name, score, method)
+                for entity, listed_name, score, method in candidates_by_entity.values():
+                    match_id = f"{entity.id}|{uid}"
+                    matches[match_id] = {
+                        "entity": entity,
+                        "uid": uid,
+                        "listed_name": listed_name,
+                        "aliases": aliases,
+                        "source": (row.get("source") or "unspecified")[:1000],
+                        "programs": (row.get("programs") or "")[:2000],
+                        "source_url": (row.get("source_information_url") or "")[:2048],
+                        "score": score,
+                        "method": method,
+                        "observed_at": observed_at,
+                    }
+        except csv.Error:
+            raise ValueError("ITA CSL CSV is invalid.") from None
+        if entry_count == 0:
+            raise ValueError("ITA CSL returned an empty screening list.")
+        return sorted(matches.values(), key=lambda item: (item["entity"].id, item["uid"]))
+
+
 def configured_feeds(tenant_id: str) -> list[dict]:
     path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
     if not path:
@@ -915,6 +1059,62 @@ def poll(store, tenant_id: str):
                 category_hint=config.get("category_hint", ""),
                 api_key_file=config.get("api_key_file", ""),
             )
+        elif feed_type == "ita_csl":
+            feed = ITACSLFeed(allowed)
+            with tenant_transaction(store.engine, tenant_id) as session:
+                org = store.organisation(session, tenant_id)
+                if org.version == 0:
+                    continue
+            snapshot = store.snapshot(tenant_id)
+            for match in feed.screen(snapshot.data.entities):
+                entity = match["entity"]
+                description = (
+                    "Potential name-only candidate from the International Trade "
+                    "Administration (ITA) Consolidated Screening List (CSL), a U.S. "
+                    "government screening aid. This local similarity score is not ITA's "
+                    "fuzzy-search score. A candidate is not a legal determination, "
+                    "export license decision, clearance, or instruction to block. "
+                    f"Listed name: {match['listed_name']}; record ID: {match['uid']}; "
+                    f"source list: {match['source']}; programs: "
+                    f"{match['programs'] or 'unspecified'}; name method: {match['method']}; "
+                    f"local similarity: {match['score']:.3f}; "
+                    f"aliases: {', '.join(match['aliases'])[:2000] or 'none'}; "
+                    f"source details: {match['source_url'] or 'see official CSL source'}. "
+                    "Check the originating official list and Federal Register, perform "
+                    "additional due diligence, and have a qualified analyst review. "
+                    "This product uses the International Trade Administration's Data "
+                    "API but is not endorsed or certified by the International Trade "
+                    "Administration."
+                )[:9500]
+                provenance = Provenance(
+                    uri=f"{ITACSLFeed.URL}#id={match['uid']}",
+                    observed_at=match["observed_at"],
+                    kind="public",
+                    note=(
+                        f"ITA consolidated screening list; {config['name']}; source row "
+                        "is a screening aid and not a legal determination; "
+                        f"license/attribution: {config['license']}"
+                    ),
+                )
+                results.append(
+                    ingest(
+                        store,
+                        tenant_id,
+                        EventSubmission(
+                            source_id="csl:"
+                            + hashlib.sha256(
+                                f"{config['name']}|{match['uid']}|{entity.id}".encode()
+                            ).hexdigest(),
+                            title=(
+                                f"Potential export/sanctions screening match: {entity.name[:200]}"
+                            ),
+                            description=description,
+                            observed_at=match["observed_at"],
+                            provenance=provenance,
+                        ),
+                    )
+                )
+            continue
         elif feed_type == "ofac_sdn":
             user_agent = os.environ.get("SUBSTRATA_OFAC_USER_AGENT", "")
             feed = OFACSDNFeed(allowed, user_agent)

@@ -1369,9 +1369,20 @@ export default function PlatformWorkspace() {
                             </strong>
                             <p className="muted">
                               {r.payload.category === "sanctions"
-                                ? "Possible name-only sanctions match. Mapping the entity does not determine sanctions status or clearance."
+                                ? "Possible name-only sanctions or export-control candidate. Mapping the entity does not determine sanctions status, export authorization, or clearance."
                                 : "Event needs entity review"}
                             </p>
+                            {typeof r.payload.provenance === "object" &&
+                              r.payload.provenance !== null &&
+                              "uri" in r.payload.provenance &&
+                              typeof r.payload.provenance.uri === "string" &&
+                              r.payload.provenance.uri.startsWith("https://data.trade.gov/") && (
+                              <p className="muted">
+                                This product uses the International Trade Administration’s Data API
+                                but is not endorsed or certified by the International Trade
+                                Administration.
+                              </p>
+                            )}
                             <div className="button-row">
                               <label>
                                 Match to entity

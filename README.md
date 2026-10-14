@@ -24,8 +24,8 @@ The scorer training script calibrates a small gradient-boosted model on supplier
 labels with grouped holdouts and a versioned registry; it never fine-tunes an LLM.
 Tenant event feeds use HTTPS host allowlists and explicit license notes; RSS, GDELT
 DOC, U.S. NWS alerts, European MeteoAlarm weather warnings, review-only OFAC SDN
-name candidates and field-mapped JSON APIs run through the same tenant event
-pipeline.
+and ITA consolidated screening candidates, and field-mapped JSON APIs run through
+the same tenant event pipeline.
 Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, so clients cannot delegate exposure arithmetic to an LLM.
