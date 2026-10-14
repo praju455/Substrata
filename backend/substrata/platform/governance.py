@@ -11,6 +11,7 @@ from substrata.platform.auth import Principal
 from substrata.platform.cascade import assess
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Contract, Measure
+from substrata.platform.models import WorkRecord
 from substrata.platform.records import add, encode, require_record
 from substrata.platform.store import Conflict
 from substrata.seed import canonical
@@ -80,7 +81,17 @@ def configure_policy(store, actor: Principal, policy: Policy):
         return org.policy
 
 
-def save_assessment(store, actor, source_id, severity, *, as_of, version=None, max_depth=8):
+def save_assessment(
+    store,
+    actor,
+    source_id,
+    severity,
+    *,
+    as_of,
+    version=None,
+    max_depth=8,
+    idempotency_key=None,
+):
     actor.require("analyst")
     snapshot = store.snapshot(actor.tenant_id, version=version)
     report = assess(snapshot, source_id, severity, as_of=as_of, max_depth=max_depth)
@@ -91,6 +102,16 @@ def save_assessment(store, actor, source_id, severity, *, as_of, version=None, m
             if report["truncated"] or any(i["status"] == "incomplete" for i in report["impacts"])
             else "complete"
         )
+        record_id = (
+            "assessment-"
+            + hashlib.sha256(f"{actor.tenant_id}|{idempotency_key}".encode()).hexdigest()
+            if idempotency_key
+            else None
+        )
+        if record_id:
+            existing = session.get(WorkRecord, (actor.tenant_id, record_id))
+            if existing is not None:
+                return encode(existing)
         record = add(
             session,
             actor.tenant_id,
@@ -101,6 +122,7 @@ def save_assessment(store, actor, source_id, severity, *, as_of, version=None, m
                 "requester": actor.subject,
                 "input_snapshot": snapshot.model_dump(mode="json"),
             },
+            record_id,
         )
         store.append(
             session,

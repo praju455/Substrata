@@ -79,6 +79,78 @@ def test_required_auth_and_demo_reset_absent_in_platform_mode(client):
     )
 
 
+def test_agent_card_and_mcp_tools_keep_exposure_deterministic_and_authenticated(client):
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "test-admin")
+    data = __import__("substrata.platform.seeds", fromlist=["generate"]).generate("pharma")
+    store.save("alpha", data, "test-admin", expected_version=0)
+    assert client.get("/.well-known/agent.json").json()["url"].endswith("/platform/a2a")
+    assert (
+        client.post(
+            "/platform/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+        ).status_code
+        == 401
+    )
+    listed = client.post(
+        "/platform/mcp",
+        headers=headers(role="viewer"),
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+    ).json()
+    assert listed["result"]["tools"][0]["name"] == "cascade.assess"
+    result = client.post(
+        "/platform/mcp",
+        headers=headers(role="analyst"),
+        json={
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "cascade.assess",
+                "arguments": {
+                    "source_id": "upstream",
+                    "severity": 0.8,
+                    "as_of": datetime.now(UTC).isoformat(),
+                },
+            },
+        },
+    ).json()
+    assert result["result"]["structuredContent"]["graph_version"] == 1
+    assert result["result"]["isError"] is False
+
+
+def test_a2a_assessment_is_typed_and_tenant_scoped(client):
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "test-admin")
+    data = __import__("substrata.platform.seeds", fromlist=["generate"]).generate("food")
+    store.save("alpha", data, "test-admin", expected_version=0)
+    response = client.post(
+        "/platform/a2a",
+        headers=headers(tenant="beta", role="analyst"),
+        json={
+            "jsonrpc": "2.0",
+            "id": "rpc-1",
+            "method": "tasks/send",
+            "params": {
+                "id": "task-1",
+                "message": {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "type": "data",
+                            "data": {
+                                "source_id": "upstream",
+                                "severity": 0.6,
+                                "as_of": datetime.now(UTC).isoformat(),
+                            },
+                        }
+                    ],
+                },
+            },
+        },
+    ).json()
+    assert response["error"]["code"] == -32602
+
+
 def test_verified_tenant_cannot_be_overridden_and_viewer_cannot_write(client):
     for tenant in ("alpha", "beta"):
         assert (

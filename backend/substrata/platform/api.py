@@ -1,10 +1,10 @@
 """Tenant derived from verified claims, never a caller-selected header or body."""
 
-from datetime import datetime
-from typing import Annotated
+from datetime import UTC, datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 
 from substrata.platform.auth import Principal, principal
 from substrata.platform.confirmations import ConfirmationInput, SupplierReply
@@ -69,6 +69,36 @@ class RestImport(GraphChange):
 
 class EvidenceQuery(Contract):
     query: str = Field(min_length=1, max_length=2000)
+
+
+class EventRuleInput(Contract):
+    name: Identifier = "default"
+    categories: set[Literal["supply_disruption", "weather", "transport", "sanctions", "other"]]
+    minimum_severity: float = Field(default=0, ge=0, le=1, allow_inf_nan=False)
+    enabled: bool = True
+
+
+class EventSubmitInput(Contract):
+    source_id: Identifier
+    title: str = Field(min_length=1, max_length=256)
+    description: str = Field(default="", max_length=10000)
+    observed_at: AwareDatetime
+    provenance: Provenance
+
+
+class JobInput(Contract):
+    kind: Literal["event_poll", "assessment"]
+    idempotency_key: Identifier
+    payload: dict = Field(default_factory=dict)
+
+
+class EventResolution(Contract):
+    entity_id: Identifier
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class AlertAcknowledgement(Contract):
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 class PortalToken(Contract):
@@ -212,6 +242,150 @@ def records(request: Request, actor: Actor, kind: str | None = None, status: str
 
     actor.require("viewer")
     return list_records(request.app.state.platform_store, actor.tenant_id, kind=kind, status=status)
+
+
+@router.post("/events/subscriptions")
+def event_subscription(body: EventRuleInput, request: Request, actor: Actor):
+    from substrata.platform.events import EventRule, subscription
+
+    return subscription(
+        request.app.state.platform_store,
+        actor,
+        EventRule(
+            categories=body.categories,
+            minimum_severity=body.minimum_severity,
+            enabled=body.enabled,
+        ),
+        body.name,
+    )
+
+
+@router.post("/events")
+def event_submit(body: EventSubmitInput, request: Request, actor: Actor):
+    from substrata.platform.events import EventSubmission, submit
+
+    return submit(
+        request.app.state.platform_store,
+        actor,
+        EventSubmission(**body.model_dump()),
+    )
+
+
+@router.post("/events/poll")
+def event_poll(request: Request, actor: Actor):
+    from substrata.platform.jobs import JobInput as DurableJobInput
+    from substrata.platform.jobs import enqueue
+
+    return enqueue(
+        request.app.state.platform_store,
+        actor,
+        DurableJobInput(kind="event_poll", idempotency_key=f"feed-poll-{datetime.now().date()}"),
+    )
+
+
+@router.post("/events/{id}/resolve")
+def event_resolve(id: str, body: EventResolution, request: Request, actor: Actor):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+
+    actor.require("analyst")
+    store = request.app.state.platform_store
+    snapshot = store.snapshot(actor.tenant_id)
+    entity = next((item for item in snapshot.data.entities if item.id == body.entity_id), None)
+    if entity is None:
+        raise HTTPException(404, "Event entity is unavailable in this tenant.")
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        record = session.get(WorkRecord, (actor.tenant_id, id))
+        if record is None or record.kind != "event" or record.status != "needs_review":
+            raise HTTPException(409, "Event is unavailable or no longer needs review.")
+        payload = dict(record.payload)
+        payload["resolution"] = {
+            "entity_id": entity.id,
+            "name": entity.name,
+            "reason": body.reason,
+            "actor": actor.subject,
+        }
+        record.payload = payload
+        record.status = "matched"
+        store.append(
+            session,
+            org,
+            "event.entity.resolved",
+            actor.subject,
+            {"id": id, "entity_id": entity.id, "reason": body.reason},
+        )
+        return {"id": id, "status": record.status, "resolution": payload["resolution"]}
+
+
+@router.post("/alerts/{id}/acknowledge")
+def acknowledge_alert(id: str, body: AlertAcknowledgement, request: Request, actor: Actor):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+    from substrata.platform.records import encode
+
+    actor.require("analyst")
+    store = request.app.state.platform_store
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        record = session.get(WorkRecord, (actor.tenant_id, id))
+        if record is None or record.kind != "alert" or record.status != "open":
+            raise HTTPException(409, "Alert is unavailable or already acknowledged.")
+        record.status = "acknowledged"
+        record.payload = {
+            **record.payload,
+            "acknowledged_by": actor.subject,
+            "acknowledgement_reason": body.reason,
+            "acknowledged_at": datetime.now(UTC).isoformat(),
+        }
+        store.append(
+            session,
+            org,
+            "event.alert.acknowledged",
+            actor.subject,
+            {"id": id, "reason": body.reason},
+        )
+        return encode(record)
+
+
+@router.post("/jobs")
+def job_enqueue(body: JobInput, request: Request, actor: Actor):
+    from substrata.platform.jobs import JobInput as DurableJobInput
+    from substrata.platform.jobs import enqueue
+
+    return enqueue(request.app.state.platform_store, actor, DurableJobInput(**body.model_dump()))
+
+
+@router.post("/jobs/dispatch")
+def job_dispatch(request: Request, actor: Actor):
+    from substrata.platform.jobs import run_next
+
+    return run_next(request.app.state.platform_store, actor)
+
+
+@router.get("/jobs")
+def job_list(request: Request, actor: Actor):
+    from substrata.platform.jobs import jobs
+
+    actor.require("viewer")
+    return jobs(request.app.state.platform_store, actor.tenant_id)
+
+
+@router.post("/mcp")
+def mcp(request: Request, actor: Actor, body: dict):
+    from fastapi.responses import Response
+
+    from substrata.platform.agent_protocols import handle_mcp
+
+    result = handle_mcp(request.app.state.platform_store, actor, body)
+    return Response(status_code=202) if result is None else result
+
+
+@router.post("/a2a")
+def a2a(request: Request, actor: Actor, body: dict):
+    from substrata.platform.agent_protocols import handle_a2a
+
+    return handle_a2a(request.app.state.platform_store, actor, body)
 
 
 from substrata.platform.ingestion import TabularImport  # noqa: E402
@@ -442,12 +616,17 @@ def activate_model(id: str, request: Request, actor: Actor):
 
 
 def install(application, store, verifier):
+    from substrata.platform.agent_protocols import a2a_card
     from substrata.platform.auth import RateLimiter
 
     application.state.platform_store = store
     application.state.auth_verifier = verifier
     application.state.platform_rate_limiter = RateLimiter()
     application.include_router(router)
+
+    @application.get("/.well-known/agent.json", tags=["agents"])
+    def agent_card(request: Request):
+        return a2a_card(str(request.base_url).rstrip("/"))
 
     @application.exception_handler(Conflict)
     async def conflict(request, exception):

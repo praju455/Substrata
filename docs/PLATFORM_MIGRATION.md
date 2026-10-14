@@ -127,6 +127,28 @@ Tests include multi-industry golden results and generated stock monotonicity.
 fixtures only in development. `/platform/scenarios/assess` accepts an explicit
 source, date, graph version and bounded traversal depth.
 
+Event subscriptions and user-submitted events are tenant-scoped, deduplicated and
+audited. RSS/Atom inputs are bounded, HTTPS-only and restricted to an operator
+host allowlist; each configured feed carries an explicit licensing note. Heuristic
+severity and entity-match scores are labelled assumptions, while ambiguous matches
+wait for an authenticated analyst. Alert acknowledgement and event resolution are
+audited. These feed connectors do not yet cover GDELT, weather, ports or sanctions
+registries, and no news API key is bundled.
+
+`/platform/jobs` stores idempotent work with leases, bounded retries and audit
+records. Run `python scripts/platform_worker.py --tenant demo` as a separately
+supervised process; each worker is bound to one tenant. The queue currently handles
+event polls and deterministic assessments. Retries stop after four attempts and
+expired leases are recoverable. There is no managed broker or automatic worker
+orchestration yet.
+
+The stateless authenticated `/platform/mcp` endpoint exposes the deterministic
+`cascade.assess` tool. `/.well-known/agent.json` advertises the authenticated A2A
+`/platform/a2a` task endpoint. Both validate typed inputs and invoke the same plain
+Python cascade; neither exposes model-generated exposure calculations. Current
+protocol tests cover discovery, authentication, tenant isolation and results, but
+do not claim broad client interoperability or streaming support.
+
 Authenticated `/platform` endpoints derive tenant and actor from verified access
 tokens. Roles are `viewer`, `analyst`, `approver`, `admin`; body/header tenant
 overrides are never trusted. Tokens require issuer, audience, expiry, issued/not
@@ -154,7 +176,9 @@ heads separately to detect privileged tail truncation.
 3. Imports/connectors, entity resolution and data-quality/onboarding workflows.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
-6. Feeds, durable agents, approval notifications, exports, MCP/A2A and operations.
+6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
+   slice; GDELT/weather/port feeds, agent specialisations, approval notifications,
+   managed queue orchestration and production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior
 or a documented external configuration gate. Real supplier contact is disabled in
