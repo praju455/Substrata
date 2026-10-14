@@ -27,6 +27,26 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+Documents are immutable and indexed into offset-preserving chunks. PostgreSQL uses
+pgvector cosine retrieval with tenant policies; SQLite uses the same bounded vector
+contracts offline. The default hashing-word baseline is explicitly lexical, not
+semantic. Configure a 384-dimensional OpenAI-compatible embedding provider for
+semantic retrieval. Embedding model versions coexist instead of silently replacing
+older vectors. Extractors support OpenAI, Anthropic, local compatible HTTP and an
+explicit offline mock. Strict JSON schema, retries/timeouts and exact document
+spans prevent unsupported writes; evidence is data, never executable instructions.
+
+Live inference requires sourced provider input/output prices in
+`USD/million_tokens` and a sourced tenant `llm_daily_budget` in USD. Daily cost
+reservations serialize across requests and conservatively retain charges when
+upstream usage is unknown. Logs carry provider/model/prompt, token usage, latency
+and estimated cost without credentials. Live provider access remains configuration
+dependent; intercepted-response tests do not establish live availability.
+
+Provider contracts follow [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
+[OpenAI embeddings](https://developers.openai.com/api/reference/resources/embeddings/methods/create)
+and [Anthropic structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs).
+
 The `/platform/` frontend includes organisation onboarding, data-quality counts,
 CSV/Excel mapping, graph status/search/history, deterministic scenario/runway,
 policy setup, approval/rejection, notifications and audit/CSV exports. SSO uses

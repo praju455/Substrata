@@ -21,6 +21,7 @@ class Policy(Contract):
     spend_limit: Measure
     auto_approve_limit: Measure
     approval_sla: Measure
+    llm_daily_budget: Measure | None = None
     approver_roles: set[Literal["approver", "admin"]] = {"approver", "admin"}
     require_separate_approver: bool = True
     allowed_kinds: set[str] = {
@@ -41,6 +42,8 @@ class Policy(Contract):
             raise ValueError("Approval SLA must be between zero and 168 hours.")
         if not self.approver_roles:
             raise ValueError("At least one authenticated approver role is required.")
+        if self.llm_daily_budget is not None and self.llm_daily_budget.unit != "USD":
+            raise ValueError("Live inference budget must be expressed in USD.")
         return self
 
 

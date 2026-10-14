@@ -7,6 +7,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from substrata.database import Base as LegacyBase
 from substrata.models import UTCDateTime
+from substrata.platform.vector import Embedding
 
 
 class Base(DeclarativeBase):
@@ -65,3 +66,18 @@ class WorkRecord(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
     payload: Mapped[dict] = mapped_column(JSON)
     __table_args__ = (Index("ix_work_records_inbox", "tenant_id", "kind", "status"),)
+
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+    tenant_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    document_id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    start: Mapped[int] = mapped_column(Integer)
+    end: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    embedding_model: Mapped[str] = mapped_column(String(128), primary_key=True)
+    embedding: Mapped[list[float]] = mapped_column(Embedding())
+    __table_args__ = (
+        ForeignKeyConstraint(["tenant_id", "document_id"], ["documents.tenant_id", "documents.id"]),
+    )

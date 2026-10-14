@@ -15,6 +15,8 @@ Read-only OData, authenticated REST and signed webhook adapters are available,
 with a synthetic local mock and an explicit Business Network/Ariba stub.
 Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
 approval review, notifications and audit/CSV exports.
+Evidence retrieval supports pgvector and exact passage citations; configurable
+OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

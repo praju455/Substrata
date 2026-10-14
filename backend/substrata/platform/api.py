@@ -66,6 +66,10 @@ class RestImport(GraphChange):
     idempotency_key: str = Field(min_length=1, max_length=96)
 
 
+class EvidenceQuery(Contract):
+    query: str = Field(min_length=1, max_length=2000)
+
+
 @router.get("/identity")
 def identity(actor: Actor):
     return actor
@@ -373,6 +377,28 @@ def export_graph(request: Request, actor: Actor):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="substrata-graph.csv"'},
     )
+
+
+@router.post("/evidence/index")
+def evidence_index(request: Request, actor: Actor):
+    from substrata.platform.evidence import index_documents
+
+    return index_documents(request.app.state.platform_store, actor)
+
+
+@router.post("/evidence/search")
+def evidence_search(body: EvidenceQuery, request: Request, actor: Actor):
+    from substrata.platform.evidence import retrieve
+
+    actor.require("viewer")
+    return retrieve(request.app.state.platform_store, actor.tenant_id, body.query, actor=actor)
+
+
+@router.post("/evidence/discover")
+def evidence_discover(body: EvidenceQuery, request: Request, actor: Actor):
+    from substrata.platform.evidence import discover
+
+    return discover(request.app.state.platform_store, actor, body.query)
 
 
 def install(application, store, verifier):
