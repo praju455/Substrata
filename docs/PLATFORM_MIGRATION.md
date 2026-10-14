@@ -69,7 +69,9 @@ and [Anthropic structured outputs](https://platform.claude.com/docs/en/build-wit
 
 The `/platform/` frontend includes organisation onboarding, data-quality counts,
 CSV/Excel mapping, graph status/search/history, deterministic scenario/runway,
-policy setup, approval/rejection, notifications and audit/CSV exports. SSO uses
+policy setup, approval/rejection, notifications and audit/CSV exports. Its
+print-ready report supports browser PDF save/print with the selected graph revision,
+saved impacts and uncertainty notes. SSO uses
 authorization code with PKCE; access tokens remain in component memory. Configure
 an OIDC public client, audience mapping, tenant/role claims and exact redirect URI.
 SAML login is brokered by that identity provider. Development token entry is only

@@ -391,6 +391,56 @@ export default function PlatformWorkspace() {
     URL.revokeObjectURL(url);
   };
 
+  const printRiskReport = async () => {
+    const workspace = state;
+    if (!workspace || !snapshot)
+      throw new Error("Load a graph snapshot before exporting a report.");
+    const reportWindow = window.open("", "_blank");
+    if (!reportWindow)
+      throw new Error("Allow the report window to open, then try again.");
+    reportWindow.opener = null;
+    const safe = (value: unknown) =>
+      String(value ?? "—").replace(/[&<>"']/g, (character) => {
+        const entities: Record<string, string> = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        };
+        return entities[character];
+      });
+    const payload = assessment?.payload.report;
+    const report =
+      payload && typeof payload === "object"
+        ? (payload as Partial<Report>)
+        : null;
+    const impacts = Array.isArray(report?.impacts) ? report.impacts : [];
+    const impactRows = impacts.length
+      ? impacts
+          .map(
+            (impact) =>
+              `<tr><td>${safe(impact.material_name)}</td><td>${safe(impact.plant_name)}</td><td>${safe(impact.cover_days)} ${impact.cover_days === null ? "" : "days"}</td><td>${safe(impact.requalification_days)} ${impact.requalification_days === null ? "" : "days"}</td><td>${safe(impact.exposure_days_range?.join("–"))}</td><td>${safe(impact.status)}</td></tr>`,
+          )
+          .join("")
+      : '<tr><td colspan="6">No saved assessment is available for this graph revision.</td></tr>';
+    const entitiesByKind = [
+      ...new Set(snapshot.data.entities.map((entity) => entity.kind)),
+    ]
+      .sort()
+      .map(
+        (kind) =>
+          `<li>${safe(kind)}: ${snapshot.data.entities.filter((entity) => entity.kind === kind).length}</li>`,
+      )
+      .join("");
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Supply risk report</title><style>
+      @page{size:auto;margin:18mm}body{font:14px/1.45 Arial,sans-serif;color:#17212a;max-width:1000px;margin:36px auto;padding:0 24px}h1,h2{color:#163b46}h1{font-size:28px}h2{font-size:18px;margin-top:28px}p,li{color:#394b54}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}.meta p{margin:4px 0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;border:1px solid #c7d1d5;padding:8px;vertical-align:top}th{background:#eaf1f2}.notice{padding:12px;border-left:4px solid #aa6b18;background:#fff7e9}.footer{margin-top:32px;font-size:11px;color:#596a72;word-break:break-word}@media print{body{margin:0;padding:0}h1,h2,table{break-after:avoid}tr{break-inside:avoid}}
+      </style></head><body><h1>Supply risk assessment</h1><p>${safe(workspace.organisation?.name)} · ${safe(workspace.identity.tenant_id)}</p><div class="meta"><p><strong>Report generated:</strong> ${safe(new Date().toLocaleString())}</p><p><strong>Graph revision:</strong> ${snapshot.version}</p><p><strong>Revision recorded:</strong> ${safe(new Date(snapshot.recorded_at).toLocaleString())}</p><p><strong>Entities / links:</strong> ${snapshot.data.entities.length} / ${snapshot.data.links.length}</p><p><strong>Assessment created:</strong> ${assessment ? safe(new Date(assessment.created_at).toLocaleString()) : "No saved assessment"}</p><p><strong>Assessment as of:</strong> ${safe(report?.as_of)}</p><p><strong>Audit chain:</strong> ${workspace.audit?.valid ? "Verified" : "Not verified"} (${workspace.audit?.count ?? 0} records)</p></div><h2>Graph coverage</h2><ul>${entitiesByKind}</ul><p>${snapshot.data.links.filter((link) => link.status === "confirmed").length} confirmed · ${snapshot.data.links.filter((link) => link.status === "inferred").length} inferred · ${snapshot.data.links.filter((link) => link.status === "declared").length} declared links</p><h2>Affected materials and plants</h2><table><thead><tr><th>Material</th><th>Plant</th><th>Cover</th><th>Requalification</th><th>Exposure range</th><th>Status</th></tr></thead><tbody>${impactRows}</tbody></table>${report?.range_assumption ? `<h2>Uncertainty and method</h2><p>${safe(report.range_assumption)}</p>` : ""}<p class="notice">This report reflects the selected graph revision and any saved deterministic assessment shown above. Inferred relationships and exposure ranges carry uncertainty; review their source evidence and provenance before acting. The report is informational and does not authorize procurement or legal clearance.</p><p class="footer">Graph snapshot SHA-256: ${safe(snapshot.sha256)}<br>Audit chain head: ${safe(workspace.audit?.head)}</p><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250))</script></body></html>`;
+    reportWindow.document.open();
+    reportWindow.document.write(html);
+    reportWindow.document.close();
+  };
+
   return (
     <>
       <a className="skip-link" href="#platform-main">
@@ -1376,13 +1426,16 @@ export default function PlatformWorkspace() {
                               r.payload.provenance !== null &&
                               "uri" in r.payload.provenance &&
                               typeof r.payload.provenance.uri === "string" &&
-                              r.payload.provenance.uri.startsWith("https://data.trade.gov/") && (
-                              <p className="muted">
-                                This product uses the International Trade Administration’s Data API
-                                but is not endorsed or certified by the International Trade
-                                Administration.
-                              </p>
-                            )}
+                              r.payload.provenance.uri.startsWith(
+                                "https://data.trade.gov/",
+                              ) && (
+                                <p className="muted">
+                                  This product uses the International Trade
+                                  Administration’s Data API but is not endorsed
+                                  or certified by the International Trade
+                                  Administration.
+                                </p>
+                              )}
                             <div className="button-row">
                               <label>
                                 Match to entity
@@ -1473,6 +1526,12 @@ export default function PlatformWorkspace() {
                     · {state.audit?.count || 0} records
                   </p>
                   <div className="button-row">
+                    <button
+                      className="secondary"
+                      onClick={() => void run(() => printRiskReport())}
+                    >
+                      Print or save PDF
+                    </button>
                     <button
                       className="secondary"
                       onClick={() =>

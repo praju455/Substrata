@@ -14,7 +14,7 @@ expiry and dry-run execution of sourced mitigation drafts.
 Read-only OData, authenticated REST and signed webhook adapters are available,
 with a synthetic local mock and an explicit Business Network/Ariba stub.
 Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
-approval review, notifications and audit/CSV exports.
+approval review, notifications and audit/CSV/PDF report exports.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link
