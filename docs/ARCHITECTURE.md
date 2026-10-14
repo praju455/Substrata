@@ -38,6 +38,10 @@ PostgreSQL regression checks run through the restricted runtime role and cover
 every tenant table, transaction-local context reset, pgvector retrieval, immutable
 import history, concurrent graph/audit commits and a checkpointed agent plan
 resumed through a new connection pool before governed dry-run execution.
+`scripts/verify_postgres.py` starts a disposable pgvector database on an ephemeral
+loopback port and supplies the test admin URL only to its pytest child process.
+It uses a generated local password and removes its owned container/anonymous
+volume afterward; it does not reuse the application's Compose database.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

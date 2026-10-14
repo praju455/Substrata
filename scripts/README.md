@@ -23,3 +23,11 @@ See [LLM setup](../docs/LLM_SETUP.md). Stop servers before setup or CLI seed.
 Makefile forwards the same tasks. GNU Make is unavailable on this Windows
 workstation; the Python runner is verified. Non-Windows process cleanup remains
 unverified. See docs/DEMO_SCRIPT.md for recovery.
+
+`python scripts/verify_postgres.py` starts an owned disposable PostgreSQL/pgvector
+container and runs the PostgreSQL workflow/isolation checks using project `.venv`
+dependencies. `--full-suite` runs every Python test with PostgreSQL integration
+enabled. Docker Desktop's Windows CLI is discovered even when missing from PATH;
+`--docker PATH` overrides discovery. Generated test credentials stay in child
+environments, the loopback port is selected dynamically, and cleanup removes only
+this command's container/anonymous volume. See [Operations](../docs/OPERATIONS.md).

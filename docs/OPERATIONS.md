@@ -48,6 +48,29 @@ checkpoints followed by named approval and idempotent dry-run execution. Six
 checks passed against the local Docker PostgreSQL 17/pgvector instance on
 14 October 2026. These synthetic workflow checks do not establish customer scale.
 
+## Repeatable PostgreSQL verification
+
+Start Docker Desktop (or a local Docker engine) and install `.[dev,platform]` into
+the project Python environment. The runner selects `.venv` when it exists. It
+can discover both the per-user and system Windows Docker Desktop CLI locations
+if Docker is not on PATH; an explicit `--docker PATH` is also supported.
+
+```powershell
+python scripts/verify_postgres.py
+python scripts/verify_postgres.py --full-suite
+```
+
+The first command runs the PostgreSQL integration checks; `--full-suite` runs all
+Python tests with PostgreSQL integration enabled. Most fixture tests still use
+temporary SQLite databases; the six production-dialect checks use PostgreSQL.
+The runner creates its own `--rm` pgvector container with a generated test-only
+password and an ephemeral loopback port. It waits for PostgreSQL to accept TCP
+connections and passes the admin URL directly to the pytest child environment.
+There are no host mounts or named volumes. On success, test failure or interruption,
+it stops only the container it created and removes its anonymous database volume;
+the existing Compose stack is untouched. Failed tests propagate a nonzero exit.
+The complete run passed 222 Python tests on 14 October 2026 with no skips.
+
 ## Health, logs and metrics
 
 `/health` is liveness only. `/ready` checks each configured SQLAlchemy database

@@ -47,6 +47,9 @@ For the local PostgreSQL/API/worker scaffold and production operations gates, se
 PostgreSQL integration checks exercise forced tenant policies on every business
 table, pgvector retrieval/model versions, import history and rollback, concurrent
 graph/audit writes, and resumed risk-review jobs followed by named approval.
+With Docker running, `python scripts/verify_postgres.py --full-suite` runs all
+Python tests against synthetic fixtures with PostgreSQL integration enabled in
+an isolated database container that is removed afterward.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

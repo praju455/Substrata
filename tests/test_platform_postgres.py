@@ -146,6 +146,7 @@ def test_postgres_rls_is_forced_on_every_tenant_table_and_unset_context_denies_r
             assert flags == (True, True), table
 
     models = (Organisation, GraphRevision, AuditRecord, Document, DocumentChunk, WorkRecord)
+    assert {model.__tablename__ for model in models} == set(Base.metadata.tables)
     for tenant, other in ((alpha, beta), (beta, alpha)):
         with tenant_transaction(store.engine, tenant) as session:
             for model in models:
