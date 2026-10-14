@@ -5,6 +5,13 @@ export const locales = ["en", "hi"] as const;
 export type Locale = (typeof locales)[number];
 
 const hindi = {
+  "Delegate approval review": "अनुमोदन समीक्षा सौंपें",
+  "Use the reviewer's identity-provider subject. Delegation does not grant a role or approve the action.": "समीक्षक का पहचान-प्रदाता सब्जेक्ट उपयोग करें। समीक्षा सौंपने से कोई भूमिका या कार्रवाई की मंज़ूरी नहीं मिलती।",
+  "Reviewer subject": "समीक्षक सब्जेक्ट",
+  "Delegation reason": "समीक्षा सौंपने का कारण",
+  "Delegate review": "समीक्षा सौंपें",
+  "Assigned reviewer": "निर्धारित समीक्षक",
+  approval_delegated: "अनुमोदन समीक्षा सौंपी गई",
   "Event alert": "इवेंट अलर्ट",
   active: "सक्रिय",
   disabled: "अक्षम",

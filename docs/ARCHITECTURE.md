@@ -80,6 +80,10 @@ observation times converted to UTC. Named alert-rule controls reuse the tenant
 subscription policy and retain the administrator requirement. Heuristic category,
 severity and entity-review boundaries are explicit; rule edits affect new intake
 and do not resend historical alerts. No new feed transport is introduced.
+Approval delegation controls reuse the existing governed endpoint, require a
+reviewer subject/reason and display the resulting assignment and portal notice.
+They do not create roles or approvals; the backend checks assignment, tenant,
+approver role, policy and separation of duties when a decision is submitted.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

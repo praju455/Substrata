@@ -29,6 +29,9 @@ Saved assessment reports retain their original graph revision after later replie
 The event intake panel submits sourced events and lets administrators configure,
 edit or disable tenant alert rules; resulting events feed the existing review and
 alert centre rather than requiring separate API calls.
+Pending approvals can be delegated to a named reviewer from the inbox, with a
+required reason and visible assignment. Existing role and separation-of-duties
+checks still decide whether that reviewer may approve.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link

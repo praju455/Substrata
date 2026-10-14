@@ -34,6 +34,7 @@ import JobsPanel from "./jobs-panel";
 import { reportSnapshot } from "./report-snapshot";
 import EventsPanel from "./events-panel";
 import { eventForAlert, recordTitle } from "./record-title";
+import Delegation from "./delegation";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -1284,6 +1285,11 @@ export default function PlatformWorkspace() {
                           <strong>{String(r.payload.title)}</strong>
                           <span className="badge">{tStatus(r.status)}</span>
                           <p>{String(r.payload.rationale)}</p>
+                          {typeof r.payload.assigned_to === "string" && <p>{t("Assigned reviewer")} {r.payload.assigned_to}</p>}
+                          {r.status === "pending" && <Delegation token={token} actionId={r.id}
+                            busy={busy} canDelegate={can("approver") &&
+                              (typeof r.payload.assigned_to !== "string" ||
+                               r.payload.assigned_to === state.identity.subject || can("admin"))} run={run} />}
                           <p className="muted small">
                             {format((r.payload.cost as Measure).value, locale)}{" "}
                             {(r.payload.cost as Measure).unit} ·{" "}
@@ -1302,7 +1308,8 @@ export default function PlatformWorkspace() {
                             <>
                               <button
                                 disabled={
-                                  busy || !reason.trim() || !can("approver")
+                                  busy || !reason.trim() || !can("approver") ||
+                                  (typeof r.payload.assigned_to === "string" && r.payload.assigned_to !== state.identity.subject)
                                 }
                                 className="primary"
                                 onClick={() =>
@@ -1318,7 +1325,8 @@ export default function PlatformWorkspace() {
                               </button>
                               <button
                                 disabled={
-                                  busy || !reason.trim() || !can("approver")
+                                  busy || !reason.trim() || !can("approver") ||
+                                  (typeof r.payload.assigned_to === "string" && r.payload.assigned_to !== state.identity.subject)
                                 }
                                 className="secondary"
                                 onClick={() =>
@@ -1370,6 +1378,7 @@ export default function PlatformWorkspace() {
                             {tStatus(recordTitle(r, records))}
                           </strong>
                           <p className="muted">{tStatus(r.status)}</p>
+                          {r.payload.type === "approval_delegated" && <p>{t("Assigned reviewer")} {String(r.payload.subject)}</p>}
                           {eventForAlert(r, records) && <p className="muted">
                             {tStatus((eventForAlert(r, records)!.payload.provenance as Provenance).kind)} · {(eventForAlert(r, records)!.payload.provenance as Provenance).uri}
                           </p>}

@@ -96,6 +96,12 @@
 .record-row .badge {
   margin-left: 10px;
 }
+.record-row > div {
+  min-width: 0;
+}
+.delegation-form {
+  max-width: 520px;
+}
 .record-row pre {
   white-space: pre-wrap;
   max-width: 100%;
