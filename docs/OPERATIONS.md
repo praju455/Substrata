@@ -6,7 +6,8 @@ Compose is a local development scaffold, not a production deployment. Its
 PostgreSQL credentials are deliberately marked local-only and must never be reused
 outside a developer machine. The database and API ports bind to loopback. The app
 database role is `NOSUPERUSER` and `NOBYPASSRLS`; migrations use the separate
-PostgreSQL admin account. The worker is opt-in because its tenant must already be
+PostgreSQL admin account. The database image includes pgvector to support the
+document-vector migration. The worker is opt-in because its tenant must already be
 provisioned.
 
 Create a development signing key on the host, then start PostgreSQL, migrations

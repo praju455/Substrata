@@ -169,6 +169,9 @@ OIDC verification; SAML organisations use an identity provider that brokers SAML
 to OIDC with the same verified claims. Configure tenant/role mappings at the IdP.
 HMAC development credentials are refused outside explicit development mode.
 Platform mode disables unauthenticated replay/reset routes by default.
+CI also runs PostgreSQL-backed tests with a non-superuser `NOBYPASSRLS` role,
+checks tenant-scoped row visibility and rejects a cross-tenant insert. Local runs
+skip this integration test unless `SUBSTRATA_TEST_POSTGRES_ADMIN_URL` is set.
 
 Install `python -m pip install -e ".[dev,platform]"`. Run migrations explicitly:
 `python -m substrata.platform.cli migrate` with `SUBSTRATA_PLATFORM_DATABASE_URL`.
