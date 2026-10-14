@@ -331,10 +331,9 @@ heads separately to detect privileged tail truncation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
    slice; weather feeds beyond MeteoAlarm and NWS, configured port-provider
    integrations, additional jurisdiction-specific sanctions/export-control
-   sources, agent coordination
-   across multiple roles,
-   SMS and approval delegation notifications, managed queue orchestration and
-   production operations remain.
+   sources, adaptive agent plans beyond the fixed risk-review flow, SMS and
+   approval delegation notifications, managed queue orchestration and production
+   operations remain.
 
 ## Ten-area readiness map
 
@@ -364,3 +363,11 @@ request correlation, readiness and process counters are implemented. Production
 secret management, TLS deployment, scheduled encrypted backups/restore drills,
 distributed tracing, managed metrics, and a managed job broker remain explicit
 pilot gates. See [Operations](OPERATIONS.md).
+
+## Delivery milestones
+
+| Milestone | Scope | Main risks | Explicitly deferred |
+|---|---|---|---|
+| A — Finale-ready hardened slice, by 4 November 2026 | Demonstrate tenant onboarding, three clearly synthetic industry seeds, mapped import and review, sourced event intake, deterministic cascade ranges, approval/audit flow and printable report. Keep offline mode reliable and run the full automated suite against the demo build. | Finale network and identity configuration, representative workflow usability, and the gap between synthetic fixtures and enterprise data | Live customer SAP credentials, supplier outreach, production sanctions decisions, live ERP writes and claims of field accuracy |
+| B — First pilot-ready release | Validate one customer's read-only SAP resource mappings, identity/roles, licensed event providers, operating policy, tenant isolation, encrypted backups and restore drill. Evaluate mappings and risk outputs against customer-reviewed labels before operational use. | Master-data quality, lawful data sharing, provider terms, and customer acceptance of review workload | General-purpose connector catalog, automatic ERP execution, broad jurisdiction coverage and GA uptime commitments |
+| C — General availability | Establish a supported multi-tenant operating model with managed durable work, production secrets/TLS, recovery objectives, distributed observability, accessibility/localization, security review, load/evaluation baselines and documented support/incident response. | Cross-tenant scale, evolving legal/provider requirements, security assurance and long-term calibration | Autonomous purchasing, unreviewed sanctions clearance, LLM-computed exposure and unsupported sources |

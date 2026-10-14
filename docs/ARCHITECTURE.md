@@ -93,11 +93,13 @@ Authenticated MCP and A2A endpoints expose typed tenant tools; broad external
 client interoperability has not been verified, and no SAP affiliation is claimed.
 
 The current offline slice exposes typed Mapper, Sensor, Cascade-caller, Action and
-Compliance/Audit skills over the shared tool registry. Agent tasks can use the
-tenant job queue, which persists inputs, retries and results and caps active jobs
-per tenant. These are bounded service/tool roles rather than a LangGraph planner;
-cross-role autonomous plans, push notifications and hosted agent interoperability
-remain deployment/integration work.
+Compliance/Audit skills over the shared tool registry. Tenant jobs persist typed
+inputs, retries and results and cap active work. A fixed, version-pinned risk-review
+plan coordinates Cascade-caller assessment with Compliance/Audit verification and
+stores a checkpoint after each role step. The flow creates an assessment only; it
+does not propose or execute a mitigation. Adaptive plan authoring, cross-role flows
+beyond this path, push notifications and hosted agent interoperability remain
+deployment/integration work.
 
 ### Layer 5 — API and experience
 

@@ -8,7 +8,9 @@ Platform API access requires verified tokens; see the migration guide for setup.
 The platform includes automotive, pharma and food fixtures and a deterministic
 assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
 CSV/Excel imports are staged with column mapping, validation and identity review;
-history and safe rollback preserve graph revisions.
+optional semantic embeddings add scored, review-only entity candidates when a
+provider and tenant cost budget are configured. History and safe rollback preserve
+graph revisions.
 Tenant policies enforce named approval, separation of duties, delegation, SLA
 expiry and dry-run execution of sourced mitigation drafts.
 Read-only OData, authenticated REST and signed webhook adapters are available,
@@ -31,7 +33,9 @@ Event polls and graph assessments can run as durable, retryable jobs via `script
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
 skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and
-results; clients cannot delegate exposure arithmetic to an LLM.
+results. The fixed risk-review plan checkpoints a pinned cascade assessment and
+audit verification across retries; clients cannot delegate exposure arithmetic to
+an LLM.
 Run a synthetic graph traversal load check with
 `python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
 Its local timings are not production service-level objectives.
