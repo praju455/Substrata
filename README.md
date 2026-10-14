@@ -9,6 +9,8 @@ The platform includes automotive, pharma and food fixtures and a deterministic
 assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
 CSV/Excel imports are staged with column mapping, validation and identity review;
 history and safe rollback preserve graph revisions.
+Tenant policies enforce named approval, separation of duties, delegation, SLA
+expiry and dry-run execution of sourced mitigation drafts.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

@@ -27,6 +27,15 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+Tenant policies specify sourced currency/spend/automatic-approval thresholds,
+approval SLA, roles and requester/approver separation. Assessments persist their
+input snapshots. Mitigation drafts use sourced quotes rather than the legacy
+fixed-price templates. Decisions freeze policy/graph hashes, require authenticated
+authority and reasons, support delegation and create portal notification records.
+Stale/expired inputs block approval. Execution is idempotent and dry-run by default;
+real SAP adapters additionally require an explicit feature flag, human approval
+and a non-development environment. No production adapter is assumed configured.
+
 CSV/XLSX ingestion supports a mapping preview, validated staged rows, duplicate
 identities, schema fingerprint checks, import history, idempotent apply and safe
 rollback. Uploads are bounded to 3 MB, 10000 rows and 100 columns; expanded Excel

@@ -12,6 +12,8 @@ bounded path calculations; LLMs have no arithmetic authority.
 Tenant workflow records store staged import validation, human entity resolution,
 applied versions and rollback reasons. Import application and graph/audit writes
 use a shared transaction.
+Policies and approval decisions use verified actor roles, sourced spend limits,
+graph/policy hashes and SLA expiry; execution requires a separate adapter gate.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

@@ -8,6 +8,7 @@ from pydantic import Field
 
 from substrata.platform.auth import Principal, principal
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
+from substrata.platform.governance import Policy, ProposalInput
 from substrata.platform.store import Conflict
 
 Actor = Annotated[Principal, Depends(principal)]
@@ -50,6 +51,14 @@ class ReasonInput(Contract):
 
 class ResolutionInput(ReasonInput):
     decisions: dict[str, str | None]
+
+
+class ApprovalInput(ReasonInput):
+    decision: str
+
+
+class DelegateInput(ReasonInput):
+    subject: str = Field(min_length=1, max_length=256)
 
 
 @router.get("/identity")
@@ -105,12 +114,17 @@ def audit(request: Request, actor: Actor, expected_head: str | None = None):
 
 @router.post("/scenarios/assess")
 def assess_scenario(body: AssessmentInput, request: Request, actor: Actor):
-    from substrata.platform.cascade import assess
+    from substrata.platform.governance import save_assessment
 
     actor.require("analyst")
-    snapshot = request.app.state.platform_store.snapshot(actor.tenant_id, version=body.version)
-    return assess(
-        snapshot, body.source_id, body.severity, as_of=body.as_of, max_depth=body.max_depth
+    return save_assessment(
+        request.app.state.platform_store,
+        actor,
+        body.source_id,
+        body.severity,
+        as_of=body.as_of,
+        version=body.version,
+        max_depth=body.max_depth,
     )
 
 
@@ -182,6 +196,52 @@ def import_rollback(id: str, body: ReasonInput, request: Request, actor: Actor):
     return rollback(
         request.app.state.platform_store, actor.tenant_id, id, actor.subject, body.reason
     )
+
+
+@router.post("/policy")
+def policy_update(body: Policy, request: Request, actor: Actor):
+    from substrata.platform.governance import configure_policy
+
+    return configure_policy(request.app.state.platform_store, actor, body)
+
+
+@router.get("/policy")
+def policy_read(request: Request, actor: Actor):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import Organisation
+
+    actor.require("viewer")
+    with tenant_transaction(request.app.state.platform_store.engine, actor.tenant_id) as session:
+        org = session.get(Organisation, actor.tenant_id)
+        return org.policy if org else {}
+
+
+@router.post("/mitigations")
+def mitigation(body: ProposalInput, request: Request, actor: Actor):
+    from substrata.platform.governance import propose
+
+    return propose(request.app.state.platform_store, actor, body)
+
+
+@router.post("/approvals/{id}/decision")
+def action_decision(id: str, body: ApprovalInput, request: Request, actor: Actor):
+    from substrata.platform.governance import decide
+
+    return decide(request.app.state.platform_store, actor, id, body.decision, body.reason)
+
+
+@router.post("/approvals/{id}/delegate")
+def action_delegate(id: str, body: DelegateInput, request: Request, actor: Actor):
+    from substrata.platform.governance import delegate
+
+    return delegate(request.app.state.platform_store, actor, id, body.subject, body.reason)
+
+
+@router.post("/actions/{id}/execute")
+def action_execute(id: str, request: Request, actor: Actor):
+    from substrata.platform.governance import execute
+
+    return execute(request.app.state.platform_store, actor, id)
 
 
 def install(application, store, verifier):
