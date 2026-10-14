@@ -220,6 +220,12 @@ const hindi = {
   public: "सार्वजनिक",
   supplier: "आपूर्तिकर्ता",
   assumption: "मान्यता",
+  SUPPLIES: "आपूर्ति करता है",
+  DEPENDS_ON: "निर्भर है",
+  USED_IN: "इसमें उपयोग होता है",
+  OWNED_BY: "स्वामित्व में है",
+  LOCATED_IN: "इसमें स्थित है",
+  supplier_confirmation: "आपूर्तिकर्ता पुष्टि",
   "This link is missing its confirmation token.":
     "इस लिंक में पुष्टि टोकन नहीं है।",
   "The link is unavailable or expired.":

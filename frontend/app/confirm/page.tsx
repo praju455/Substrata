@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import "../platform/workspace.css";
 import {
+  copyKeys,
   localeTag,
   localizeMessage,
   translate,
   useLocale,
+  type CopyKey,
 } from "../platform/i18n";
 
 const API = (
@@ -16,6 +18,8 @@ const API = (
 export default function SupplierPortal() {
   const [locale, setLocale] = useLocale();
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const tStatus = (value: string) =>
+    copyKeys.includes(value as CopyKey) ? t(value as CopyKey) : value;
   const [token, setToken] = useState("");
   const [request, setRequest] = useState<{
     source: string;
@@ -109,7 +113,7 @@ export default function SupplierPortal() {
               {request.source} → {request.target}
             </h2>
             <p>
-              {request.type.replaceAll("_", " ")} ·{" "}
+              {tStatus(request.type)} ·{" "}
               {localizeMessage(locale, request.status)}
             </p>
             <p className="muted">
