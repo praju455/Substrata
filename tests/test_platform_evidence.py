@@ -1,6 +1,5 @@
 """Citations, document isolation, bounded provider schemas and durable budgets."""
 
-
 import pytest
 from test_platform_store import source
 
@@ -147,6 +146,7 @@ def test_semantic_embedding_count_and_dimensions_are_validated(monkeypatch):
 def test_cost_reservation_prevents_overspend_and_unknown_usage_remains_charged(platform):
     def measure(value, unit):
         return Measure(value=value, unit=unit, provenance=source())
+
     policy = Policy(
         currency="USD",
         spend_limit=measure(100, "USD"),
