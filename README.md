@@ -26,6 +26,9 @@ documents, index/search passages, discover cited links, request a signed supplie
 preview and queue/run a graph-pinned risk review. Development previews send no
 supplier email. Completed reviews refresh the runway, assessment and audit views.
 Saved assessment reports retain their original graph revision after later replies.
+The event intake panel submits sourced events and lets administrators configure,
+edit or disable tenant alert rules; resulting events feed the existing review and
+alert centre rather than requiring separate API calls.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link

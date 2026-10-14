@@ -106,6 +106,22 @@
   gap: 7px;
   margin: 14px 0;
 }
+.event-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px 0;
+  border: 1px solid #d4d1de;
+  border-radius: 7px;
+}
+.event-categories label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.event-categories input {
+  width: auto;
+}
 .onboarding-steps {
   display: flex;
   gap: 32px;

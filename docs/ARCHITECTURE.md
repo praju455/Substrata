@@ -75,6 +75,11 @@ Supplier portal fragments are captured only in memory before URL removal; effect
 cancellation preserves the captured token during React development checks. Report
 exports use the saved assessment's input snapshot and reject a missing or mismatched
 snapshot instead of substituting the current network.
+Workspace event intake calls the existing sourced-event endpoint, with local
+observation times converted to UTC. Named alert-rule controls reuse the tenant
+subscription policy and retain the administrator requirement. Heuristic category,
+severity and entity-review boundaries are explicit; rule edits affect new intake
+and do not resend historical alerts. No new feed transport is introduced.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

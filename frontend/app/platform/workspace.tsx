@@ -9,6 +9,7 @@ import type {
   Frozen,
   Impact,
   Measure,
+  Provenance,
   RecordItem,
   Report,
   Workspace,
@@ -31,6 +32,8 @@ import { API, call } from "./client";
 import EvidencePanel from "./evidence-panel";
 import JobsPanel from "./jobs-panel";
 import { reportSnapshot } from "./report-snapshot";
+import EventsPanel from "./events-panel";
+import { eventForAlert, recordTitle } from "./record-title";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -450,6 +453,7 @@ export default function PlatformWorkspace() {
             <a href="#graph">{t("Network")}</a>
             <a href="#evidence">{t("Evidence")}</a>
             <a href="#jobs">{t("Background tasks")}</a>
+            <a href="#event-intake">{t("Events")}</a>
             <a href="#approvals">{t("Approvals")}</a>
           </nav>
           <label className="locale-picker">
@@ -1353,6 +1357,8 @@ export default function PlatformWorkspace() {
                   )}
                 </section>
 
+                <EventsPanel token={token} records={records} busy={busy}
+                  canEdit={can("analyst")} canAdmin={can("admin")} run={run} />
                 <section className="panel">
                   <h2>{t("Alert centre")}</h2>
                   {records
@@ -1361,9 +1367,12 @@ export default function PlatformWorkspace() {
                       <article className="record-row" key={r.id}>
                         <div>
                           <strong>
-                            {String(r.payload.title || r.payload.type)}
+                            {tStatus(recordTitle(r, records))}
                           </strong>
                           <p className="muted">{tStatus(r.status)}</p>
+                          {eventForAlert(r, records) && <p className="muted">
+                            {tStatus((eventForAlert(r, records)!.payload.provenance as Provenance).kind)} · {(eventForAlert(r, records)!.payload.provenance as Provenance).uri}
+                          </p>}
                           {r.kind === "alert" && r.status === "open" && (
                             <div className="button-row">
                               <label>
