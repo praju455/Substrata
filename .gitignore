@@ -34,3 +34,4 @@ out/
 *.log
 *.secret
 .hypothesis/
+data/models/

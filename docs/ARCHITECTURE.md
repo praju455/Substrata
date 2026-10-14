@@ -22,6 +22,8 @@ Tenant document vectors, exact passages and provider-neutral extraction feed onl
 inferred link proposals. Durable cost reservations gate live provider calls.
 Single-use supplier tokens bind confirmation to tenant/request/link inputs;
 responses revise the graph and emit attributable training labels atomically.
+Supplier labels feed a versioned gradient-boosted scorer with independent
+calibration/test supplier groups and explicit activation gates.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

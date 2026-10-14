@@ -27,6 +27,16 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+The small link scorer trains gradient-boosted trees on supplier confirm/reject
+features, calibrates on a separate supplier-group split and reports held-out
+precision, recall, average precision, Brier score, calibration points and errors.
+At least 50 labels across 10 supplier groups are required, with both classes in
+each split. Models have feature/library/data/artifact versions and hash-verified
+registry files. Explicit activation requires evaluation gates; synthetic-trained
+models cannot be activated in production. No LLM fine-tuning is performed.
+Use `python -m scripts.train_scorer --labels labels.json --output new-model-dir`.
+Synthetic training tests establish the pipeline, not customer accuracy.
+
 Supplier confirmations use signed, expiring, single-use portal tokens. Tokens live
 in the URL fragment and are posted in the body, not server request URLs. They bind
 to one tenant/request and reject changed link inputs. Confirm/reject replies create

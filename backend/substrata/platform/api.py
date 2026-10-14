@@ -427,6 +427,20 @@ def portal_reply(body: SupplierReply, request: Request):
     return reply(request.app.state.platform_store, body)
 
 
+@router.post("/models/train")
+def train_model(request: Request, actor: Actor):
+    from substrata.platform.scoring import train_tenant
+
+    return train_tenant(request.app.state.platform_store, actor)
+
+
+@router.post("/models/{id}/activate")
+def activate_model(id: str, request: Request, actor: Actor):
+    from substrata.platform.scoring import activate
+
+    return activate(request.app.state.platform_store, actor, id)
+
+
 def install(application, store, verifier):
     from substrata.platform.auth import RateLimiter
 

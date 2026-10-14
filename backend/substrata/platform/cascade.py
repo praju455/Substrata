@@ -178,7 +178,7 @@ def assess(
                 if exposure is not None
                 else None,
                 "confidence_bounds": confidence_bounds(paths.paths, links),
-                "confidence_label": "Uncalibrated evidence support; not disruption probability",
+                "confidence_label": "Evidence support bounds; not disruption probability",
                 "paths": [p.nodes for p in paths.paths],
                 "evidence_ids": citations,
                 "eligible_order_ids": eligible,

@@ -234,12 +234,30 @@ def discover(store, actor, query, *, extractor=None):
                     f"prompt={telemetry['prompt_version']}"
                 ),
             )
+            from substrata.platform.scoring import score
+
+            scoring = score(
+                store,
+                actor.tenant_id,
+                {
+                    "evidence_count": 1,
+                    "supplier_source": int(document.provenance["kind"] == "supplier"),
+                    "explicit_endpoints": 1,
+                    "rule_score": 0.65,
+                },
+            )
+            provenance = provenance.model_copy(
+                update={
+                    "note": provenance.note
+                    + f"; scorer={scoring['model_version']}; calibrated={scoring['calibrated']}"
+                }
+            )
             links[id] = Link(
                 id=id,
                 source=relation.source,
                 target=relation.target,
                 type=relation.type,
-                confidence=0.65,
+                confidence=scoring["score"],
                 status="inferred",
                 evidence=[citation],
                 provenance=provenance,

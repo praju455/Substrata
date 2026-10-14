@@ -19,6 +19,8 @@ Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link
 states while producing confirm/reject training labels. Development contact is disabled.
+The scorer training script calibrates a small gradient-boosted model on supplier
+labels with grouped holdouts and a versioned registry; it never fine-tunes an LLM.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
