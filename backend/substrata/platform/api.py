@@ -61,6 +61,10 @@ class DelegateInput(ReasonInput):
     subject: str = Field(min_length=1, max_length=256)
 
 
+class RestImport(GraphChange):
+    idempotency_key: str = Field(min_length=1, max_length=96)
+
+
 @router.get("/identity")
 def identity(actor: Actor):
     return actor
@@ -242,6 +246,71 @@ def action_execute(id: str, request: Request, actor: Actor):
     from substrata.platform.governance import execute
 
     return execute(request.app.state.platform_store, actor, id)
+
+
+@router.post("/ingest")
+def rest_ingest(body: RestImport, request: Request, actor: Actor):
+    from substrata.platform.connectors import receive_graph
+
+    return receive_graph(
+        request.app.state.platform_store,
+        actor,
+        body.data,
+        body.expected_version,
+        body.idempotency_key,
+    )
+
+
+@router.post("/webhooks/{name}")
+async def webhook(name: str, body: RestImport, request: Request, actor: Actor):
+    from substrata.platform.connectors import receive_graph, verify_webhook
+
+    verify_webhook(
+        actor.tenant_id,
+        name,
+        await request.body(),
+        request.headers.get("x-substrata-signature", ""),
+    )
+    return receive_graph(
+        request.app.state.platform_store,
+        actor,
+        body.data,
+        body.expected_version,
+        body.idempotency_key,
+        connector=name,
+    )
+
+
+@router.get("/connectors")
+def connectors(request: Request, actor: Actor):
+    from substrata.platform.connectors import configured_connectors
+
+    actor.require("viewer")
+    return [
+        {"name": c.name, "resources": sorted(c.resources)}
+        for c in configured_connectors(actor.tenant_id).values()
+    ]
+
+
+@router.post("/connectors/{name}/read/{resource}")
+def connector_read(name: str, resource: str, request: Request, actor: Actor):
+    from substrata.platform.connectors import (
+        S4HANAODataConnector,
+        configured_connectors,
+        connector_source,
+    )
+
+    actor.require("analyst")
+    config = configured_connectors(actor.tenant_id).get(name)
+    if config is None:
+        raise HTTPException(404, "Tenant connector is unavailable.")
+    adapter = S4HANAODataConnector(config)
+    rows = adapter.read(resource)
+    return {
+        "rows": rows,
+        "provenance": connector_source(config, resource, synthetic=adapter.synthetic),
+        "requires_mapping": True,
+    }
 
 
 def install(application, store, verifier):

@@ -14,6 +14,8 @@ applied versions and rollback reasons. Import application and graph/audit writes
 use a shared transaction.
 Policies and approval decisions use verified actor roles, sourced spend limits,
 graph/policy hashes and SLA expiry; execution requires a separate adapter gate.
+Read-only OData, REST and signed webhooks enter through adapter contracts and
+validated graph/import services; external endpoint credentials stay on the server.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

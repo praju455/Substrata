@@ -11,6 +11,8 @@ CSV/Excel imports are staged with column mapping, validation and identity review
 history and safe rollback preserve graph revisions.
 Tenant policies enforce named approval, separation of duties, delegation, SLA
 expiry and dry-run execution of sourced mitigation drafts.
+Read-only OData, authenticated REST and signed webhook adapters are available,
+with a synthetic local mock and an explicit Business Network/Ariba stub.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

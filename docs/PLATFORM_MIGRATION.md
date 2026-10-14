@@ -27,6 +27,27 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+REST ingestion accepts typed graphs with tenant-scoped idempotency keys; webhooks
+add an HMAC signature over exact request bytes plus authenticated machine identity.
+OData adapters perform GET only, bound response/page/row budgets, refuse redirects
+and keep pagination on the configured origin. Configuration and credential files
+are server-side and scoped to a tenant. SAP Business Network/Ariba remains an
+explicit adapter stub as requested; it does not substitute mock data for real data.
+
+Run the development OData mock with
+`python -m uvicorn scripts.mock_sap:app --host 127.0.0.1 --port 8521`.
+Example connector config (supplied through `SUBSTRATA_CONNECTORS_FILE`):
+
+```json
+[{"name":"mock","tenant_id":"demo","base_url":"http://127.0.0.1:8521/odata/",
+  "resources":{"vendors":"entities"},"synthetic":true}]
+```
+
+`/platform/connectors/{name}/read/{resource}` returns rows for explicit column/unit
+mapping. Actual S/4HANA resource paths, credentials and mappings are supplied per
+customer system; access and real-system semantics have not been validated locally.
+Mock responses remain visibly synthetic. No SAP affiliation is claimed.
+
 Tenant policies specify sourced currency/spend/automatic-approval thresholds,
 approval SLA, roles and requester/approver separation. Assessments persist their
 input snapshots. Mitigation drafts use sourced quotes rather than the legacy
