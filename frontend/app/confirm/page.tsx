@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import "../platform/workspace.css";
+import {
+  localeTag,
+  localizeMessage,
+  translate,
+  useLocale,
+} from "../platform/i18n";
 
 const API = (
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 
 export default function SupplierPortal() {
+  const [locale, setLocale] = useLocale();
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const [token, setToken] = useState("");
   const [request, setRequest] = useState<{
     source: string;
@@ -21,6 +29,9 @@ export default function SupplierPortal() {
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    document.documentElement.lang = localeTag(locale);
+  }, [locale]);
   useEffect(() => {
     const load = async () => {
       const value =
@@ -72,38 +83,56 @@ export default function SupplierPortal() {
         className="panel"
         style={{ padding: 28, maxWidth: 720, margin: "auto" }}
       >
-        <p className="eyebrow purple">SUBSTRATA · SUPPLIER CONFIRMATION</p>
-        <h1>Review this relationship</h1>
+        <p className="eyebrow purple">
+          {t("SUBSTRATA · SUPPLIER CONFIRMATION")}
+        </p>
+        <h1>{t("Review this relationship")}</h1>
         {message && (
           <p className="notice" role="status">
-            {message}
+            {localizeMessage(locale, message)}
           </p>
         )}
+        <label className="locale-picker">
+          <span className="visually-hidden">{t("Language")}</span>
+          <select
+            aria-label={t("Language")}
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as "en" | "hi")}
+          >
+            <option value="en">English</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        </label>
         {request && (
           <>
             <h2>
               {request.source} → {request.target}
             </h2>
             <p>
-              {request.type.replaceAll("_", " ")} · {request.status}
+              {request.type.replaceAll("_", " ")} ·{" "}
+              {localizeMessage(locale, request.status)}
             </p>
             <p className="muted">
-              This is a relationship claim for your review. It does not
-              authorise a purchase or operational change.
+              {t(
+                "This is a relationship claim for your review. It does not authorise a purchase or operational change.",
+              )}
             </p>
             {request.passages.map((passage, i) => (
               <blockquote key={i}>{passage}</blockquote>
             ))}
-            <p>Link expires {new Date(request.expires_at).toLocaleString()}.</p>
+            <p>
+              {t("Link expires")}{" "}
+              {new Date(request.expires_at).toLocaleString(localeTag(locale))}.
+            </p>
             <label>
-              Your name or supplier reference
+              {t("Your name or supplier reference")}
               <input
                 value={responder}
                 onChange={(e) => setResponder(e.target.value)}
               />
             </label>
             <label>
-              Reason
+              {t("Reason")}
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -115,14 +144,14 @@ export default function SupplierPortal() {
                 disabled={busy || !token || !responder.trim() || !reason.trim()}
                 onClick={() => void respond("confirmed")}
               >
-                Confirm relationship
+                {t("Confirm relationship")}
               </button>
               <button
                 className="secondary"
                 disabled={busy || !token || !responder.trim() || !reason.trim()}
                 onClick={() => void respond("rejected")}
               >
-                Reject relationship
+                {t("Reject relationship")}
               </button>
             </div>
           </>

@@ -18,6 +18,9 @@ Read-only OData, REST and signed webhooks enter through adapter contracts and
 validated graph/import services; external endpoint credentials stay on the server.
 The feature-flagged tenant surface uses OIDC/PKCE and in-memory bearer tokens;
 product workflows call typed tenant endpoints and reuse the existing graph view.
+The platform workspace, printable report and supplier confirmation portal share
+an English/Hindi catalog and browser-persisted language choice; full locale and
+accessibility QA remains a release gate.
 The platform adds tenant-scoped event feeds, durable leased work records and
 stateless authenticated MCP/A2A adapters around deterministic services. Request
 correlation, database readiness and basic process metrics support local operations.

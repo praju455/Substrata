@@ -16,6 +16,15 @@ import type {
 
 import type { GraphData } from "../types";
 import { dependencyDepths } from "../graph-layout";
+import {
+  copyKeys,
+  localeTag,
+  localizeMessage,
+  translate,
+  useLocale,
+  type CopyKey,
+  type Locale,
+} from "./i18n";
 
 import "./workspace.css";
 
@@ -25,21 +34,10 @@ const API = (
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 
-const labels = {
-  title: "Your supply network",
-  signIn: "Sign in with your organisation",
-  imports: "Data imports",
-  network: "Graph explorer",
-  approvals: "Approvals inbox",
-  alerts: "Alert centre",
-};
-
-const format = (value: number | null | undefined) =>
+const format = (value: number | null | undefined, locale: Locale) =>
   value == null
     ? "—"
-    : new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(
-        value,
-      );
+    : new Intl.NumberFormat(localeTag(locale), { maximumFractionDigits: 2 }).format(value);
 
 async function call(path: string, token: string, body?: unknown) {
   const response = await fetch(API + "/platform" + path, {
@@ -116,6 +114,12 @@ async function beginLogin() {
 }
 
 export default function PlatformWorkspace() {
+  const [locale, setLocale] = useLocale();
+
+  const t = (key: CopyKey) => translate(locale, key);
+  const tStatus = (value: string) =>
+    copyKeys.includes(value as CopyKey) ? t(value as CopyKey) : value;
+
   const [token, setToken] = useState("");
 
   const [devToken, setDevToken] = useState("");
@@ -190,6 +194,10 @@ export default function PlatformWorkspace() {
 
   const [duration, setDuration] = useState(7);
 
+  useEffect(() => {
+    document.documentElement.lang = localeTag(locale);
+  }, [locale]);
+
   const refresh = useCallback(
     async (accessToken = token) => {
       const workspace: Workspace = await call("/state", accessToken);
@@ -215,10 +223,10 @@ export default function PlatformWorkspace() {
     try {
       await operation();
       if (token) await refresh();
-      setMessage("Saved. Your workspace is up to date.");
+      setMessage(t("Saved. Your workspace is up to date."));
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "The operation failed.",
+        error instanceof Error ? error.message : t("The operation failed."),
       );
     } finally {
       setBusy(false);
@@ -380,7 +388,7 @@ export default function PlatformWorkspace() {
       headers: { Authorization: "Bearer " + token },
     });
 
-    if (!response.ok) throw new Error("Export failed.");
+    if (!response.ok) throw new Error(t("Export failed."));
 
     const url = URL.createObjectURL(await response.blob());
 
@@ -394,10 +402,10 @@ export default function PlatformWorkspace() {
   const printRiskReport = async () => {
     const workspace = state;
     if (!workspace || !snapshot)
-      throw new Error("Load a graph snapshot before exporting a report.");
+      throw new Error(t("Load a graph snapshot before exporting a report."));
     const reportWindow = window.open("", "_blank");
     if (!reportWindow)
-      throw new Error("Allow the report window to open, then try again.");
+      throw new Error(t("Allow the report window to open, then try again."));
     reportWindow.opener = null;
     const safe = (value: unknown) =>
       String(value ?? "—").replace(/[&<>"']/g, (character) => {
@@ -420,22 +428,25 @@ export default function PlatformWorkspace() {
       ? impacts
           .map(
             (impact) =>
-              `<tr><td>${safe(impact.material_name)}</td><td>${safe(impact.plant_name)}</td><td>${safe(impact.cover_days)} ${impact.cover_days === null ? "" : "days"}</td><td>${safe(impact.requalification_days)} ${impact.requalification_days === null ? "" : "days"}</td><td>${safe(impact.exposure_days_range?.join("–"))}</td><td>${safe(impact.status)}</td></tr>`,
+              `<tr><td>${safe(impact.material_name)}</td><td>${safe(impact.plant_name)}</td><td>${safe(format(impact.cover_days, locale))} ${impact.cover_days === null ? "" : safe(t("days"))}</td><td>${safe(format(impact.requalification_days, locale))} ${impact.requalification_days === null ? "" : safe(t("days"))}</td><td>${safe(impact.exposure_days_range?.map((days) => format(days, locale)).join("–"))}</td><td>${safe(t(impact.status as CopyKey))}</td></tr>`,
           )
           .join("")
-      : '<tr><td colspan="6">No saved assessment is available for this graph revision.</td></tr>';
+      : `<tr><td colspan="6">${safe(t("No saved assessment is available for this graph revision."))}</td></tr>`;
     const entitiesByKind = [
       ...new Set(snapshot.data.entities.map((entity) => entity.kind)),
     ]
       .sort()
       .map(
         (kind) =>
-          `<li>${safe(kind)}: ${snapshot.data.entities.filter((entity) => entity.kind === kind).length}</li>`,
+          `<li>${safe(t(kind as CopyKey))}: ${snapshot.data.entities.filter((entity) => entity.kind === kind).length}</li>`,
       )
       .join("");
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Supply risk report</title><style>
+    const dateTime = (value: string | Date) =>
+      safe(new Date(value).toLocaleString(localeTag(locale)));
+    const links = snapshot.data.links;
+    const html = `<!doctype html><html lang="${localeTag(locale)}"><head><meta charset="utf-8"><title>${safe(t("Supply risk assessment"))}</title><style>
       @page{size:auto;margin:18mm}body{font:14px/1.45 Arial,sans-serif;color:#17212a;max-width:1000px;margin:36px auto;padding:0 24px}h1,h2{color:#163b46}h1{font-size:28px}h2{font-size:18px;margin-top:28px}p,li{color:#394b54}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}.meta p{margin:4px 0}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;border:1px solid #c7d1d5;padding:8px;vertical-align:top}th{background:#eaf1f2}.notice{padding:12px;border-left:4px solid #aa6b18;background:#fff7e9}.footer{margin-top:32px;font-size:11px;color:#596a72;word-break:break-word}@media print{body{margin:0;padding:0}h1,h2,table{break-after:avoid}tr{break-inside:avoid}}
-      </style></head><body><h1>Supply risk assessment</h1><p>${safe(workspace.organisation?.name)} · ${safe(workspace.identity.tenant_id)}</p><div class="meta"><p><strong>Report generated:</strong> ${safe(new Date().toLocaleString())}</p><p><strong>Graph revision:</strong> ${snapshot.version}</p><p><strong>Revision recorded:</strong> ${safe(new Date(snapshot.recorded_at).toLocaleString())}</p><p><strong>Entities / links:</strong> ${snapshot.data.entities.length} / ${snapshot.data.links.length}</p><p><strong>Assessment created:</strong> ${assessment ? safe(new Date(assessment.created_at).toLocaleString()) : "No saved assessment"}</p><p><strong>Assessment as of:</strong> ${safe(report?.as_of)}</p><p><strong>Audit chain:</strong> ${workspace.audit?.valid ? "Verified" : "Not verified"} (${workspace.audit?.count ?? 0} records)</p></div><h2>Graph coverage</h2><ul>${entitiesByKind}</ul><p>${snapshot.data.links.filter((link) => link.status === "confirmed").length} confirmed · ${snapshot.data.links.filter((link) => link.status === "inferred").length} inferred · ${snapshot.data.links.filter((link) => link.status === "declared").length} declared links</p><h2>Affected materials and plants</h2><table><thead><tr><th>Material</th><th>Plant</th><th>Cover</th><th>Requalification</th><th>Exposure range</th><th>Status</th></tr></thead><tbody>${impactRows}</tbody></table>${report?.range_assumption ? `<h2>Uncertainty and method</h2><p>${safe(report.range_assumption)}</p>` : ""}<p class="notice">This report reflects the selected graph revision and any saved deterministic assessment shown above. Inferred relationships and exposure ranges carry uncertainty; review their source evidence and provenance before acting. The report is informational and does not authorize procurement or legal clearance.</p><p class="footer">Graph snapshot SHA-256: ${safe(snapshot.sha256)}<br>Audit chain head: ${safe(workspace.audit?.head)}</p></body></html>`;
+      </style></head><body><h1>${safe(t("Supply risk assessment"))}</h1><p>${safe(workspace.organisation?.name)} · ${safe(workspace.identity.tenant_id)}</p><div class="meta"><p><strong>${safe(t("Report generated:"))}</strong> ${dateTime(new Date())}</p><p><strong>${safe(t("Graph revision"))}:</strong> ${format(snapshot.version, locale)}</p><p><strong>${safe(t("Revision recorded:"))}</strong> ${dateTime(snapshot.recorded_at)}</p><p><strong>${safe(t("Entities / links:"))}</strong> ${format(snapshot.data.entities.length, locale)} / ${format(snapshot.data.links.length, locale)}</p><p><strong>${safe(t("Assessment created:"))}</strong> ${assessment ? dateTime(assessment.created_at) : safe(t("No saved assessment"))}</p><p><strong>${safe(t("Assessment as of:"))}</strong> ${safe(report?.as_of)}</p><p><strong>${safe(t("Audit chain"))}:</strong> ${safe(t(workspace.audit?.valid ? "Verified" : "Not verified"))} (${format(workspace.audit?.count ?? 0, locale)} ${safe(t("records"))})</p></div><h2>${safe(t("Graph coverage"))}</h2><ul>${entitiesByKind}</ul><p>${format(links.filter((link) => link.status === "confirmed").length, locale)} ${safe(t("confirmed"))} · ${format(links.filter((link) => link.status === "inferred").length, locale)} ${safe(t("inferred"))} · ${format(links.filter((link) => link.status === "declared").length, locale)} ${safe(t("declared links"))}</p><h2>${safe(t("Affected materials and plants"))}</h2><table><thead><tr><th>${safe(t("Material"))}</th><th>${safe(t("Plant"))}</th><th>${safe(t("Cover"))}</th><th>${safe(t("Requalification"))}</th><th>${safe(t("Exposure range"))}</th><th>${safe(t("Status"))}</th></tr></thead><tbody>${impactRows}</tbody></table>${report?.range_assumption ? `<h2>${safe(t("Uncertainty and method"))}</h2><p>${safe(report.range_assumption)}</p>` : ""}<p class="notice">${safe(t("This report reflects the selected graph revision and any saved deterministic assessment shown above. Inferred relationships and exposure ranges carry uncertainty; review their source evidence and provenance before acting. The report is informational and does not authorize procurement or legal clearance."))}</p><p class="footer">${safe(t("Graph snapshot SHA-256:"))} ${safe(snapshot.sha256)}<br>${safe(t("Audit chain head:"))} ${safe(workspace.audit?.head)}</p></body></html>`;
     reportWindow.document.open();
     reportWindow.document.write(html);
     reportWindow.document.close();
@@ -445,20 +456,31 @@ export default function PlatformWorkspace() {
   return (
     <>
       <a className="skip-link" href="#platform-main">
-        Skip to workspace
+        {t("Skip to workspace")}
       </a>
       <header className="site-header">
         <div className="shell header-inner">
           <NextLink className="brand" href="/">
             Substrata
           </NextLink>
-          <nav aria-label="Platform sections">
-            <a href="#onboarding">Onboarding</a>
-            <a href="#imports">Imports</a>
-            <a href="#graph">Network</a>
-            <a href="#approvals">Approvals</a>
+          <nav aria-label={t("Platform sections")}>
+            <a href="#onboarding">{t("Onboarding")}</a>
+            <a href="#imports">{t("Imports")}</a>
+            <a href="#graph">{t("Network")}</a>
+            <a href="#approvals">{t("Approvals")}</a>
           </nav>
-          <span>{state ? state.identity.tenant_id : "Tenant workspace"}</span>
+          <label className="locale-picker">
+            <span className="visually-hidden">{t("Language")}</span>
+            <select
+              aria-label={t("Language")}
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as Locale)}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिन्दी</option>
+            </select>
+          </label>
+          <span>{state ? state.identity.tenant_id : t("Tenant workspace")}</span>
         </div>
       </header>
       <main
@@ -467,11 +489,10 @@ export default function PlatformWorkspace() {
       >
         <div className="hero">
           <div>
-            <p className="eyebrow purple">SUPPLY NETWORK INTELLIGENCE</p>
-            <h1>{labels.title}</h1>
+          <p className="eyebrow purple">{t("SUPPLY NETWORK INTELLIGENCE")}</p>
+            <h1>{t("Your supply network")}</h1>
             <p className="muted">
-              Trace your dependencies, measure production runway, and review the
-              next action.
+              {t("Trace your dependencies, measure production runway, and review the next action.")}
             </p>
           </div>
           {token && (
@@ -481,7 +502,7 @@ export default function PlatformWorkspace() {
                 disabled={busy}
                 onClick={() => void run(() => refresh())}
               >
-                Refresh workspace
+                {t("Refresh workspace")}
               </button>
               <button
                 className="secondary"
@@ -493,7 +514,7 @@ export default function PlatformWorkspace() {
                   setMessage("");
                 }}
               >
-                Sign out
+                {t("Sign out")}
               </button>
             </div>
           )}
@@ -501,27 +522,26 @@ export default function PlatformWorkspace() {
 
         {message && (
           <p className="notice" role="status">
-            {message}
+            {localizeMessage(locale, message)}
           </p>
         )}
 
         {!token ? (
           <section className="panel">
-            <h2>{labels.signIn}</h2>
+            <h2>{t("Sign in with your organisation")}</h2>
             <p className="muted">
-              Your organisation determines the network and approvals you can
-              access.
+              {t("Your organisation determines the network and approvals you can access.")}
             </p>
             {auth?.enabled && (
               <button className="primary" onClick={() => void run(beginLogin)}>
-                Continue with SSO
+                {t("Continue with SSO")}
               </button>
             )}
             {auth?.development && (
               <details>
-                <summary>Local development access</summary>
+                <summary>{t("Local development access")}</summary>
                 <label>
-                  Development access token
+                  {t("Development access token")}
                   <textarea
                     value={devToken}
                     onChange={(e) => setDevToken(e.target.value)}
@@ -536,32 +556,32 @@ export default function PlatformWorkspace() {
                     setDevToken("");
                   }}
                 >
-                  Open local workspace
+                  {t("Open local workspace")}
                 </button>
               </details>
             )}
-            {!auth && <p>Start the platform API to connect this workspace.</p>}
+            {!auth && <p>{t("Start the platform API to connect this workspace.")}</p>}
           </section>
         ) : !state ? (
           <section className="panel" aria-busy="true">
-            Loading your organisation…
+            {t("Loading your organisation…")}
           </section>
         ) : (
           <>
             <section id="onboarding" className="panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow teal">GET STARTED</p>
+                  <p className="eyebrow teal">{t("GET STARTED")}</p>
                   <h2>
-                    {state.organisation?.name || "Set up your organisation"}
+                    {state.organisation?.name || t("Set up your organisation")}
                   </h2>
                 </div>
-                <span>{state.identity.roles.join(" · ")}</span>
+                    <span>{state.identity.roles.map(tStatus).join(" · ")}</span>
               </div>
               {!state.organisation ? (
                 <>
                   <label>
-                    Organisation name
+                    {t("Organisation name")}
                     <input
                       value={orgName}
                       onChange={(e) => setOrgName(e.target.value)}
@@ -576,43 +596,42 @@ export default function PlatformWorkspace() {
                       )
                     }
                   >
-                    Create organisation
+                    {t("Create organisation")}
                   </button>
                 </>
               ) : (
                 <>
                   <ol className="onboarding-steps">
-                    <li>Organisation created</li>
+                    <li>{t("Organisation created")}</li>
                     <li>
                       {snapshot
-                        ? "Network data loaded"
-                        : "Import your network data"}
+                        ? t("Network data loaded")
+                        : t("Import your network data")}
                     </li>
                     <li>
                       {Object.keys(state.organisation.policy).length
-                        ? "Approval policy configured"
-                        : "Set an approval policy"}
+                        ? t("Approval policy configured")
+                        : t("Set an approval policy")}
                     </li>
-                    <li>Assess a disruption and review an action</li>
+                    <li>{t("Assess a disruption and review an action")}</li>
                   </ol>
                   {auth?.development && (
                     <details>
-                      <summary>Explore synthetic industry examples</summary>
+                      <summary>{t("Explore synthetic industry examples")}</summary>
                       <p>
-                        Invented records for demonstration. These are not
-                        customer or supplier facts.
+                        {t("Invented records for demonstration. These are not customer or supplier facts.")}
                       </p>
                       <label>
-                        Industry
+                        {t("Industry")}
                         <select
                           value={industry}
                           onChange={(e) => setIndustry(e.target.value)}
                         >
                           <option value="automotive">
-                            Automotive electronics
+                            {t("Automotive electronics")}
                           </option>
-                          <option value="pharma">Pharma</option>
-                          <option value="food">Food</option>
+                          <option value="pharma">{t("Pharma")}</option>
+                          <option value="food">{t("Food")}</option>
                         </select>
                       </label>
                       <button
@@ -627,7 +646,7 @@ export default function PlatformWorkspace() {
                           )
                         }
                       >
-                        Load synthetic example
+                        {t("Load synthetic example")}
                       </button>
                     </details>
                   )}
@@ -637,13 +656,13 @@ export default function PlatformWorkspace() {
 
             {state.organisation && (
               <>
-                <section className="quality-grid" aria-label="Data quality">
+                <section className="quality-grid" aria-label={t("Data quality")}>
                   <div>
-                    <span>Graph revision</span>
+                    <span>{t("Graph revision")}</span>
                     <strong>{snapshot?.version || 0}</strong>
                   </div>
                   <div>
-                    <span>Missing inventory inputs</span>
+                    <span>{t("Missing inventory inputs")}</span>
                     <strong>
                       {snapshot?.data.inventory.filter(
                         (i) => !i.on_hand || !i.daily_consumption,
@@ -651,7 +670,7 @@ export default function PlatformWorkspace() {
                     </strong>
                   </div>
                   <div>
-                    <span>Inferred links</span>
+                    <span>{t("Inferred links")}</span>
                     <strong>
                       {snapshot?.data.links.filter(
                         (e) => e.status === "inferred",
@@ -659,22 +678,21 @@ export default function PlatformWorkspace() {
                     </strong>
                   </div>
                   <div>
-                    <span>Audit chain</span>
+                    <span>{t("Audit chain")}</span>
                     <strong>
-                      {state.audit?.valid ? "Verified" : "Check required"}
+                      {state.audit?.valid ? t("Verified") : t("Check required")}
                     </strong>
                   </div>
                 </section>
 
                 <section id="imports" className="panel">
-                  <h2>{labels.imports}</h2>
+                  <h2>{t("Data imports")}</h2>
                   <p className="muted">
-                    Preview CSV or Excel columns, validate the mapping, then
-                    apply a reviewed import.
+                    {t("Preview CSV or Excel columns, validate the mapping, then apply a reviewed import.")}
                   </p>
                   <div className="platform-form-row">
                     <label>
-                      Table
+                      {t("Table")}
                       <select
                         value={target}
                         onChange={(e) => {
@@ -682,22 +700,22 @@ export default function PlatformWorkspace() {
                           setMapping({});
                         }}
                       >
-                        <option value="entities">Entities</option>
-                        <option value="inventory">Inventory</option>
-                        <option value="links">Links</option>
-                        <option value="purchase_orders">Purchase orders</option>
-                        <option value="boms">BOM items</option>
+                        <option value="entities">{t("Entities")}</option>
+                        <option value="inventory">{t("Inventory")}</option>
+                        <option value="links">{t("Links")}</option>
+                        <option value="purchase_orders">{t("Purchase orders")}</option>
+                        <option value="boms">{t("BOM items")}</option>
                       </select>
                     </label>
                     <label>
-                      Quantity unit
+                      {t("Quantity unit")}
                       <input
                         value={importUnit}
                         onChange={(e) => setImportUnit(e.target.value)}
                       />
                     </label>
                     <label>
-                      File
+                      {t("File")}
                       <input
                         type="file"
                         accept=".csv,.xlsx"
@@ -717,7 +735,7 @@ export default function PlatformWorkspace() {
                             await file.arrayBuffer(),
                           );
                           if (bytes.length > 3000000)
-                            throw new Error("Choose a file smaller than 3 MB.");
+                            throw new Error(t("Choose a file smaller than 3 MB."));
                           let encoded = "";
                           for (let i = 0; i < bytes.length; i += 8192)
                             encoded += String.fromCharCode(
@@ -748,7 +766,7 @@ export default function PlatformWorkspace() {
                         })
                       }
                     >
-                      Preview columns
+                    {t("Preview columns")}
                     </button>
                   </div>
                   {columns.length > 0 && (
@@ -766,7 +784,7 @@ export default function PlatformWorkspace() {
                                 })
                               }
                             >
-                              <option value="">Not mapped</option>
+                              <option value="">{t("Not mapped")}</option>
                               {columns.map((c) => (
                                 <option key={c}>{c}</option>
                               ))}
@@ -799,7 +817,7 @@ export default function PlatformWorkspace() {
                           )
                         }
                       >
-                        Validate and stage
+                    {t("Validate and stage")}
                       </button>
                     </>
                   )}
@@ -815,9 +833,9 @@ export default function PlatformWorkspace() {
                                 "Import",
                             )}
                           </strong>
-                          <span className="badge">{r.status}</span>
+                          <span className="badge">{tStatus(r.status)}</span>
                           <p className="muted small">
-                            {Number(r.payload.row_count || 0)} rows ·{" "}
+                            {format(Number(r.payload.row_count || 0), locale)} {t("rows")} ·{" "}
                             {String(r.payload.schema_sha256 || "").slice(0, 12)}
                           </p>
                           {r.status === "invalid" && (
@@ -836,7 +854,7 @@ export default function PlatformWorkspace() {
                               )
                             }
                           >
-                            Apply import
+                            {t("Apply import")}
                           </button>
                         )}
                         {r.status === "applied" && (
@@ -851,12 +869,12 @@ export default function PlatformWorkspace() {
                               )
                             }
                           >
-                            Rollback with reason
+                            {t("Rollback with reason")}
                           </button>
                         )}
                         {r.status === "needs_review" && (
                           <details>
-                            <summary>Resolve ambiguous identities</summary>
+                            <summary>{t("Resolve ambiguous identities")}</summary>
                             <pre>
                               {JSON.stringify(r.payload.reviews, null, 2)}
                             </pre>
@@ -880,7 +898,7 @@ export default function PlatformWorkspace() {
                                 )
                               }
                             >
-                              Keep each incoming entity separate
+                              {t("Keep each incoming entity separate")}
                             </button>
                           </details>
                         )}
@@ -891,28 +909,28 @@ export default function PlatformWorkspace() {
                 {snapshot && (
                   <section id="graph" className="panel">
                     <div className="panel-heading">
-                      <h2>{labels.network}</h2>
+                      <h2>{t("Graph explorer")}</h2>
                       <span>
-                        Revision {snapshot.version} ·{" "}
-                        {new Date(snapshot.recorded_at).toLocaleString()}
+                        {t("Revision")} {snapshot.version} ·{" "}
+                        {new Date(snapshot.recorded_at).toLocaleString(localeTag(locale))}
                       </span>
                     </div>
                     <div className="platform-form-row">
                       <label>
-                        Search
+                        {t("Search")}
                         <input
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Name or identifier"
+                          placeholder={t("Name or identifier")}
                         />
                       </label>
                       <label>
-                        Relationship status
+                        {t("Relationship status")}
                         <select
                           value={statusFilter}
                           onChange={(e) => setStatusFilter(e.target.value)}
                         >
-                          <option value="">All statuses</option>
+                          <option value="">{t("All statuses")}</option>
                           {[
                             "declared",
                             "inferred",
@@ -920,12 +938,12 @@ export default function PlatformWorkspace() {
                             "rejected",
                             "expired",
                           ].map((s) => (
-                            <option key={s}>{s}</option>
+                            <option key={s}>{t(s as CopyKey)}</option>
                           ))}
                         </select>
                       </label>
                       <label>
-                        Dependency depth
+                        {t("Dependency depth")}
                         <input
                           type="number"
                           min="0"
@@ -937,7 +955,7 @@ export default function PlatformWorkspace() {
                         />
                       </label>
                       <label>
-                        As-of date
+                        {t("As-of date")}
                         <input
                           type="datetime-local"
                           value={asOf}
@@ -961,13 +979,13 @@ export default function PlatformWorkspace() {
                           )
                         }
                       >
-                        View history
+                        {t("View history")}
                       </button>
                       <button
                         className="quiet"
                         onClick={() => setHistorical(null)}
                       >
-                        Latest revision
+                        {t("Latest revision")}
                       </button>
                     </div>
                     {filteredGraph && (
@@ -984,20 +1002,20 @@ export default function PlatformWorkspace() {
                     <div className="entity-list">
                       {visibleEntities.map((e) => (
                         <span key={e.id} className="badge">
-                          {e.name} · {e.kind} · {e.provenance.kind}
+                          {e.name} · {tStatus(e.kind)} · {tStatus(e.provenance.kind)}
                         </span>
                       ))}
                     </div>
                     <label>
-                      Inspect a link
+                      {t("Inspect a link")}
                       <select
                         value={selectedLink}
                         onChange={(e) => setSelectedLink(e.target.value)}
                       >
-                        <option value="">Choose a relationship</option>
+                        <option value="">{t("Choose a relationship")}</option>
                         {snapshot.data.links.map((e) => (
                           <option value={e.id} key={e.id}>
-                            {e.source} → {e.target} · {e.status}
+                            {e.source} → {e.target} · {tStatus(e.status)}
                           </option>
                         ))}
                       </select>
@@ -1005,11 +1023,11 @@ export default function PlatformWorkspace() {
                     {link && (
                       <div className="evidence-body">
                         <strong>
-                          {link.type} · {link.status}
+                          {link.type} · {tStatus(link.status)}
                         </strong>
                         <p>
-                          Evidence support {format(link.confidence * 100)}% ·
-                          uncalibrated
+                          {t("Evidence support")} {format(link.confidence * 100, locale)}% ·
+                          {t("uncalibrated")}
                         </p>
                         <p className="muted">
                           {link.provenance.kind} · {link.provenance.uri}
@@ -1029,19 +1047,18 @@ export default function PlatformWorkspace() {
 
                 {snapshot && (
                   <section className="panel">
-                    <h2>Scenario runner</h2>
+                    <h2>{t("Scenario runner")}</h2>
                     <p className="muted">
-                      Assess a full source interruption using the selected
-                      immutable graph revision.
+                      {t("Assess a full source interruption using the selected immutable graph revision.")}
                     </p>
                     <div className="platform-form-row">
                       <label>
-                        Affected source
+                        {t("Affected source")}
                         <select
                           value={source}
                           onChange={(e) => setSource(e.target.value)}
                         >
-                          <option value="">Choose an entity</option>
+                          <option value="">{t("Choose an entity")}</option>
                           {snapshot.data.entities.map((e) => (
                             <option value={e.id} key={e.id}>
                               {e.name}
@@ -1050,7 +1067,7 @@ export default function PlatformWorkspace() {
                         </select>
                       </label>
                       <label>
-                        Severity
+                        {t("Severity")}
                         <input
                           type="number"
                           min="0"
@@ -1061,7 +1078,7 @@ export default function PlatformWorkspace() {
                         />
                       </label>
                       <label>
-                        Traversal depth
+                        {t("Traversal depth")}
                         <input
                           type="number"
                           min="1"
@@ -1091,7 +1108,7 @@ export default function PlatformWorkspace() {
                           })
                         }
                       >
-                        Calculate runway
+                      {t("Calculate runway")}
                       </button>
                     </div>
                     {report && (
@@ -1099,8 +1116,7 @@ export default function PlatformWorkspace() {
                         <p className="notice">{report.range_assumption}</p>
                         {report.truncated && (
                           <p role="alert">
-                            Traversal was truncated. Mitigations are blocked
-                            until assessment is complete.
+                            {t("Traversal was truncated. Mitigations are blocked until assessment is complete.")}
                           </p>
                         )}
                         {report.impacts.map((impact: Impact, i) => (
@@ -1108,28 +1124,28 @@ export default function PlatformWorkspace() {
                             <strong>
                               {impact.material_name} · {impact.plant_name}
                             </strong>
-                            <span className="badge">{impact.status}</span>
+                            <span className="badge">{tStatus(impact.status)}</span>
                             {impact.reason && <p>{impact.reason}</p>}
                             <div className="runway-metrics">
                               <div>
-                                <span>Stock cover</span>
+                                <span>{t("Stock cover")}</span>
                                 <strong>
-                                  {format(impact.cover_days)} days
+                                  {format(impact.cover_days, locale)} {t("days")}
                                 </strong>
                               </div>
                               <div>
-                                <span>Requalification</span>
+                                <span>{t("Requalification")}</span>
                                 <strong>
-                                  {format(impact.requalification_days)} days
+                                  {format(impact.requalification_days, locale)} {t("days")}
                                 </strong>
                               </div>
                               <div>
-                                <span>Exposure range</span>
+                                <span>{t("Exposure range")}</span>
                                 <strong>
                                   {impact.exposure_days_range
-                                    ?.map(format)
+                                    ?.map((days) => format(days, locale))
                                     .join("–") || "—"}{" "}
-                                  days
+                                  {t("days")}
                                 </strong>
                               </div>
                             </div>
@@ -1141,14 +1157,13 @@ export default function PlatformWorkspace() {
                 )}
 
                 <section className="panel">
-                  <h2>Approval policy</h2>
+                  <h2>{t("Approval policy")}</h2>
                   <p className="muted">
-                    Limits are explicit organisation assumptions. A separate
-                    approver is required by default.
+                    {t("Limits are explicit organisation assumptions. A separate approver is required by default.")}
                   </p>
                   <div className="platform-form-row">
                     <label>
-                      Currency
+                      {t("Currency")}
                       <input
                         maxLength={3}
                         value={currency}
@@ -1158,7 +1173,7 @@ export default function PlatformWorkspace() {
                       />
                     </label>
                     <label>
-                      Maximum spend
+                      {t("Maximum spend")}
                       <input
                         type="number"
                         min="0"
@@ -1167,7 +1182,7 @@ export default function PlatformWorkspace() {
                       />
                     </label>
                     <label>
-                      Automatic approval limit
+                      {t("Automatic approval limit")}
                       <input
                         type="number"
                         min="0"
@@ -1185,50 +1200,50 @@ export default function PlatformWorkspace() {
                             spend_limit: measure(
                               spend,
                               currency,
-                              "Organisation spending limit",
+                                t("Organisation spending limit"),
                             ),
                             auto_approve_limit: measure(
                               automatic,
                               currency,
-                              "Organisation automatic approval limit",
+                                t("Organisation automatic approval limit"),
                             ),
                             approval_sla: measure(
                               24,
                               "hour",
-                              "Organisation approval SLA",
+                              t("Organisation approval SLA"),
                             ),
                           }),
                         )
                       }
                     >
-                      Save policy
+                      {t("Save policy")}
                     </button>
                   </div>
                 </section>
 
                 <section id="approvals" className="panel">
-                  <h2>{labels.approvals}</h2>
+                  <h2>{t("Approvals inbox")}</h2>
                   <label>
-                    Decision or rollback reason
+                    {t("Decision or rollback reason")}
                     <textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
-                      placeholder="Explain the evidence and decision"
+                      placeholder={t("Explain the evidence and decision")}
                     />
                   </label>
                   {assessment && (
                     <details>
-                      <summary>Draft a mitigation from a sourced quote</summary>
+                      <summary>{t("Draft a mitigation from a sourced quote")}</summary>
                       <div className="platform-form-row">
                         <label>
-                          Quote source and rationale
+                          {t("Quote source and rationale")}
                           <input
                             value={quote}
                             onChange={(e) => setQuote(e.target.value)}
                           />
                         </label>
                         <label>
-                          Cost
+                          {t("Cost")}
                           <input
                             type="number"
                             min="0"
@@ -1237,7 +1252,7 @@ export default function PlatformWorkspace() {
                           />
                         </label>
                         <label>
-                          Duration in days
+                          {t("Duration in days")}
                           <input
                             type="number"
                             min="0"
@@ -1263,7 +1278,7 @@ export default function PlatformWorkspace() {
                             )
                           }
                         >
-                          Create approval draft
+                          {t("Create approval draft")}
                         </button>
                       </div>
                     </details>
@@ -1274,10 +1289,10 @@ export default function PlatformWorkspace() {
                       <article className="record-row" key={r.id}>
                         <div>
                           <strong>{String(r.payload.title)}</strong>
-                          <span className="badge">{r.status}</span>
+                          <span className="badge">{tStatus(r.status)}</span>
                           <p>{String(r.payload.rationale)}</p>
                           <p className="muted small">
-                            {format((r.payload.cost as Measure).value)}{" "}
+                            {format((r.payload.cost as Measure).value, locale)}{" "}
                             {(r.payload.cost as Measure).unit} ·{" "}
                             {(r.payload.cost as Measure).provenance.note}
                           </p>
@@ -1306,7 +1321,7 @@ export default function PlatformWorkspace() {
                                   )
                                 }
                               >
-                                Approve
+                                {t("Approve")}
                               </button>
                               <button
                                 disabled={
@@ -1322,7 +1337,7 @@ export default function PlatformWorkspace() {
                                   )
                                 }
                               >
-                                Reject
+                                {t("Reject")}
                               </button>
                             </>
                           )}
@@ -1336,7 +1351,7 @@ export default function PlatformWorkspace() {
                                 )
                               }
                             >
-                              Record dry-run preview
+                              {t("Record dry-run preview")}
                             </button>
                           )}
                         </div>
@@ -1344,14 +1359,13 @@ export default function PlatformWorkspace() {
                     ))}
                   {!records.some((r) => r.kind === "mitigation") && (
                     <p className="muted">
-                      Assess a disruption, then draft a sourced mitigation to
-                      begin review.
+                      {t("Assess a disruption, then draft a sourced mitigation to begin review.")}
                     </p>
                   )}
                 </section>
 
                 <section className="panel">
-                  <h2>{labels.alerts}</h2>
+                  <h2>{t("Alert centre")}</h2>
                   {records
                     .filter((r) => ["alert", "notification"].includes(r.kind))
                     .map((r) => (
@@ -1360,11 +1374,11 @@ export default function PlatformWorkspace() {
                           <strong>
                             {String(r.payload.title || r.payload.type)}
                           </strong>
-                          <p className="muted">{r.status}</p>
+                          <p className="muted">{tStatus(r.status)}</p>
                           {r.kind === "alert" && r.status === "open" && (
                             <div className="button-row">
                               <label>
-                                Acknowledgement reason
+                                {t("Acknowledgement reason")}
                                 <input
                                   value={alertReasons[r.id] || ""}
                                   onChange={(event) =>
@@ -1392,7 +1406,7 @@ export default function PlatformWorkspace() {
                                   )
                                 }
                               >
-                                Acknowledge alert
+                                {t("Acknowledge alert")}
                               </button>
                             </div>
                           )}
@@ -1415,13 +1429,13 @@ export default function PlatformWorkspace() {
                               {String(
                                 r.payload.title ||
                                   r.payload.headline ||
-                                  "Unmatched event",
+                                  t("Unmatched event"),
                               )}
                             </strong>
                             <p className="muted">
                               {r.payload.category === "sanctions"
-                                ? "Possible name-only sanctions or export-control candidate. Mapping the entity does not determine sanctions status, export authorization, or clearance."
-                                : "Event needs entity review"}
+                                ? t("Possible name-only sanctions or export-control candidate. Mapping the entity does not determine sanctions status, export authorization, or clearance.")
+                                : t("Event needs entity review")}
                             </p>
                             {typeof r.payload.provenance === "object" &&
                               r.payload.provenance !== null &&
@@ -1431,15 +1445,12 @@ export default function PlatformWorkspace() {
                                 "https://data.trade.gov/",
                               ) && (
                                 <p className="muted">
-                                  This product uses the International Trade
-                                  Administration’s Data API but is not endorsed
-                                  or certified by the International Trade
-                                  Administration.
+                                  {t("This product uses the International Trade Administration’s Data API but is not endorsed or certified by the International Trade Administration.")}
                                 </p>
                               )}
                             <div className="button-row">
                               <label>
-                                Match to entity
+                                {t("Match to entity")}
                                 <select
                                   value={resolution.entityId}
                                   onChange={(event) =>
@@ -1452,7 +1463,7 @@ export default function PlatformWorkspace() {
                                     }))
                                   }
                                 >
-                                  <option value="">Select an entity</option>
+                                  <option value="">{t("Select an entity")}</option>
                                   {(state.snapshot?.data.entities || []).map(
                                     (entity) => (
                                       <option key={entity.id} value={entity.id}>
@@ -1463,7 +1474,7 @@ export default function PlatformWorkspace() {
                                 </select>
                               </label>
                               <label>
-                                Resolution reason
+                                {t("Resolution reason")}
                                 <input
                                   value={resolution.reason}
                                   onChange={(event) =>
@@ -1499,8 +1510,8 @@ export default function PlatformWorkspace() {
                                 }
                               >
                                 {r.payload.category === "sanctions"
-                                  ? "Map entity for review"
-                                  : "Map event to entity"}
+                                  ? t("Map entity for review")
+                                  : t("Map event to entity")}
                               </button>
                             </div>
                           </div>
@@ -1513,25 +1524,25 @@ export default function PlatformWorkspace() {
                       (r.kind === "event" && r.status === "needs_review"),
                   ) && (
                     <p className="muted">
-                      No alerts or approval notifications yet.
+                      {t("No alerts or approval notifications yet.")}
                     </p>
                   )}
                 </section>
 
                 <section className="panel">
-                  <h2>Reports and audit</h2>
+                  <h2>{t("Reports and audit")}</h2>
                   <p>
                     {state.audit?.valid
-                      ? "Audit chain verified"
-                      : "Audit verification requires attention"}{" "}
-                    · {state.audit?.count || 0} records
+                      ? t("Audit chain verified")
+                      : t("Audit verification requires attention")}{" "}
+                    · {state.audit?.count || 0} {t("records")}
                   </p>
                   <div className="button-row">
                     <button
                       className="secondary"
                       onClick={() => void run(() => printRiskReport())}
                     >
-                      Print or save PDF
+                      {t("Print or save PDF")}
                     </button>
                     <button
                       className="secondary"
@@ -1541,7 +1552,7 @@ export default function PlatformWorkspace() {
                         )
                       }
                     >
-                      Export audit JSON
+                      {t("Export audit JSON")}
                     </button>
                     <button
                       className="secondary"
@@ -1551,10 +1562,10 @@ export default function PlatformWorkspace() {
                         )
                       }
                     >
-                      Export CSV
+                      {t("Export CSV")}
                     </button>
                   </div>
-                  <p className="mono break">Chain head: {state.audit?.head}</p>
+                  <p className="mono break">{t("Chain head:")} {state.audit?.head}</p>
                 </section>
               </>
             )}
