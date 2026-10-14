@@ -141,6 +141,56 @@ class RSSFeed:
         return result
 
 
+class GDELTFeed:
+    """Bounded GDELT DOC ArticleList adapter that consumes its documented RSS mode."""
+
+    HOST = "api.gdeltproject.org"
+
+    def __init__(
+        self,
+        query: str,
+        allowed_hosts: set[str],
+        *,
+        timespan: str = "24h",
+        max_records: int = 50,
+        timeout: float = 10,
+    ):
+        if not isinstance(query, str) or not query.strip() or len(query) > 256:
+            raise ValueError("GDELT query must contain 1 to 256 characters.")
+        duration = (
+            re.fullmatch(r"(\d{1,3})(min|h|d|w|m)", timespan) if isinstance(timespan, str) else None
+        )
+        if duration is None:
+            raise ValueError("GDELT timespan must be a bounded duration such as 24h or 7d.")
+        amount, unit = int(duration.group(1)), duration.group(2)
+        duration_minutes = amount * {"min": 1, "h": 60, "d": 1440, "w": 10080, "m": 43200}[unit]
+        if duration_minutes < 15 or duration_minutes > 129600:
+            raise ValueError("GDELT timespan must be at least 15 minutes and at most 90 days.")
+        if (
+            isinstance(max_records, bool)
+            or not isinstance(max_records, int)
+            or not 1 <= max_records <= 75
+        ):
+            raise ValueError("GDELT max_records must be between 1 and 75.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("GDELT host must be added to the event feed allowlist.")
+        query_string = urllib.parse.urlencode(
+            {
+                "query": query,
+                "mode": "artlist",
+                "format": "rss",
+                "timespan": timespan,
+                "maxrecords": max_records,
+                "sort": "datedesc",
+            }
+        )
+        url = f"https://{self.HOST}/api/v2/doc/doc?{query_string}"
+        self.reader = RSSFeed(url, allowed_hosts, timeout=timeout)
+
+    def read(self) -> list[FeedItem]:
+        return self.reader.read()
+
+
 def configured_feeds(tenant_id: str) -> list[dict]:
     path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
     if not path:
@@ -358,11 +408,23 @@ def poll(store, tenant_id: str):
     for config in feed_configs:
         if (
             not isinstance(config.get("name"), str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,48}", config["name"])
             or not isinstance(config.get("license"), str)
             or not config["license"].strip()
         ):
             raise ValueError("Every public feed requires a name and licensing note.")
-        feed = RSSFeed(config.get("url", ""), allowed)
+        feed_type = config.get("type", "rss")
+        if feed_type == "rss":
+            feed = RSSFeed(config.get("url", ""), allowed)
+        elif feed_type == "gdelt":
+            feed = GDELTFeed(
+                config.get("query", ""),
+                allowed,
+                timespan=config.get("timespan", "24h"),
+                max_records=config.get("max_records", 50),
+            )
+        else:
+            raise ValueError("Configured event feed type is not supported.")
         for item in feed.read():
             provenance = Provenance(
                 uri=item.id,
@@ -375,7 +437,9 @@ def poll(store, tenant_id: str):
                     store,
                     tenant_id,
                     EventSubmission(
-                        source_id=f"{config['name']}:{item.id}",
+                        source_id=(
+                            f"{config['name']}:{hashlib.sha256(item.id.encode()).hexdigest()}"
+                        ),
                         title=item.title,
                         description=item.description,
                         observed_at=item.observed_at,

@@ -1,6 +1,6 @@
 """Authenticated authority, frozen inputs, policy change and execution gates."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -15,6 +15,7 @@ from substrata.platform.governance import (
     decide,
     delegate,
     execute,
+    expire_pending_approvals,
     propose,
     save_assessment,
 )
@@ -100,6 +101,29 @@ def test_delegation_rejection_and_blocked_spending(platform):
     assert rejected["status"] == "rejected"
     with pytest.raises(Conflict):
         execute(platform, actor("delegate", "approver"), action["id"])
+
+
+def test_worker_expiry_marks_sla_and_emits_portal_notification(platform):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+    from substrata.platform.records import list_records
+
+    action = prepared(platform)
+    with tenant_transaction(platform.engine, "alpha") as session:
+        record = session.get(WorkRecord, ("alpha", action["id"]))
+        record.payload = {
+            **record.payload,
+            "expires_at": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+        }
+
+    assert expire_pending_approvals(platform, actor("worker", "analyst")) == [action["id"]]
+    assert expire_pending_approvals(platform, actor("worker", "analyst")) == []
+    saved = list_records(platform, "alpha", kind="mitigation")[0]
+    assert saved["status"] == "expired"
+    notifications = list_records(platform, "alpha", kind="notification")
+    assert any(n["payload"]["type"] == "approval_expired" for n in notifications)
+    assert any(n["status"] == "expired" for n in notifications)
+    assert platform.audit("alpha")["verification"]["valid"]
 
 
 def test_high_cost_is_blocked_and_live_writes_are_disabled_in_development(platform, monkeypatch):

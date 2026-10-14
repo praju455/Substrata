@@ -146,6 +146,9 @@ def _claim(store, tenant_id: str):
 
 def run_next(store, actor):
     actor.require("analyst")
+    from substrata.platform.governance import expire_pending_approvals
+
+    expire_pending_approvals(store, actor)
     claimed = _claim(store, actor.tenant_id)
     if claimed is None:
         return None

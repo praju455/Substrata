@@ -134,15 +134,23 @@ audited. RSS/Atom inputs are bounded, HTTPS-only and restricted to an operator
 host allowlist; each configured feed carries an explicit licensing note. Heuristic
 severity and entity-match scores are labelled assumptions, while ambiguous matches
 wait for an authenticated analyst. Alert acknowledgement and event resolution are
-audited. These feed connectors do not yet cover GDELT, weather, ports or sanctions
-registries, and no news API key is bundled.
+audited. A GDELT DOC ArticleList adapter consumes its RSS output with bounded query
+windows and result counts; configure `api.gdeltproject.org` in the host allowlist
+and provide an operator-reviewed attribution/license note. See the [GDELT DOC API
+description](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/). Weather,
+port/congestion and sanctions/export-control registries still need dedicated
+adapters, and no source key or licensing rights are bundled.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
 supervised process; each worker is bound to one tenant. The queue currently handles
-event polls and deterministic assessments. Retries stop after four attempts and
-expired leases are recoverable. There is no managed broker or automatic worker
-orchestration yet.
+event polls and deterministic assessments. The worker also scans tenant approval
+deadlines on each poll, expires overdue pending decisions, closes the original
+portal notice and creates an audited expiry notice. Approval endpoints enforce the
+same deadline even when the worker is offline. Portal records are the only
+notification channel today; email/SMS delivery is not configured. Retries stop
+after four attempts and expired leases are recoverable. There is no managed broker
+or automatic worker orchestration yet.
 
 The stateless authenticated `/platform/mcp` endpoint exposes the deterministic
 `cascade.assess` tool. `/.well-known/agent.json` advertises the authenticated A2A

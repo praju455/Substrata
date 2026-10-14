@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal, Protocol
 
 from pydantic import Field, model_validator
+from sqlalchemy import select
 
 from substrata.platform.auth import Principal
 from substrata.platform.cascade import assess
@@ -132,6 +133,77 @@ def save_assessment(
             {"id": record.id, "graph_sha256": snapshot.sha256, "status": status},
         )
         return encode(record)
+
+
+def expire_pending_approvals(store, actor: Principal, *, limit=500):
+    """Apply expired approval deadlines and publish one tenant notification per action."""
+    actor.require("analyst")
+    now = datetime.now(UTC)
+    expired_ids = []
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        pending = session.scalars(
+            select(WorkRecord)
+            .where(
+                WorkRecord.tenant_id == actor.tenant_id,
+                WorkRecord.kind == "mitigation",
+                WorkRecord.status == "pending",
+            )
+            .order_by(WorkRecord.created_at, WorkRecord.id)
+            .limit(min(max(limit, 1), 500))
+            .with_for_update(skip_locked=True)
+        )
+        notifications = list(
+            session.scalars(
+                select(WorkRecord)
+                .where(
+                    WorkRecord.tenant_id == actor.tenant_id,
+                    WorkRecord.kind == "notification",
+                    WorkRecord.status == "pending",
+                )
+                .limit(1000)
+            )
+        )
+        for action in pending:
+            expires_at = datetime.fromisoformat(action.payload["expires_at"])
+            if expires_at > now:
+                continue
+            action.status = "expired"
+            action.payload = {
+                **action.payload,
+                "approval": {
+                    "actor": actor.subject,
+                    "reason": "Approval SLA expired before a decision.",
+                    "decided_at": now.isoformat(),
+                },
+            }
+            for notification in notifications:
+                if notification.payload.get("action_id") == action.id:
+                    notification.status = "expired"
+            notification_id = "approval-expired-" + hashlib.sha256(action.id.encode()).hexdigest()
+            if session.get(WorkRecord, (actor.tenant_id, notification_id)) is None:
+                add(
+                    session,
+                    actor.tenant_id,
+                    "notification",
+                    "pending",
+                    {
+                        "type": "approval_expired",
+                        "action_id": action.id,
+                        "title": action.payload["title"],
+                        "channel": "portal",
+                    },
+                    notification_id,
+                )
+            store.append(
+                session,
+                org,
+                "approval.expired",
+                actor.subject,
+                {"id": action.id, "reason": "approval_sla_elapsed"},
+            )
+            expired_ids.append(action.id)
+    return expired_ids
 
 
 def propose(store, actor: Principal, body: ProposalInput):

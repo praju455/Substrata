@@ -8,7 +8,16 @@ from fastapi import HTTPException
 from substrata.platform.auth import Principal
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Provenance
-from substrata.platform.events import EventRule, EventSubmission, RSSFeed, ingest, subscription
+from substrata.platform.events import (
+    EventRule,
+    EventSubmission,
+    FeedItem,
+    GDELTFeed,
+    RSSFeed,
+    ingest,
+    poll,
+    subscription,
+)
 from substrata.platform.jobs import JobInput, enqueue, jobs, run_next
 from substrata.platform.models import WorkRecord
 from substrata.platform.records import list_records
@@ -89,6 +98,54 @@ def test_feed_hosts_require_https_and_explicit_allowlist():
         RSSFeed("https://example.com/feed.xml", {"other.example"})
     with pytest.raises(ValueError, match="allowlist"):
         RSSFeed("https://example.com@127.0.0.1/feed.xml", {"example.com"})
+
+
+def test_gdelt_adapter_is_allowlisted_and_bounds_query_window_and_results():
+    allowed = {GDELTFeed.HOST}
+    feed = GDELTFeed('"port closure" OR "factory shutdown"', allowed, max_records=25)
+    parsed = __import__("urllib.parse", fromlist=["urlsplit", "parse_qs"])
+    url = parsed.urlsplit(feed.reader.url)
+    values = parsed.parse_qs(url.query)
+    assert url.hostname == GDELTFeed.HOST
+    assert values["mode"] == ["artlist"]
+    assert values["format"] == ["rss"]
+    assert values["maxrecords"] == ["25"]
+    with pytest.raises(ValueError, match="allowlist"):
+        GDELTFeed("supplier disruption", set())
+    with pytest.raises(ValueError, match="timespan"):
+        GDELTFeed("supplier disruption", allowed, timespan="3months")
+    with pytest.raises(ValueError, match="max_records"):
+        GDELTFeed("supplier disruption", allowed, max_records=250)
+
+
+def test_gdelt_feed_configuration_runs_through_tenant_event_pipeline(
+    platform, monkeypatch, tmp_path
+):
+    seeded(platform)
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"gdelt","name":"global-news","tenant_id":"alpha",'
+        '"query":"factory closure","license":"GDELT metadata attribution",'
+        '"timespan":"24h","max_records":10}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", GDELTFeed.HOST)
+    monkeypatch.setattr(
+        GDELTFeed,
+        "read",
+        lambda self: [
+            FeedItem(
+                id="https://news.example/story-1",
+                title="Factory closure halts production",
+                observed_at=datetime.now(UTC),
+            )
+        ],
+    )
+    received = poll(platform, "alpha")
+    assert len(received) == 1
+    assert received[0]["payload"]["provenance"]["note"].startswith("global-news;")
+    assert poll(platform, "beta") == []
 
 
 def test_job_is_idempotent_durable_and_dispatches_scoped_feed_poll(platform, monkeypatch):
