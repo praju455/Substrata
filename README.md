@@ -27,6 +27,9 @@ DOC, U.S. NWS active weather alerts and field-mapped JSON APIs run through the s
 Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, so clients cannot delegate exposure arithmetic to an LLM.
+Run a synthetic graph traversal load check with
+`python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
+Its local timings are not production service-level objectives.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see
 [Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
 

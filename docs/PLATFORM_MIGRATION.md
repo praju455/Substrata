@@ -129,6 +129,10 @@ Tests include multi-industry golden results and generated stock monotonicity.
 `POST /platform/seeds` supplies clearly synthetic automotive, pharma and food
 fixtures only in development. `/platform/scenarios/assess` accepts an explicit
 source, date, graph version and bounded traversal depth.
+Run `python -m scripts.platform_graph_load` for repeatable concurrent traversal
+measurements on a generated binary tree. The harness reports query latency and
+throughput, labels all input as synthetic, and has no production performance
+threshold; pilot sizing still needs representative customer-shaped graphs.
 
 Event subscriptions and user-submitted events are tenant-scoped, deduplicated and
 audited. RSS/Atom inputs are bounded, HTTPS-only and restricted to an operator
