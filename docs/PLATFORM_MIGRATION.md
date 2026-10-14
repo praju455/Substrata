@@ -327,6 +327,25 @@ heads separately to detect privileged tail truncation.
    SMS and approval delegation notifications, managed queue orchestration and
    production operations remain.
 
+## Ten-area readiness map
+
+| Target area | Local evidence | Remaining gate or limitation |
+|---|---|---|
+| 1. Domain model | Tenant-scoped versioned graph revisions, sites/materials/products/plants, inventory, POs/BOMs, provenance and audit; see `DATA_MODEL.md` and platform store tests | Customer master-data semantics and alternative GraphStore deployments are not validated |
+| 2. Ingestion | CSV/XLSX mapping, drift checks, dedupe, review, rollback; REST/webhooks; read-only OData mock/adapter; see connector and ingestion tests | Real SAP resource mappings/credentials and the Ariba adapter remain customer integration work |
+| 3. Evidence and inference | Tenant document store, citation-checked extraction, optional embeddings, provider interface/mock/cost logs, scorer training/evaluation and registry | Semantic provider keys and customer-labelled evaluation data are external; offline fixtures do not establish field precision/recall |
+| 4. Event sensing | Tenant RSS/Atom, GDELT, NWS, MeteoAlarm, user/API events, OFAC SDN and ITA CSL flow through review rules | Port signals require a licensed provider configuration; more jurisdictions/lists need source-specific review adapters |
+| 5. Cascade engine | Deterministic traversal, runway/ranges, golden scenarios and generated stock invariants; see `cascade.py` and cascade tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
+| 6. Agents | Five typed role skills, durable tenant jobs, bounded retries/queue, MCP/A2A facades and deterministic math | Multi-role coordinated plans, durable cross-role checkpoints and broad external protocol interoperability remain |
+| 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
+| 8. Product surface | Onboarding, quality counts, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports | Labels are currently English-only; full translation catalog and locale QA remain |
+| 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, request correlation, health/metrics and worker | Production secret manager, TLS topology, encrypted backup/restore drills, distributed tracing/metrics and managed broker require deployment work |
+| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, extraction/scoring evaluation fixtures and graph load harness | PostgreSQL RLS integration skips locally without its admin URL; customer-shaped load/evaluation baselines are still needed |
+
+This map describes implementation evidence, not a pilot or GA certification. A
+production release still needs the listed deployment gates, real-system validation,
+reviewed provider terms and a customer-owned operating policy.
+
 The final review must map every requirement to executable tests, runtime behavior
 or a documented external configuration gate. Real supplier contact is disabled in
 development, execution defaults to dry-run, and no SAP affiliation is claimed.
