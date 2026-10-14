@@ -1367,7 +1367,11 @@ export default function PlatformWorkspace() {
                                   "Unmatched event",
                               )}
                             </strong>
-                            <p className="muted">Event needs entity review</p>
+                            <p className="muted">
+                              {r.payload.category === "sanctions"
+                                ? "Possible name-only sanctions match. Mapping the entity does not determine sanctions status or clearance."
+                                : "Event needs entity review"}
+                            </p>
                             <div className="button-row">
                               <label>
                                 Match to entity
@@ -1429,7 +1433,9 @@ export default function PlatformWorkspace() {
                                   )
                                 }
                               >
-                                Resolve event
+                                {r.payload.category === "sanctions"
+                                  ? "Map entity for review"
+                                  : "Map event to entity"}
                               </button>
                             </div>
                           </div>

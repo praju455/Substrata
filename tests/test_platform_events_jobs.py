@@ -1,13 +1,14 @@
 """Tenant feed isolation, transparent heuristic confidence and durable job recovery."""
 
 from datetime import UTC, datetime, timedelta
+from urllib.error import HTTPError
 
 import pytest
 from fastapi import HTTPException
 
 from substrata.platform.auth import Principal
 from substrata.platform.database import tenant_transaction
-from substrata.platform.domain import Provenance
+from substrata.platform.domain import Entity, Provenance
 from substrata.platform.events import (
     EventRule,
     EventSubmission,
@@ -15,6 +16,7 @@ from substrata.platform.events import (
     GDELTFeed,
     JSONAPIEventFeed,
     NWSWeatherFeed,
+    OFACSDNFeed,
     RSSFeed,
     ingest,
     poll,
@@ -345,6 +347,157 @@ def test_configured_json_api_signal_uses_shared_event_pipeline(platform, monkeyp
     assert len(events) == 1
     assert events[0]["payload"]["category"] == "transport"
     assert poll(platform, "beta") == []
+
+
+def test_ofac_sdn_xml_generates_review_only_supplier_name_candidates(
+    platform, monkeypatch, tmp_path
+):
+    data = generate("pharma")
+    entities = [
+        entity.model_copy(update={"name": "Acme Logistics Inc"})
+        if entity.id == "supplier-0"
+        else entity.model_copy(update={"name": "Acme Logistics LCC"})
+        if entity.id == "supplier-1"
+        else entity
+        for entity in data.entities
+    ]
+    platform.save(
+        "alpha", data.model_copy(update={"entities": entities}), "risk-user", expected_version=0
+    )
+    subscription(
+        platform, actor(), EventRule(categories={"sanctions"}, minimum_severity=0.5), "sanctions"
+    )
+    feed_config = tmp_path / "feeds.json"
+    feed_config.write_text(
+        '[{"type":"ofac_sdn","name":"ofac-sdn","tenant_id":"alpha",'
+        '"license":"OFAC public list; operator attribution reviewed"}]',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUBSTRATA_EVENT_FEEDS_FILE", str(feed_config))
+    monkeypatch.setenv("SUBSTRATA_EVENT_ALLOWED_HOSTS", OFACSDNFeed.HOST)
+    monkeypatch.setenv("SUBSTRATA_OFAC_USER_AGENT", "Substrata tests (ops@example.test)")
+    namespace = OFACSDNFeed.NAMESPACE
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<sdnList xmlns="{namespace}">
+  <sdnEntry><uid>12345</uid><lastName>Unrelated Target</lastName><sdnType>Entity</sdnType>
+    <programList><program>SDGT</program></programList>
+    <akaList><aka><type>a.k.a.</type><category>strong</category>
+      <lastName>Acme Logistics Inc</lastName></aka></akaList>
+  </sdnEntry>
+  <sdnEntry><uid>23456</uid><lastName>Acme Logistics LLC</lastName>
+    <sdnType>Entity</sdnType></sdnEntry>
+  <sdnEntry><uid>67890</uid><lastName>Other Organization</lastName>
+    <sdnType>Entity</sdnType></sdnEntry>
+</sdnList>""".encode()
+
+    class Response:
+        headers = {"Last-Modified": "Wed, 14 Oct 2026 14:02:23 GMT"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return OFACSDNFeed.URL
+
+        def read(self, limit):
+            assert limit == 40_000_001
+            return xml
+
+    class Opener:
+        def open(self, request, timeout):
+            assert request.full_url == OFACSDNFeed.URL
+            assert request.get_header("User-agent") == "Substrata tests (ops@example.test)"
+            assert timeout == 30
+            return Response()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: Opener())
+    events = poll(platform, "alpha")
+    assert len(events) == 2
+    assert all(event["status"] == "needs_review" for event in events)
+    assert all(event["payload"]["category"] == "sanctions" for event in events)
+    assert all("not a legal determination" in event["payload"]["description"] for event in events)
+    assert {event["payload"]["matches"][0]["entity_id"] for event in events} == {
+        "supplier-0",
+        "supplier-1",
+    }
+    assert any("heuristic_name_similarity" in event["payload"]["description"] for event in events)
+    alerts = list_records(platform, "alpha", kind="alert")
+    assert len(alerts) == 2
+    assert {event["id"] for event in poll(platform, "alpha")} == {event["id"] for event in events}
+    assert list_records(platform, "beta", kind="event") == []
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_ofac_sdn_reader_requires_allowlist_and_rejects_unbounded_configuration():
+    with pytest.raises(ValueError, match="allowlist"):
+        OFACSDNFeed(set(), "Substrata tests (ops@example.test)")
+    with pytest.raises(ValueError, match="User-Agent"):
+        OFACSDNFeed({OFACSDNFeed.HOST}, "")
+
+
+def test_ofac_sdn_reader_follows_only_the_official_signed_s3_download(monkeypatch):
+    entity = Entity(
+        id="supplier-acme",
+        kind="Supplier",
+        name="Acme Holdings LLC",
+        provenance=source(),
+    )
+    feed = OFACSDNFeed({OFACSDNFeed.HOST}, "Substrata tests (ops@example.test)")
+    xml = (
+        f'<sdnList xmlns="{feed.NAMESPACE}"><sdnEntry><uid>42</uid>'
+        "<lastName>Acme Holdings LLC</lastName><sdnType>Entity</sdnType>"
+        "</sdnEntry></sdnList>"
+    ).encode()
+    target = "https://published.s3.us-gov-west-1.amazonaws.com/sdn.xml?signature=secret"
+
+    class Response:
+        headers = {"Last-Modified": "Wed, 14 Oct 2026 14:02:23 GMT"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return target
+
+        def read(self, limit):
+            return xml
+
+    class Opener:
+        calls = 0
+
+        def open(self, request, timeout):
+            self.calls += 1
+            assert timeout == 30
+            if self.calls == 1:
+                assert request.full_url == feed.URL
+                raise HTTPError(feed.URL, 302, "Found", {"Location": target}, None)
+            assert request.full_url == target
+            return Response()
+
+    opener = Opener()
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: opener)
+    assert len(feed.screen([entity])) == 1
+    assert opener.calls == 2
+
+    class UntrustedOpener:
+        def open(self, request, timeout):
+            raise HTTPError(
+                feed.URL,
+                302,
+                "Found",
+                {"Location": "https://untrusted.example.test/sdn.xml"},
+                None,
+            )
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: UntrustedOpener())
+    with pytest.raises(ValueError, match="untrusted download redirect"):
+        feed.screen([entity])
 
 
 def test_job_is_idempotent_durable_and_dispatches_scoped_feed_poll(platform, monkeypatch):

@@ -2,6 +2,7 @@
 
 import hashlib
 import html
+import io
 import json
 import os
 import re
@@ -24,6 +25,8 @@ from substrata.platform.records import add, encode
 
 MAX_FEED_BYTES = 1_000_000
 MAX_FEED_ITEMS = 200
+MAX_OFAC_BYTES = 40_000_000
+MAX_OFAC_ENTRIES = 50_000
 
 
 class EventSubmission(Contract):
@@ -419,6 +422,220 @@ class JSONAPIEventFeed:
         return result
 
 
+class OFACSDNFeed:
+    """Bounded name-candidate reader for OFAC's published SDN XML list."""
+
+    HOST = "sanctionslistservice.ofac.treas.gov"
+    URL = f"https://{HOST}/api/PublicationPreview/exports/SDN.XML"
+    DOWNLOAD_SUFFIX = ".s3.us-gov-west-1.amazonaws.com"
+    NAMESPACE = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/XML"
+
+    def __init__(self, allowed_hosts: set[str], user_agent: str, *, timeout: float = 30):
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("OFAC SLS host must be added to the event feed allowlist.")
+        if not isinstance(user_agent, str) or not 10 <= len(user_agent) <= 256:
+            raise ValueError("OFAC SLS requires an identifying User-Agent of 10 to 256 characters.")
+        if "\r" in user_agent or "\n" in user_agent:
+            raise ValueError("OFAC SLS User-Agent cannot contain line breaks.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.user_agent = user_agent
+        self.timeout = timeout
+
+    @staticmethod
+    def _local(tag: str) -> str:
+        return tag.rsplit("}", 1)[-1]
+
+    @staticmethod
+    def _text(parent, name: str) -> str:
+        return next(
+            (
+                (child.text or "").strip()
+                for child in parent
+                if OFACSDNFeed._local(child.tag) == name
+            ),
+            "",
+        )
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        return " ".join(re.findall(r"[^\W_]+", value.casefold()))
+
+    def screen(self, entities) -> list[dict]:
+        """Return possible supplier name matches; this is not a clearance decision."""
+        suppliers = [entity for entity in entities if entity.kind == "Supplier"]
+        if not suppliers:
+            return []
+        request = urllib.request.Request(
+            self.URL,
+            headers={"Accept": "application/xml", "User-Agent": self.user_agent},
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            try:
+                response = opener.open(request, timeout=self.timeout)
+                expected_url = self.URL
+            except urllib.error.HTTPError as redirect:
+                if redirect.code not in {301, 302, 303, 307, 308}:
+                    raise
+                destination = redirect.headers.get("Location", "")
+                parsed = urllib.parse.urlsplit(destination)
+                host = (parsed.hostname or "").casefold().rstrip(".")
+                if (
+                    parsed.scheme != "https"
+                    or parsed.username
+                    or parsed.password
+                    or parsed.port not in {None, 443}
+                    or not host.endswith(self.DOWNLOAD_SUFFIX)
+                    or not host[: -len(self.DOWNLOAD_SUFFIX)]
+                ):
+                    redirect.close()
+                    raise ValueError("OFAC SLS returned an untrusted download redirect.") from None
+                redirect.close()
+                expected_url = destination
+                download_request = urllib.request.Request(
+                    destination,
+                    headers={"Accept": "application/xml", "User-Agent": self.user_agent},
+                )
+                response = opener.open(download_request, timeout=self.timeout)
+            with response:
+                if response.geturl() != expected_url:
+                    raise ValueError("OFAC SLS download redirects are not allowed.")
+                body = response.read(MAX_OFAC_BYTES + 1)
+                last_modified = response.headers.get("Last-Modified")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured OFAC SLS feed could not be reached.") from None
+        if (
+            len(body) > MAX_OFAC_BYTES
+            or b"<!DOCTYPE" in body.upper()
+            or b"<!ENTITY" in body.upper()
+        ):
+            raise ValueError(
+                "OFAC SLS response is oversized or contains unsupported XML declarations."
+            )
+        try:
+            observed_at = (
+                parsedate_to_datetime(last_modified) if last_modified else datetime.now(UTC)
+            )
+            if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+                observed_at = observed_at.replace(tzinfo=UTC)
+        except (TypeError, ValueError):
+            observed_at = datetime.now(UTC)
+
+        exact_index: dict[str, list] = {}
+        fuzzy_index: dict[tuple[str, int], list[tuple[object, str]]] = {}
+        for entity in suppliers:
+            normalized = self._normalize(entity.name)
+            if not normalized:
+                continue
+            exact_index.setdefault(normalized, []).append(entity)
+            if len(normalized) >= 8:
+                fuzzy_index.setdefault((normalized[0], len(normalized) // 4), []).append(
+                    (entity, normalized)
+                )
+
+        matches: dict[str, dict] = {}
+        entry_count = 0
+        root_seen = False
+        try:
+            for event, node in ET.iterparse(io.BytesIO(body), events=("start", "end")):
+                local = self._local(node.tag)
+                if event == "start" and not root_seen:
+                    root_seen = True
+                    if local != "sdnList" or not node.tag.startswith(f"{{{self.NAMESPACE}}}"):
+                        raise ValueError("OFAC SLS returned an unsupported SDN XML schema.")
+                if event != "end" or local != "sdnEntry":
+                    continue
+                entry_count += 1
+                if entry_count > MAX_OFAC_ENTRIES:
+                    raise ValueError("OFAC SLS contains more entries than the configured limit.")
+                uid = self._text(node, "uid")
+                primary = " ".join(
+                    part
+                    for part in (self._text(node, "firstName"), self._text(node, "lastName"))
+                    if part
+                )
+                names = [primary] if primary else []
+                programs = []
+                aliases = []
+                for child in node:
+                    child_name = self._local(child.tag)
+                    if child_name == "programList":
+                        programs.extend(
+                            (item.text or "").strip()
+                            for item in child
+                            if self._local(item.tag) == "program" and (item.text or "").strip()
+                        )
+                    elif child_name == "akaList":
+                        for alias in child:
+                            if self._local(alias.tag) != "aka":
+                                continue
+                            alias_name = " ".join(
+                                part
+                                for part in (
+                                    self._text(alias, "firstName"),
+                                    self._text(alias, "lastName"),
+                                )
+                                if part
+                            )
+                            if alias_name:
+                                names.append(alias_name)
+                                aliases.append(alias_name)
+                if uid and primary:
+                    unique_names = list(dict.fromkeys(names))
+                    for listed_name in unique_names:
+                        normalized = self._normalize(listed_name)
+                        if not normalized:
+                            continue
+                        candidates = [
+                            (entity, 1.0, "exact") for entity in exact_index.get(normalized, [])
+                        ]
+                        if not candidates and len(normalized) >= 8:
+                            length_bucket = len(normalized) // 4
+                            possible = []
+                            for bucket in range(length_bucket - 1, length_bucket + 2):
+                                possible.extend(fuzzy_index.get((normalized[0], bucket), []))
+                            if len(possible) <= 1000:
+                                for entity, supplier_name in possible:
+                                    if abs(len(supplier_name) - len(normalized)) > max(
+                                        2, int(max(len(supplier_name), len(normalized)) * 0.1)
+                                    ):
+                                        continue
+                                    score = SequenceMatcher(
+                                        None, supplier_name, normalized, autojunk=False
+                                    ).ratio()
+                                    if score >= 0.9:
+                                        candidates.append(
+                                            (entity, score, "heuristic_name_similarity")
+                                        )
+                        for entity, score, method in candidates:
+                            match_id = f"{entity.id}|{uid}"
+                            previous = matches.get(match_id)
+                            if previous is None or score > previous["score"]:
+                                matches[match_id] = {
+                                    "entity": entity,
+                                    "uid": uid,
+                                    "listed_name": listed_name,
+                                    "aliases": aliases,
+                                    "programs": programs,
+                                    "sdn_type": self._text(node, "sdnType"),
+                                    "score": score,
+                                    "method": method,
+                                    "observed_at": observed_at,
+                                }
+                node.clear()
+        except ET.ParseError:
+            raise ValueError("OFAC SLS SDN XML is invalid.") from None
+        if not root_seen or entry_count == 0:
+            raise ValueError("OFAC SLS returned an empty or incomplete SDN list.")
+        return sorted(matches.values(), key=lambda item: (item["entity"].id, item["uid"]))
+
+
 def configured_feeds(tenant_id: str) -> list[dict]:
     path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
     if not path:
@@ -571,7 +788,9 @@ def ingest(store, tenant_id: str, submitted: EventSubmission):
             session,
             tenant_id,
             "event",
-            "matched" if _has_confident_match(matches) else "needs_review",
+            "matched"
+            if category != "sanctions" and _has_confident_match(matches)
+            else "needs_review",
             event,
             event_id,
         )
@@ -669,6 +888,53 @@ def poll(store, tenant_id: str):
                 category_hint=config.get("category_hint", ""),
                 api_key_file=config.get("api_key_file", ""),
             )
+        elif feed_type == "ofac_sdn":
+            user_agent = os.environ.get("SUBSTRATA_OFAC_USER_AGENT", "")
+            feed = OFACSDNFeed(allowed, user_agent)
+            with tenant_transaction(store.engine, tenant_id) as session:
+                org = store.organisation(session, tenant_id)
+                if org.version == 0:
+                    continue
+            snapshot = store.snapshot(tenant_id)
+            for match in feed.screen(snapshot.data.entities):
+                entity = match["entity"]
+                description = (
+                    "Potential name-only candidate from the OFAC SDN list. "
+                    "This heuristic is not OFAC's matching score and is not a legal "
+                    "determination, clearance, or instruction to block a supplier. "
+                    f"Listed name: {match['listed_name']}; list UID: {match['uid']}; "
+                    f"listed type: {match['sdn_type'] or 'unspecified'}; "
+                    f"programs: {', '.join(match['programs']) or 'unspecified'}; "
+                    f"name method: {match['method']}; local similarity: {match['score']:.3f}; "
+                    f"aliases: {', '.join(match['aliases'])[:2000] or 'none'}. "
+                    "Analyst review of the complete source entry is required."
+                )[:9500]
+                provenance = Provenance(
+                    uri=f"{OFACSDNFeed.URL}#uid={match['uid']}",
+                    observed_at=match["observed_at"],
+                    kind="public",
+                    note=(
+                        f"OFAC SLS SDN list; {config['name']}; list entries are source data, "
+                        f"not a legal determination; license/attribution: {config['license']}"
+                    ),
+                )
+                results.append(
+                    ingest(
+                        store,
+                        tenant_id,
+                        EventSubmission(
+                            source_id="ofac:"
+                            + hashlib.sha256(
+                                f"{config['name']}|{match['uid']}|{entity.id}".encode()
+                            ).hexdigest(),
+                            title=f"Potential sanctions-list name match: {entity.name[:200]}",
+                            description=description,
+                            observed_at=match["observed_at"],
+                            provenance=provenance,
+                        ),
+                    )
+                )
+            continue
         else:
             raise ValueError("Configured event feed type is not supported.")
         for item in feed.read():
@@ -683,9 +949,8 @@ def poll(store, tenant_id: str):
                     store,
                     tenant_id,
                     EventSubmission(
-                        source_id=(
-                            f"{config['name']}:{hashlib.sha256(item.id.encode()).hexdigest()}"
-                        ),
+                        source_id="feed:"
+                        + hashlib.sha256(f"{config['name']}|{item.id}".encode()).hexdigest(),
                         title=item.title,
                         description=item.description,
                         observed_at=item.observed_at,

@@ -179,6 +179,23 @@ optional. Credentials are read from a file and sent as a bearer token only to th
 allowlisted HTTPS host. This generic interface does not establish provider
 licensing or sanctions-screening suitability.
 
+The `ofac_sdn` adapter reads OFAC's current SDN XML from the official
+[Sanctions List Service](https://ofac.treasury.gov/sanctions-list-service); add
+`sanctionslistservice.ofac.treas.gov` to the host allowlist and set
+`SUBSTRATA_OFAC_USER_AGENT` to an identifying application/contact string as
+described in [OFAC's technical notice](https://ofac.treasury.gov/sdn-list-data-formats-data-schemas/ofac-technical-actions-in-reverse-chronological-order/20240516_44).
+The response is capped at 40 MB and 50,000 entries. Only supplier names and SDN
+primary/alias names are compared. Exact matches and a bounded 0.90 name-similarity
+heuristic create `needs_review` events; sanctions events are never auto-matched.
+The displayed similarity is Substrata's string score, not OFAC's score. This
+adapter does not cover OFAC's consolidated non-SDN list, export-control lists,
+identifiers or jurisdiction/activity restrictions, and does not establish a true
+match, false positive, clearance or instruction to block. Analysts must review the
+complete source entry and apply their organisation's sanctions procedures; an
+event-to-entity mapping is not a sanctions disposition. Historical candidates
+remain event records, so operators must consider each event's source observation
+time when reviewing it.
+
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
 supervised process; each worker is bound to one tenant. The queue currently handles
@@ -240,9 +257,9 @@ heads separately to detect privileged tail truncation.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
-   slice; broader international weather feeds, native port/sanctions parsers,
-   agent specialisations, approval notifications, managed queue orchestration and
-   production operations remain.
+   slice; broader international weather and port feeds, additional sanctions and
+   export-control lists, agent specialisations, approval notifications, managed
+   queue orchestration and production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior
 or a documented external configuration gate. Real supplier contact is disabled in
