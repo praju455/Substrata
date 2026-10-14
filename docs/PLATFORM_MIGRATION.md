@@ -349,7 +349,7 @@ heads separately to detect privileged tail truncation.
 | 6. Agents | Five typed role skills, durable tenant jobs, bounded retries/queue, checkpointed risk-review plan, A2A task submission/polling, MCP facade and deterministic math | General adaptive multi-role plan authoring, durable coordination beyond the fixed risk-review flow and broad external protocol interoperability remain |
 | 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
 | 8. Product surface | Onboarding, quality counts, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports; English/Hindi catalog covers the workspace, printable report and supplier confirmation portal with a persisted browser choice | Full locale coverage, translated third-party/API content and locale/accessibility QA remain |
-| 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, request correlation, health/metrics and worker | Production secret manager, TLS topology, encrypted backup/restore drills, distributed tracing/metrics and managed broker require deployment work |
+| 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, complete-response HTTP latency/status metrics, W3C trace correlation, optional OTLP export, health checks and worker | Production secret manager, TLS topology, encrypted backup/restore drills, production collector/metrics/log shipping and managed broker require deployment work |
 | 10. Quality | Python/frontend CI, synthetic multi-industry seeds, extraction/scoring evaluation fixtures and graph load harness; six Docker-verified PostgreSQL checks cover every tenant table, pgvector, imports/history, concurrent audit writes, resumable jobs and approvals; disposable runner verified all 222 Python tests with no skips | Docker or a configured test admin URL is required for PostgreSQL integration; customer-shaped load/evaluation baselines are still needed |
 
 This map describes implementation evidence, not a pilot or GA certification. A
@@ -363,7 +363,7 @@ No claims of production readiness follow merely from passing offline tests.
 The local PostgreSQL/API/worker Compose scaffold and CI checks are in place;
 request correlation, readiness and process counters are implemented. Production
 secret management, TLS deployment, scheduled encrypted backups/restore drills,
-distributed tracing, managed metrics, and a managed job broker remain explicit
+production collector configuration, managed metrics, and a managed job broker remain explicit
 pilot gates. See [Operations](OPERATIONS.md).
 
 ## Delivery milestones

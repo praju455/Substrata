@@ -4,7 +4,7 @@ Invoke `python scripts/dev.py TASK` from the root, or use the script's absolute 
 
 | Task | Behavior |
 |---|---|
-| setup | Install locked dependencies; create .venv and preserve existing .env |
+| setup | Install locked dev/platform dependencies; create .venv and preserve existing .env |
 | migrate | Upgrade schema without resetting records |
 | seed | Write fixtures and reset synthetic business/session data |
 | evaluate | Measure fixture, persist results and regenerate EVALUATION.md results |

@@ -3,7 +3,8 @@
 The approved industry-neutral platform migration is tracked in
 [Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
 remains available during the migration; new tenant features use a separate schema.
-Install the optional platform dependencies with `python -m pip install -e ".[dev,platform]"`.
+For manual Python installs, use `python -m pip install -e ".[dev,platform]"`;
+the setup runner installs these extras for the complete test suite.
 Platform API access requires verified tokens; see the migration guide for setup.
 The platform includes automotive, pharma and food fixtures and a deterministic
 assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
@@ -44,6 +45,10 @@ Run a synthetic graph traversal load check with
 Its local timings are not production service-level objectives.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see
 [Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
+HTTP observability includes route-template latency/status metrics and W3C trace
+context correlation. Optional OTLP/HTTP export uses a bounded queue and local
+sampling; credentials, query strings, path parameters and business inputs are
+excluded from span attributes and request logs.
 PostgreSQL integration checks exercise forced tenant policies on every business
 table, pgvector retrieval/model versions, import history and rollback, concurrent
 graph/audit writes, and resumed risk-review jobs followed by named approval.

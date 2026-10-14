@@ -75,12 +75,54 @@ The complete run passed 222 Python tests on 14 October 2026 with no skips.
 
 `/health` is liveness only. `/ready` checks each configured SQLAlchemy database
 connection with `SELECT 1` and returns 503 on a database failure. `/metrics`
-exports process-local request and 5xx counters in Prometheus text format. These
-counters reset on restart and are not tenant-labelled. Each HTTP request logs one
-JSON record with request ID, method, path, status and elapsed milliseconds. The
-server accepts a bounded safe `X-Request-ID` or generates one. Tokens, request
-bodies and query strings are not logged. Forward these records to the deployment's
-log collector and retain request IDs across API gateways.
+exports process-local request/error counters, an in-flight gauge, response counts
+by method/route/status and cumulative latency histograms in Prometheus text format.
+Duration covers the complete response body, including streams. Aborted responses
+and HTTP 5xx count as errors. Metrics reset on restart, use registered route
+templates (or `<unmatched>`), normalize unknown methods to `OTHER` and never label
+tenants, tokens or path parameters. Scrape each API process separately and aggregate
+in a managed metrics system.
+
+Each request logs one JSON record with a bounded ASCII request ID, trace/span IDs,
+method, route template, status, duration and aborted flag. The server accepts a safe
+`X-Request-ID` or generates one; validated `traceparent` preserves incoming trace
+causality and a server-span traceparent is returned on ordinary responses. Headers,
+tokens, raw path parameters, bodies, query strings, vendor tracestate and baggage
+are excluded. Unhandled failures record the exception class, not its message or
+stack trace. Forward these records to the deployment's log collector.
+The supplied Docker and development launchers disable Uvicorn's raw URL access
+log; custom launch commands should also use `--no-access-log`. Application JSON
+logs are emitted through the `substrata` logger. Configure framework diagnostic
+log redaction separately when deploying with a different server/logging setup.
+
+## Optional OTLP tracing
+
+The trace contract follows [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+and [OpenTelemetry Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/)
+and [exporter guidance](https://opentelemetry.io/docs/languages/python/exporters/).
+The platform dependencies include the SDK and OTLP/HTTP exporter. Export is
+disabled when `SUBSTRATA_OTLP_TRACES_ENDPOINT` is blank; local correlation still
+works without a collector. Configure the complete trace endpoint, for example:
+
+```text
+SUBSTRATA_OTLP_TRACES_ENDPOINT=https://collector.example/v1/traces
+SUBSTRATA_TRACE_SAMPLE_RATIO=0.1
+SUBSTRATA_OTLP_HEADERS_FILE=/run/secrets/otlp-headers.json
+```
+
+The optional header file contains a JSON object of header names to values. Mount
+it with restricted permissions rather than putting credentials in source or a
+browser setting. Collector URLs reject credentials, query strings and fragments.
+HTTPS is required; development alone permits HTTP on localhost/loopback. Sampling
+is trace-ID-based and locally enforced even if the remote client sets sampled=1.
+The exporter queue holds at most 1024 spans, batches at most 128, and uses a five
+second export timeout. API shutdown flushes and closes its owned provider. No
+global provider is replaced when constructing independent test/application instances.
+Service names are bounded stable ASCII identifiers; do not encode tenant/customer
+information in `OTEL_SERVICE_NAME`. A temporary loopback collector verifies real
+protobuf OTLP export and shutdown flushing in the regression suite. Production
+collector credentials, certificate trust, retention and log/metric shipping still
+require deployment configuration.
 
 ## Database backup and restore
 
@@ -104,5 +146,5 @@ manager, provision the least-privilege migration/runtime roles separately, enabl
 TLS on every network hop, configure OIDC and tenant/role claims, and establish
 backups, retention, key rotation, restore drills and incident response. Add a
 managed durable broker or supervise one worker process per tenant, and add
-distributed tracing plus durable metrics/log shipping. The included Compose file
+the production collector plus durable metrics/log shipping. The included Compose file
 uses local credentials and does not claim to satisfy those controls.

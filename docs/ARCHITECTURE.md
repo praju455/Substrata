@@ -24,6 +24,13 @@ accessibility QA remains a release gate.
 The platform adds tenant-scoped event feeds, durable leased work records and
 stateless authenticated MCP/A2A adapters around deterministic services. Request
 correlation, database readiness and basic process metrics support local operations.
+ASGI observability follows each response through its complete body, including
+streaming responses and failures. HTTP metrics use bounded method/route-template
+labels and include response counts, in-flight requests and latency histograms.
+Trace IDs follow validated W3C traceparent contexts; optional application-owned
+OpenTelemetry providers export batches over OTLP/HTTP with a locally enforced
+sample ratio. Vendor tracestate, baggage, credentials, raw paths/query strings
+and business payloads are excluded, and providers shut down with the API lifespan.
 Tenant document vectors, exact passages and provider-neutral extraction feed only
 inferred link proposals. Durable cost reservations gate live provider calls.
 Single-use supplier tokens bind confirmation to tenant/request/link inputs;

@@ -1,21 +1,23 @@
 """FastAPI entry point and process health contract."""
 
-import json
-import logging
 import os
 import threading
-import time
 from contextlib import asynccontextmanager
 from typing import Literal
-from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from substrata.api import router
+from substrata.observability import (
+    HTTPMetrics,
+    HTTPObservability,
+    configure_logging,
+    configured_tracing,
+)
 
 
 class HealthResponse(BaseModel):
@@ -32,21 +34,26 @@ class TenantHealthResponse(BaseModel):
     data_mode: Literal["tenant"] = "tenant"
 
 
-def create_app(runtime=None, *, platform_store=None, auth_verifier=None) -> FastAPI:
+def create_app(runtime=None, *, platform_store=None, auth_verifier=None, tracing=None) -> FastAPI:
     """Build an independent API instance without database or network side effects."""
 
     @asynccontextmanager
     async def lifespan(application):
-        yield
-        current = application.state.runtime
-        if current is not None:
-            current.active = False
-            if current.task is not None:
-                await current.task
-            if runtime is None:
-                current.engine.dispose()
-        if platform_store is None and getattr(application.state, "platform_store", None):
-            application.state.platform_store.engine.dispose()
+        try:
+            yield
+        finally:
+            try:
+                current = application.state.runtime
+                if current is not None:
+                    current.active = False
+                    if current.task is not None:
+                        await current.task
+                    if runtime is None:
+                        current.engine.dispose()
+                if platform_store is None and getattr(application.state, "platform_store", None):
+                    application.state.platform_store.engine.dispose()
+            finally:
+                application.state.tracing.shutdown()
 
     application = FastAPI(
         title="Substrata API",
@@ -55,9 +62,10 @@ def create_app(runtime=None, *, platform_store=None, auth_verifier=None) -> Fast
         description="Synthetic demo data. All eventual operational actions are simulated.",
     )
     application.state.runtime = runtime
+    configure_logging()
     application.state.runtime_lock = threading.Lock()
-    application.state.metrics_lock = threading.Lock()
-    application.state.request_metrics = {"requests": 0, "errors": 0}
+    application.state.tracing = tracing or configured_tracing()
+    application.state.http_metrics = HTTPMetrics()
     ui_port = os.environ.get("SUBSTRATA_UI_PORT", "3000")
     application.add_middleware(
         CORSMiddleware,
@@ -65,44 +73,19 @@ def create_app(runtime=None, *, platform_store=None, auth_verifier=None) -> Fast
             "SUBSTRATA_CORS_ORIGINS", f"http://127.0.0.1:{ui_port},http://localhost:{ui_port}"
         ).split(","),
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "Last-Event-ID", "Authorization", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        allow_headers=[
+            "Content-Type",
+            "Last-Event-ID",
+            "Authorization",
+            "X-Request-ID",
+            "traceparent",
+        ],
+        expose_headers=["X-Request-ID", "traceparent"],
     )
 
-    @application.middleware("http")
-    async def request_observability(request: Request, call_next):
-        candidate = request.headers.get("x-request-id", "")
-        request_id = (
-            candidate
-            if 1 <= len(candidate) <= 96 and all(c.isalnum() or c in "-_." for c in candidate)
-            else uuid4().hex
-        )
-        started = time.perf_counter()
-        status_code = 500
-        try:
-            response = await call_next(request)
-            status_code = response.status_code
-            response.headers["X-Request-ID"] = request_id
-            return response
-        finally:
-            duration_ms = round((time.perf_counter() - started) * 1000, 2)
-            with application.state.metrics_lock:
-                application.state.request_metrics["requests"] += 1
-                if status_code >= 500:
-                    application.state.request_metrics["errors"] += 1
-            logging.getLogger("substrata.http").info(
-                json.dumps(
-                    {
-                        "event": "http.request",
-                        "request_id": request_id,
-                        "method": request.method,
-                        "path": request.url.path,
-                        "status_code": status_code,
-                        "duration_ms": duration_ms,
-                    },
-                    separators=(",", ":"),
-                )
-            )
+    application.add_middleware(
+        HTTPObservability, tracing=application.state.tracing, metrics=application.state.http_metrics
+    )
 
     platform_enabled = (
         platform_store is not None or os.environ.get("SUBSTRATA_PLATFORM_ENABLED") == "true"
@@ -171,16 +154,7 @@ def create_app(runtime=None, *, platform_store=None, auth_verifier=None) -> Fast
 
     @application.get("/metrics", response_class=PlainTextResponse, tags=["system"])
     async def metrics():
-        with application.state.metrics_lock:
-            values = dict(application.state.request_metrics)
-        return (
-            "# HELP substrata_http_requests_total HTTP requests handled by this process.\n"
-            "# TYPE substrata_http_requests_total counter\n"
-            f"substrata_http_requests_total {values['requests']}\n"
-            "# HELP substrata_http_errors_total HTTP 5xx responses handled by this process.\n"
-            "# TYPE substrata_http_errors_total counter\n"
-            f"substrata_http_errors_total {values['errors']}\n"
-        )
+        return application.state.http_metrics.render()
 
     return application
 
