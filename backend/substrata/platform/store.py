@@ -4,7 +4,7 @@ import hashlib
 from datetime import UTC, datetime
 from typing import Protocol
 
-from sqlalchemy import Engine, select, update
+from sqlalchemy import Engine, select, text, update
 
 from substrata.audit import digest, verify_chain
 from substrata.platform.database import tenant_transaction
@@ -26,6 +26,15 @@ class Conflict(ValueError):
 class PlatformStore:
     def __init__(self, engine: Engine):
         self.engine = engine
+        if engine.dialect.name == "postgresql":
+            with engine.connect() as connection:
+                privileged = connection.execute(
+                    text(
+                        "SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user"
+                    )
+                ).scalar_one()
+            if privileged:
+                raise ValueError("Runtime database role must not be superuser or BYPASSRLS.")
 
     def provision(self, tenant_id: str, name: str, actor: str):
         if not name.strip() or not actor.strip():

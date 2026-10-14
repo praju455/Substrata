@@ -3,6 +3,8 @@
 The approved industry-neutral platform migration is tracked in
 [Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
 remains available during the migration; new tenant features use a separate schema.
+Install the optional platform dependencies with `python -m pip install -e ".[dev,platform]"`.
+Platform API access requires verified tokens; see the migration guide for setup.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
