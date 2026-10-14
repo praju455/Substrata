@@ -51,9 +51,13 @@ Documents are immutable and indexed into offset-preserving chunks. PostgreSQL us
 pgvector cosine retrieval with tenant policies; SQLite uses the same bounded vector
 contracts offline. The default hashing-word baseline is explicitly lexical, not
 semantic. Configure a 384-dimensional OpenAI-compatible embedding provider for
-semantic retrieval. Embedding model versions coexist instead of silently replacing
-older vectors. Extractors support OpenAI, Anthropic, local compatible HTTP and an
-explicit offline mock. Strict JSON schema, retries/timeouts and exact document
+semantic retrieval and optional tabular entity-resolution candidates. Imports use
+bounded name-rule shortlists, then show separate rule and embedding scores in the
+human review queue; matches are never merged automatically. Live resolution reserves
+tenant budget and runs outside graph transactions, then checks that the graph version
+did not change before staging. Embedding model versions coexist instead of silently
+replacing older vectors. Extractors support OpenAI, Anthropic, local compatible HTTP
+and an explicit offline mock. Strict JSON schema, retries/timeouts and exact document
 spans prevent unsupported writes; evidence is data, never executable instructions.
 
 Live inference requires sourced provider input/output prices in

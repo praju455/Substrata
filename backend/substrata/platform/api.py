@@ -396,7 +396,7 @@ def stage_import(body: TabularImport, request: Request, actor: Actor):
     from substrata.platform.ingestion import stage
 
     actor.require("analyst")
-    return stage(request.app.state.platform_store, actor.tenant_id, body, actor.subject)
+    return stage(request.app.state.platform_store, actor.tenant_id, body, actor)
 
 
 @router.post("/imports/{id}/apply")

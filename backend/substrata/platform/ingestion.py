@@ -7,11 +7,13 @@ import io
 import unicodedata
 import zipfile
 from difflib import SequenceMatcher
+from math import sqrt
 from typing import Literal
 
 from openpyxl import load_workbook
 from pydantic import Field, ValidationError
 
+from substrata.platform.budgets import reserve, settle
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import (
     BomItem,
@@ -24,6 +26,7 @@ from substrata.platform.domain import (
     PurchaseOrder,
 )
 from substrata.platform.models import GraphRevision, WorkRecord
+from substrata.platform.providers import configured_embedder
 from substrata.platform.records import add, encode, require_record
 from substrata.platform.store import Conflict
 from substrata.seed import canonical
@@ -137,7 +140,14 @@ def record_key(target, row):
     return (row["material_id"], row["product_id"])
 
 
-def stage(store, tenant_id, body: TabularImport, actor):
+def _embedding_similarity(left, right):
+    denominator = sqrt(sum(value * value for value in left) * sum(value * value for value in right))
+    return (
+        sum(a * b for a, b in zip(left, right, strict=True)) / denominator if denominator else 0.0
+    )
+
+
+def stage(store, tenant_id, body: TabularImport, actor, *, embedder=None):
     content, columns, rows, schema = describe(body)
     if not body.mapping:
         return {"columns": columns, "sample": rows[:5], "schema_sha256": schema, "rows": len(rows)}
@@ -163,65 +173,133 @@ def stage(store, tenant_id, body: TabularImport, actor):
             raise Conflict("Graph changed; restart import preview.")
         base = session.get(GraphRevision, (tenant_id, org.version))
         data = base.payload if base else GraphData().model_dump(mode="json")
-        parsed, errors, reviews = {}, [], []
-        known = [Entity.model_validate(e) for e in data["entities"]]
-        for index, row in enumerate(rows, start=2):
-            if not any(value not in {None, ""} for value in row.values()):
-                continue
-            try:
-                item = mapped_record(row, body).model_dump(mode="json")
-                key = record_key(body.target, item)
-                if key in parsed and parsed[key] != item:
-                    raise ValueError("Conflicting duplicate identity in upload.")
-                parsed[key] = item
-                if body.target == "entities" and not any(e.id == item["id"] for e in known):
-                    matches = [
-                        {
-                            "id": e.id,
-                            "name": e.name,
-                            "score": SequenceMatcher(
-                                None, normalise(e.name), normalise(item["name"])
-                            ).ratio(),
-                        }
-                        for e in known
-                        if e.kind == item["kind"]
-                    ]
-                    matches = sorted(
-                        (m for m in matches if m["score"] >= 0.8), key=lambda m: -m["score"]
-                    )
-                    if matches:
-                        reviews.append({"incoming_id": item["id"], "candidates": matches[:5]})
-            except (ValueError, ValidationError, TypeError) as exc:
-                errors.append({"row": index, "reason": str(exc)[:1000]})
-        merged = {record_key(body.target, r): r for r in data[body.target]}
-        merged.update(parsed)
-        candidate = {**data, body.target: list(merged.values())}
+        version = org.version
+
+    # Do provider work outside the graph transaction. Recheck the version before
+    # writing so embeddings never hold a tenant lock or stage against stale data.
+    parsed, errors, reviews = {}, [], []
+    known = [Entity.model_validate(e) for e in data["entities"]]
+    incoming_entities = []
+    reviewed_ids = set()
+    for index, row in enumerate(rows, start=2):
+        if not any(value not in {None, ""} for value in row.values()):
+            continue
         try:
-            GraphData.model_validate(candidate)
-        except ValidationError as exc:
-            errors.append({"row": None, "reason": str(exc)[:2000]})
-        status = "invalid" if errors else "needs_review" if reviews else "staged"
-        payload = {
-            "filename": body.filename,
-            "target": body.target,
-            "columns": columns,
-            "schema_sha256": schema,
-            "content_sha256": hashlib.sha256(content).hexdigest(),
-            "mapping": body.mapping,
-            "expected_version": body.expected_version,
-            "row_count": len(rows),
-            "deduped_count": len(parsed),
-            "errors": errors,
-            "reviews": reviews,
-            "candidate": candidate,
-            "before_version": org.version,
-        }
+            item = mapped_record(row, body).model_dump(mode="json")
+            key = record_key(body.target, item)
+            if key in parsed and parsed[key] != item:
+                raise ValueError("Conflicting duplicate identity in upload.")
+            parsed[key] = item
+            if (
+                body.target == "entities"
+                and item["id"] not in reviewed_ids
+                and not any(e.id == item["id"] for e in known)
+            ):
+                reviewed_ids.add(item["id"])
+                lexical = [
+                    (e, SequenceMatcher(None, normalise(e.name), normalise(item["name"])).ratio())
+                    for e in known
+                    if e.kind == item["kind"]
+                ]
+                shortlisted = sorted(
+                    ((entity, score) for entity, score in lexical if score >= 0.35),
+                    key=lambda pair: (-pair[1], pair[0].id),
+                )[:100]
+                if shortlisted:
+                    incoming_entities.append((item, shortlisted))
+        except (ValueError, ValidationError, TypeError) as exc:
+            errors.append({"row": index, "reason": str(exc)[:1000]})
+
+    if incoming_entities:
+        embedder = embedder or configured_embedder()
+        pair_count = sum(len(candidates) for _, candidates in incoming_entities)
+        if pair_count > 20000:
+            raise ValueError("Entity resolution exceeds 20000 candidate pairs; split the import.")
+        names = list(
+            dict.fromkeys(
+                [item["name"] for item, _ in incoming_entities]
+                + [entity.name for _, candidates in incoming_entities for entity, _ in candidates]
+            )
+        )
+        reservation = None
+        if hasattr(embedder, "maximum_cost"):
+            if not hasattr(actor, "tenant_id") or actor.tenant_id != tenant_id:
+                raise ValueError("Live entity embeddings require authenticated tenant context.")
+            reservation = reserve(
+                store, actor, embedder.maximum_cost(names), "import.entity_resolution"
+            )
+        try:
+            vectors = embedder.embed(names)
+            if len(vectors) != len(names):
+                raise ValueError("Embedding provider returned the wrong vector count.")
+            vector_by_name = dict(zip(names, vectors, strict=True))
+            for item, candidates in incoming_entities:
+                ranked = []
+                for entity, lexical_score in candidates:
+                    semantic_score = _embedding_similarity(
+                        vector_by_name[item["name"]], vector_by_name[entity.name]
+                    )
+                    # Keep the string-rule baseline authoritative unless semantic
+                    # evidence independently crosses a conservative review threshold.
+                    score = max(lexical_score, semantic_score)
+                    if lexical_score >= 0.8 or semantic_score >= 0.84:
+                        ranked.append(
+                            {
+                                "id": entity.id,
+                                "name": entity.name,
+                                "score": round(score, 4),
+                                "name_rule_score": round(lexical_score, 4),
+                                "embedding_score": round(semantic_score, 4),
+                            }
+                        )
+                ranked.sort(key=lambda match: (-match["score"], match["id"]))
+                if ranked:
+                    reviews.append({"incoming_id": item["id"], "candidates": ranked[:5]})
+        finally:
+            if reservation:
+                settle(
+                    store,
+                    actor,
+                    reservation,
+                    getattr(embedder, "telemetry", {}).get("estimated_cost_usd"),
+                )
+
+    merged = {record_key(body.target, r): r for r in data[body.target]}
+    merged.update(parsed)
+    candidate = {**data, body.target: list(merged.values())}
+    try:
+        GraphData.model_validate(candidate)
+    except ValidationError as exc:
+        errors.append({"row": None, "reason": str(exc)[:2000]})
+    status = "invalid" if errors else "needs_review" if reviews else "staged"
+    payload = {
+        "filename": body.filename,
+        "target": body.target,
+        "columns": columns,
+        "schema_sha256": schema,
+        "content_sha256": hashlib.sha256(content).hexdigest(),
+        "mapping": body.mapping,
+        "expected_version": body.expected_version,
+        "row_count": len(rows),
+        "deduped_count": len(parsed),
+        "errors": errors,
+        "reviews": reviews,
+        "candidate": candidate,
+        "before_version": version,
+    }
+    with tenant_transaction(store.engine, tenant_id) as session:
+        org = store.organisation(session, tenant_id)
+        previous = session.get(WorkRecord, (tenant_id, f"import-{fingerprint}"))
+        if previous:
+            return encode(previous)
+        if org.version != version:
+            raise Conflict("Graph changed during entity resolution; restart import preview.")
         record = add(session, tenant_id, "import", status, payload, f"import-{fingerprint}")
         store.append(
             session,
             org,
             "import.staged",
-            actor,
+            actor.subject if hasattr(actor, "subject") else actor,
             {"id": record.id, "status": status, "source_sha256": payload["content_sha256"]},
         )
         return encode(record)

@@ -73,6 +73,41 @@ def test_ambiguous_entity_is_reviewed_instead_of_implicitly_merged(platform):
     assert [e.id for e in platform.snapshot("alpha").data.entities] == ["supplier"]
 
 
+def test_semantic_entity_resolution_adds_candidates_without_auto_merging(platform):
+    platform.save("alpha", graph("Acme Pharma"), "analyst", expected_version=0)
+
+    class Embedder:
+        model = "test-semantic"
+
+        def embed(self, texts):
+            return [[1.0, 0.0] for _ in texts]
+
+    body = upload("ID,Name,Type\nnew,Acme Pharma Holdings,Supplier\n", version=1)
+    staged = stage(platform, "alpha", body, "analyst", embedder=Embedder())
+    assert staged["status"] == "needs_review"
+    candidate = staged["payload"]["reviews"][0]["candidates"][0]
+    assert candidate["id"] == "supplier"
+    assert candidate["embedding_score"] == 1.0
+    assert candidate["name_rule_score"] < 0.8
+    assert {e.id for e in platform.snapshot("alpha").data.entities} == {"supplier"}
+    assert "new" in {e["id"] for e in staged["payload"]["candidate"]["entities"]}
+
+
+def test_entity_resolution_rechecks_graph_version_after_embedding(platform):
+    platform.save("alpha", graph("Acme Pharma"), "analyst", expected_version=0)
+
+    class UpdatingEmbedder:
+        model = "test-semantic"
+
+        def embed(self, texts):
+            platform.save("alpha", graph("Changed while resolving"), "analyst", expected_version=1)
+            return [[1.0, 0.0] for _ in texts]
+
+    body = upload("ID,Name,Type\nnew,Acme Pharma Holdings,Supplier\n", version=1)
+    with pytest.raises(Conflict, match="during entity resolution"):
+        stage(platform, "alpha", body, "analyst", embedder=UpdatingEmbedder())
+
+
 def test_rollback_does_not_erase_later_work(platform):
     staged = stage(platform, "alpha", upload(), "analyst")
     apply_import(platform, "alpha", staged["id"], "analyst")
