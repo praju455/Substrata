@@ -1,5 +1,9 @@
 # Substrata
 
+The approved industry-neutral platform migration is tracked in
+[Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
+remains available during the migration; new tenant features use a separate schema.
+
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
 ![Stage](https://img.shields.io/badge/stage-working%20prototype-6f42c1)

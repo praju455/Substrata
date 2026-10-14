@@ -1,5 +1,10 @@
 # Substrata architecture proposal
 
+The approved production-platform migration adds `substrata.platform` alongside
+the legacy replay, with portable tenant-scoped persistence, immutable graph
+revisions, measurement provenance and atomic graph/audit writes. See
+[Platform migration](PLATFORM_MIGRATION.md) for implemented contracts and gates.
+
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 
 ## 1. Goals and boundaries
