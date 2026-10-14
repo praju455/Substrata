@@ -34,7 +34,9 @@ After provisioning that tenant, run its worker with
 `docker compose --profile worker up worker`. Keep development tokens private.
 Compose migrations run as the database administrator; API and worker processes
 run with the restricted app database role. Starting an existing named volume does
-not re-run PostgreSQL initialization SQL.
+not re-run PostgreSQL initialization SQL. The tenant worker also enforces approval
+SLA expiries; without it, API approval decisions still reject expired requests,
+but portal expiry notices are delayed until the worker runs.
 
 ## Health, logs and metrics
 
