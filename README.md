@@ -48,6 +48,15 @@ For the local PostgreSQL/API/worker scaffold and production operations gates, se
 Backup primitives encrypt custom PostgreSQL archives and their manifests with
 AES-256-GCM and authenticate the complete artifact before exposing restore input.
 Plaintext dumps are streamed; only ciphertext is staged temporarily for recovery.
+
+Run `python scripts/verify_recovery.py` with Docker running to verify encrypted
+backup/restore using two disposable PostgreSQL/pgvector databases and clearly
+synthetic automotive/food fixtures. The drill checks a consistent snapshot during
+concurrent writes, graph history, audit heads, forced tenant isolation, vector
+retrieval and durable job resumption. It writes a safe local JSON report under
+ignored `data/recovery-drills/` and removes its own containers. Operational commands
+are available through `python scripts/platform_backup.py --help`; see the
+[backup/recovery runbook](docs/OPERATIONS.md#database-backup-and-restore).
 HTTP observability includes route-template latency/status metrics and W3C trace
 context correlation. Optional OTLP/HTTP export uses a bounded queue and local
 sampling; credentials, query strings, path parameters and business inputs are

@@ -62,6 +62,14 @@ tag. Recovery stages a private ciphertext copy, verifies the whole tag, then str
 dump bytes to its consumer. Changes to the original archive cannot affect that
 verified stream. Key/artifact creation is exclusive; existing evidence is never
 overwritten, and interrupted encryption removes only its own incomplete artifact.
+`platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
+encrypted manifest use the same committed state. The manifest records graph hashes,
+audit heads, schema version and table counts. Native tool credentials stay in the
+child environment and tool execution has a deadline. Restore authenticates before
+creating a new database and uses a single transaction; existing databases are
+refused. Database roles/ACLs are provisioned separately after recovery. CI runs the
+two-container synthetic recovery drill, including a concurrent graph write,
+historical reads, audit verification, RLS/vector checks and a restored queued job.
 
 > **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 

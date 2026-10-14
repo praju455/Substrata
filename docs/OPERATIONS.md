@@ -166,6 +166,47 @@ database credentials; Windows hosts need restrictive parent-directory/file ACLs.
 The ignored `data/backups/` and `data/recovery-drills/` paths are local output areas,
 not offsite storage or a production retention policy.
 
+Use the project environment (`pip install -e ".[dev,platform]" -c requirements-dev.lock`)
+and native PostgreSQL 17 client tools for the operational CLI. The scripts select
+the repository `.venv` automatically when present. For example:
+
+```powershell
+python scripts/platform_backup.py key --key-file data/backups/backup.secret
+python scripts/platform_backup.py create --key-file data/backups/backup.secret --file data/backups/platform.enc --synthetic
+python scripts/platform_backup.py inspect --key-file data/backups/backup.secret --file data/backups/platform.enc
+python scripts/platform_backup.py restore --key-file data/backups/backup.secret --file data/backups/platform.enc --new-database recovered_platform
+python scripts/verify_recovery.py
+```
+
+Create the restricted backup output directory first. Configure
+`SUBSTRATA_BACKUP_DATABASE_URL` through the backend secret environment, using a
+separate backup role with SELECT rights on every table and BYPASSRLS. Runtime roles
+must never receive this privilege. Configure `SUBSTRATA_RESTORE_ADMIN_URL` separately
+with CREATE DATABASE permission. Production URLs require `sslmode=verify-full`;
+native tool passwords are passed through child environment variables, never argv.
+Use `--pg-dump` / `--pg-restore` for trusted executable paths when tools are outside
+PATH. Apply `--synthetic` only to known invented data.
+
+The custom dump and encrypted manifest share an exported REPEATABLE READ snapshot.
+Restore verifies the complete envelope before database creation, refuses existing
+database names and runs `pg_restore` in one transaction. A failed restore leaves its
+new database for inspection; it never drops a database. Provision least-privilege
+runtime roles and grants afterward: per-database dumps exclude cluster-global roles,
+and ownership/ACLs are deliberately omitted. Match the source PostgreSQL/pgvector
+versions and confirm encrypted manifest counts, graph hashes and audit heads before
+cutover. Only restore archives from trusted database operators: authentication
+establishes artifact integrity, while native dumps can contain executable SQL.
+See the PostgreSQL [dump](https://www.postgresql.org/docs/17/app-pgdump.html) and
+[restore](https://www.postgresql.org/docs/17/app-pgrestore.html) documentation.
+
+The Docker drill uses two fresh containers with generated credentials, loopback
+ephemeral ports, no host mounts and synthetic automotive/food fixtures. It removes
+only its owned containers/anonymous volumes, never the application's Compose data.
+Its ignored JSON report contains validation results and measured backup/restore
+seconds; these small-fixture measurements do not establish a customer's RTO/RPO.
+Keep authenticated archive/key retention and offsite storage in the deployment's
+secret/storage systems, and use managed PITR for production recovery requirements.
+
 For each release, restore a recent backup into an isolated PostgreSQL instance,
 run migrations there, validate tenant row-level policies using both allowed and
 denied tenant identities, verify exported audit chains, and exercise API readiness
