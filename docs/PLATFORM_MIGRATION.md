@@ -148,12 +148,14 @@ description](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/). An NWS ac
 weather-alert adapter accepts a two-letter U.S. area code, validates the official
 API response and requires a configured identifying User-Agent. Configure
 `api.weather.gov` in the host allowlist and review [NWS API guidance](https://www.weather.gov/documentation/services-web-api)
-before production polling. This feed is U.S.-only. Port/congestion and
-sanctions/export-control registries still need source-specific parsers; licensed
-providers that expose bounded event JSON can be connected through the field-mapped
-`json_api` adapter. It does not perform legal screening, download bulk sanctions
-lists, or bundle a port/sanctions provider. No source key or licensing rights are
-bundled.
+before production polling. This feed is U.S.-only. Licensed port/congestion
+providers with bounded JSON event APIs can be connected through `json_api` using
+operator-supplied field mappings and an optional credential file. No maritime data
+provider or license is bundled. OFAC SDN and ITA CSL lists use the dedicated
+review-only adapters below; other jurisdiction-specific sanctions/export-control
+lists still need their authoritative sources and parsers. The generic `json_api`
+adapter does not perform legal screening or download bulk registries. No provider
+keys or licensing rights are bundled.
 
 For European weather warnings, configure a `meteoalarm` feed with a country slug,
 such as `ireland`, and allowlist `feeds.meteoalarm.org`. This adapter uses the
@@ -189,6 +191,18 @@ provider's event JSON; `description_field`, `category_hint` and `api_key_file` a
 optional. Credentials are read from a file and sent as a bearer token only to the
 allowlisted HTTPS host. This generic interface does not establish provider
 licensing or sanctions-screening suitability.
+
+Example licensed port-status mapping (replace the reserved example URL and
+field names with the provider's documented schema):
+
+```json
+[{"tenant_id":"demo","name":"licensed-port-status","type":"json_api",
+  "url":"https://port-provider.example/v1/events","records_path":"data.events",
+  "id_field":"id","title_field":"headline","observed_at_field":"updated_at",
+  "description_field":"details","category_hint":"port congestion",
+  "api_key_file":"/run/secrets/port-api-key",
+  "license":"Provider plan and attribution reviewed by operator"}]
+```
 
 Example European warning feed:
 
@@ -306,8 +320,9 @@ heads separately to detect privileged tail truncation.
 4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
-   slice; weather feeds beyond MeteoAlarm and NWS, port feeds, additional
-   jurisdiction-specific sanctions/export-control sources, agent coordination
+   slice; weather feeds beyond MeteoAlarm and NWS, configured port-provider
+   integrations, additional jurisdiction-specific sanctions/export-control
+   sources, agent coordination
    across multiple roles,
    SMS and approval delegation notifications, managed queue orchestration and
    production operations remain.
