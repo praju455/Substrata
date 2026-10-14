@@ -232,9 +232,11 @@ supervised process; each worker is bound to one tenant. The queue currently hand
 event polls and deterministic assessments. The worker also scans tenant approval
 deadlines on each poll, expires overdue pending decisions, closes the original
 portal notice and creates an audited expiry notice. Approval endpoints enforce the
-same deadline even when the worker is offline. Approval notices remain portal-only;
-supplier confirmations and one reminder can be delivered through configured SMTP
-over implicit TLS. The worker uses bounded attempts and delivery leases; SMTP's
+same deadline even when the worker is offline. Portal approval notices remain
+available; optional approval-needed email notices can target tenant-configured
+approver inboxes. Supplier confirmations and one reminder can also be delivered
+through configured SMTP over implicit TLS. Email addresses are encrypted in the
+outbox. The worker uses bounded attempts and delivery leases; SMTP's
 external side effect is at-least-once if a process fails after sending but before
 its database acknowledgement. Delivery stays disabled in development, even when
 SMTP settings exist. SMS is not configured. There is no managed broker or automatic
@@ -244,8 +246,16 @@ For production supplier email, configure `SUBSTRATA_SMTP_HOST`,
 `SUBSTRATA_SMTP_PORT` (implicit TLS, default 465), `SUBSTRATA_SMTP_FROM`, and,
 when required by the mail server, `SUBSTRATA_SMTP_USERNAME` with a restricted
 `SUBSTRATA_SMTP_PASSWORD_FILE`. Keep `SUBSTRATA_PII_KEY_FILE` separate from the
-SMTP credentials. Delivery only processes tenant confirmation outbox records and
-requires `SUBSTRATA_ENV` to be a non-development deployment mode.
+SMTP credentials. Email delivery requires `SUBSTRATA_ENV` to be a
+non-development deployment mode.
+
+For optional approval email notices, point `SUBSTRATA_APPROVER_EMAILS_FILE` at a
+restricted JSON file such as
+`[{"tenant_id":"demo","emails":["approvers@example.com"]}]`. Configure
+`SUBSTRATA_PII_KEY_FILE` and SMTP as above. Notices contain the action title, ID
+and due time and direct the reviewer to sign in; they never approve or execute an
+action. A resolved or expired action prevents its pending email from being sent.
+An empty/missing file keeps the existing portal-only behavior.
 
 The stateless authenticated `/platform/mcp` endpoint exposes typed tenant tools for
 `graph.snapshot`, `evidence.discover`, `event.submit`, `cascade.assess`,
@@ -289,8 +299,8 @@ heads separately to detect privileged tail truncation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
    slice; weather feeds beyond MeteoAlarm and NWS, port feeds, additional
    jurisdiction-specific sanctions/export-control sources, agent specialisations,
-   approval notifications, managed
-   queue orchestration and production operations remain.
+   SMS and approval delegation notifications, managed queue orchestration and
+   production operations remain.
 
 The final review must map every requirement to executable tests, runtime behavior
 or a documented external configuration gate. Real supplier contact is disabled in

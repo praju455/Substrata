@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from cryptography.fernet import Fernet
 from fastapi import HTTPException
 from test_platform_store import source
 
@@ -19,6 +20,8 @@ from substrata.platform.governance import (
     propose,
     save_assessment,
 )
+from substrata.platform.notifications import deliver_pending_confirmations
+from substrata.platform.records import list_records
 from substrata.platform.seeds import generate
 from substrata.platform.store import Conflict
 
@@ -123,6 +126,58 @@ def test_worker_expiry_marks_sla_and_emits_portal_notification(platform):
     notifications = list_records(platform, "alpha", kind="notification")
     assert any(n["payload"]["type"] == "approval_expired" for n in notifications)
     assert any(n["status"] == "expired" for n in notifications)
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_optional_approval_email_is_encrypted_and_sent_only_for_pending_action(
+    platform, monkeypatch, tmp_path
+):
+    key_path = tmp_path / "pii.secret"
+    key_path.write_bytes(Fernet.generate_key())
+    config_path = tmp_path / "approvers.json"
+    config_path.write_text(
+        '[{"tenant_id":"alpha","emails":["approver@example.test"]}]', encoding="utf-8"
+    )
+    monkeypatch.setenv("SUBSTRATA_ENV", "production")
+    monkeypatch.setenv("SUBSTRATA_PII_KEY_FILE", str(key_path))
+    monkeypatch.setenv("SUBSTRATA_APPROVER_EMAILS_FILE", str(config_path))
+    action = prepared(platform)
+    notifications = list_records(platform, "alpha", kind="notification")
+    queued = next(
+        item for item in notifications if item["payload"]["type"] == "approval_needed_email"
+    )
+    assert queued["status"] == "pending"
+    assert "approver@example.test" not in str(queued["payload"])
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+
+    with tenant_transaction(platform.engine, "alpha") as session:
+        outbox = session.get(WorkRecord, ("alpha", queued["id"]))
+        ciphertext = outbox.payload["recipient_ciphertext"]
+    assert "approver@example.test" not in ciphertext
+    assert Fernet(key_path.read_bytes()).decrypt(ciphertext.encode()).decode() == (
+        "approver@example.test"
+    )
+
+    class Mailer:
+        messages = []
+
+        def send(self, recipient, subject, body, message_id):
+            self.messages.append((recipient, subject, body, message_id))
+
+    mailer = Mailer()
+    result = deliver_pending_confirmations(platform, actor(), mailer=mailer)
+    assert result == {"delivered": 1, "attempted": 1, "status": "processed"}
+    assert mailer.messages[0][0] == "approver@example.test"
+    assert action["id"] in mailer.messages[0][2]
+    assert "does not approve or execute" in mailer.messages[0][2]
+    assert mailer.messages[0][3]
+    delivered = next(
+        item
+        for item in list_records(platform, "alpha", kind="notification")
+        if item["payload"]["type"] == "approval_needed_email"
+    )
+    assert delivered["status"] == "delivered"
     assert platform.audit("alpha")["verification"]["valid"]
 
 

@@ -54,7 +54,7 @@ It is not an ERP, master-data replacement, sanctions-screening product, legal du
 | Declared-network adapter | Declared supplier relationships | Stand-in for SAP Business Network / Ariba-shaped records **[Design]** |
 | Public-signal adapter | Tenant RSS, GDELT DOC, U.S. NWS alerts, European MeteoAlarm warnings, OFAC SDN and ITA CSL name candidates, and field-mapped JSON APIs | Host allowlists, source attribution, provider field maps and area selection are operator-controlled; screening candidates require human review |
 | Ownership adapter | Direct/ultimate parent data shaped like GLEIF output | Not a beneficial-ownership register **[Design]** |
-| Supplier confirmation adapter | Signed portal reply and optional SMTP-over-TLS request email | Development email delivery is disabled; production requires explicit configuration |
+| Notification adapter | Signed supplier portal reply, SMTP confirmation email and optional tenant approval notices | Recipients are tenant-scoped, encrypted at rest and delivered only by configured production workers |
 | Simulated execution adapter | Alert, requisition draft, safety-stock change and supplier-message preview | Cannot mutate a real external system **[Design]** |
 
 ## 3. Layered architecture

@@ -292,6 +292,11 @@ def propose(store, actor: Principal, body: ProposalInput):
                     "channel": "portal",
                 },
             )
+            from substrata.platform.notifications import queue_approval_email_notifications
+
+            queue_approval_email_notifications(
+                store, session, actor.tenant_id, actor.subject, action
+            )
         return encode(action)
 
 

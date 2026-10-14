@@ -1,6 +1,7 @@
-"""Explicitly configured SMTP delivery for encrypted supplier confirmations."""
+"""Explicit SMTP delivery for encrypted supplier and approval notifications."""
 
 import hashlib
+import json
 import os
 import re
 import smtplib
@@ -21,6 +22,77 @@ MAX_DELIVERIES_PER_POLL = 20
 MAX_ATTEMPTS = 4
 RETRY_SECONDS = (5, 30, 120)
 DELIVERY_LEASE = timedelta(minutes=2)
+
+
+def queue_approval_email_notifications(store, session, tenant_id: str, actor_subject: str, action):
+    """Encrypt optional tenant approver recipients and add auditable mail outbox rows."""
+    config_path = os.environ.get("SUBSTRATA_APPROVER_EMAILS_FILE", "")
+    if not config_path or os.environ.get("SUBSTRATA_ENV", "development") == "development":
+        return 0
+    try:
+        tenants = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise ValueError("Approver email configuration is invalid.") from None
+    if not isinstance(tenants, list) or len(tenants) > 500:
+        raise ValueError("Approver email configuration must contain at most 500 tenants.")
+    matches = [
+        item for item in tenants if isinstance(item, dict) and item.get("tenant_id") == tenant_id
+    ]
+    if len(matches) > 1:
+        raise ValueError("Approver email configuration contains a duplicate tenant.")
+    if not matches:
+        return 0
+    emails = matches[0].get("emails")
+    if not isinstance(emails, list) or not 1 <= len(emails) <= 10:
+        raise ValueError("Configured approver email list must contain 1 to 10 addresses.")
+    normalized = []
+    for value in emails:
+        address = parseaddr(value)[1] if isinstance(value, str) else ""
+        if (
+            not address
+            or any(char in value for char in "\r\n")
+            or not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+", address)
+        ):
+            raise ValueError("Configured approver email address is invalid.")
+        if address.casefold() not in {email.casefold() for email in normalized}:
+            normalized.append(address)
+    cipher = privacy_cipher()
+    queued = 0
+    for address in normalized:
+        recipient_ciphertext = cipher.encrypt(address.encode()).decode()
+        notification_id = (
+            "approval-email-"
+            + hashlib.sha256(f"{action.id}|{address.casefold()}".encode()).hexdigest()
+        )
+        if session.get(WorkRecord, (tenant_id, notification_id)) is not None:
+            continue
+        add(
+            session,
+            tenant_id,
+            "notification",
+            "pending",
+            {
+                "type": "approval_needed_email",
+                "action_id": action.id,
+                "title": action.payload["title"],
+                "due_at": action.payload["expires_at"],
+                "channel": "email",
+                "recipient_ciphertext": recipient_ciphertext,
+                "attempts": 0,
+                "retry_at": datetime.now(UTC).isoformat(),
+            },
+            notification_id,
+        )
+        queued += 1
+    if queued:
+        store.append(
+            session,
+            store.organisation(session, tenant_id),
+            "approval.email_notifications.queued",
+            actor_subject,
+            {"action_id": action.id, "count": queued},
+        )
+    return queued
 
 
 class SMTPMailer:
@@ -152,6 +224,7 @@ def _claim(store, tenant_id: str, now: datetime):
             if payload.get("channel") != "email" or payload.get("type") not in {
                 "supplier_confirmation",
                 "supplier_confirmation_reminder",
+                "approval_needed_email",
             }:
                 continue
             if datetime.fromisoformat(payload.get("retry_at", now.isoformat())) > now:
@@ -171,20 +244,34 @@ def _claim(store, tenant_id: str, now: datetime):
                     {"id": notification.id, "reason": "attempt_limit"},
                 )
                 continue
-            request = session.get(WorkRecord, (tenant_id, payload.get("request_id", "")))
-            if (
-                request is None
-                or request.kind != "confirmation"
-                or request.status != "pending"
-                or datetime.fromisoformat(request.payload["expires_at"]) <= now
-            ):
+            if payload["type"] == "approval_needed_email":
+                request = session.get(WorkRecord, (tenant_id, payload.get("action_id", "")))
+                valid_request = (
+                    request is not None
+                    and request.kind == "mitigation"
+                    and request.status == "pending"
+                    and datetime.fromisoformat(request.payload["expires_at"]) > now
+                )
+            else:
+                request = session.get(WorkRecord, (tenant_id, payload.get("request_id", "")))
+                valid_request = (
+                    request is not None
+                    and request.kind == "confirmation"
+                    and request.status == "pending"
+                    and datetime.fromisoformat(request.payload["expires_at"]) > now
+                )
+            if not valid_request:
                 notification.status = "expired"
                 store.append(
                     session,
                     store.organisation(session, tenant_id),
                     "notification.expired",
                     "worker",
-                    {"id": notification.id, "request_id": payload.get("request_id")},
+                    {
+                        "id": notification.id,
+                        "action_id": payload.get("action_id"),
+                        "request_id": payload.get("request_id"),
+                    },
                 )
                 continue
             notification.status = "sending"
@@ -248,7 +335,7 @@ def _finish(store, tenant_id: str, notification_id: str, payload: dict, error: E
 
 
 def deliver_pending_confirmations(store, actor, *, mailer=None, limit=MAX_DELIVERIES_PER_POLL):
-    """Deliver queued confirmation email only in explicitly configured non-dev deployments."""
+    """Deliver queued confirmation/approval mail only in configured non-dev deployments."""
     actor.require("analyst")
     if os.environ.get("SUBSTRATA_ENV", "development") == "development":
         return {"delivered": 0, "status": "development_disabled"}
@@ -269,9 +356,26 @@ def deliver_pending_confirmations(store, actor, *, mailer=None, limit=MAX_DELIVE
             cipher = privacy_cipher()
             recipient = cipher.decrypt(payload["recipient_ciphertext"].encode()).decode()
             if "\r" in recipient or "\n" in recipient or "@" not in recipient:
-                raise ValueError("Encrypted supplier recipient is invalid.")
-            request_id = payload["request_id"]
-            if payload["type"] == "supplier_confirmation":
+                raise ValueError("Encrypted notification recipient is invalid.")
+            if payload["type"] == "approval_needed_email":
+                action_id = payload["action_id"]
+                with tenant_transaction(store.engine, actor.tenant_id) as session:
+                    action = session.get(WorkRecord, (actor.tenant_id, action_id))
+                    if action is None or action.kind != "mitigation" or action.status != "pending":
+                        raise ValueError("Pending approval is no longer available.")
+                    title = re.sub(r"[\r\n]+", " ", action.payload["title"])
+                    due_at = action.payload["expires_at"]
+                subject = "Mitigation action awaiting approval"
+                body = (
+                    f"A mitigation action is awaiting review: {title}\n\n"
+                    f"Action ID: {action_id}\n"
+                    f"Approval deadline: {due_at}\n\n"
+                    "Sign in to the Substrata tenant workspace to review the frozen "
+                    "assessment, policy and evidence before deciding. This email is a "
+                    "notification only; it does not approve or execute the action."
+                )
+            elif payload["type"] == "supplier_confirmation":
+                request_id = payload["request_id"]
                 portal_ciphertext = payload.get("portal_ciphertext")
                 with tenant_transaction(store.engine, actor.tenant_id) as session:
                     request = session.get(WorkRecord, (actor.tenant_id, request_id))
@@ -287,6 +391,7 @@ def deliver_pending_confirmations(store, actor, *, mailer=None, limit=MAX_DELIVE
                     "you can ignore this message."
                 )
             else:
+                request_id = payload["request_id"]
                 portal_ciphertext = payload.get("portal_ciphertext")
                 if not portal_ciphertext:
                     raise ValueError("Encrypted supplier portal link is unavailable.")
