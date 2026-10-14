@@ -13,6 +13,8 @@ Tenant policies enforce named approval, separation of duties, delegation, SLA
 expiry and dry-run execution of sourced mitigation drafts.
 Read-only OData, authenticated REST and signed webhook adapters are available,
 with a synthetic local mock and an explicit Business Network/Ariba stub.
+Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
+approval review, notifications and audit/CSV exports.
 
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 

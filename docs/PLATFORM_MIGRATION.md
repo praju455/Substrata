@@ -27,6 +27,19 @@ Audit exports include the chain head for independent anchoring and verification.
 
 ## Delivery sequence and acceptance
 
+The `/platform/` frontend includes organisation onboarding, data-quality counts,
+CSV/Excel mapping, graph status/search/history, deterministic scenario/runway,
+policy setup, approval/rejection, notifications and audit/CSV exports. SSO uses
+authorization code with PKCE; access tokens remain in component memory. Configure
+an OIDC public client, audience mapping, tenant/role claims and exact redirect URI.
+SAML login is brokered by that identity provider. Development token entry is only
+offered when the server explicitly identifies development mode.
+Graph positioning derives dependency depth from edges, independent of ID naming.
+Browser verification used an isolated synthetic tenant: sign-in, organisation
+creation, pharma seed loading and the 17.54/120/102.46-day runway rendered correctly.
+The full Python suite at this checkpoint passed 169 tests; static export and
+frontend type/lint checks passed. This does not verify a live customer IdP.
+
 REST ingestion accepts typed graphs with tenant-scoped idempotency keys; webhooks
 add an HMAC signature over exact request bytes plus authenticated machine identity.
 OData adapters perform GET only, bound response/page/row budgets, refuse redirects

@@ -9,6 +9,7 @@ from pydantic import Field
 from substrata.platform.auth import Principal, principal
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
 from substrata.platform.governance import Policy, ProposalInput
+from substrata.platform.oidc import CodeExchange
 from substrata.platform.store import Conflict
 
 Actor = Annotated[Principal, Depends(principal)]
@@ -68,6 +69,52 @@ class RestImport(GraphChange):
 @router.get("/identity")
 def identity(actor: Actor):
     return actor
+
+
+@router.get("/auth/config")
+def auth_config():
+    from substrata.platform.oidc import login_config
+
+    return login_config()
+
+
+@router.post("/auth/exchange")
+def auth_exchange(body: CodeExchange, request: Request):
+    from substrata.platform.oidc import exchange
+
+    return exchange(body, request.app.state.auth_verifier)
+
+
+@router.get("/state")
+def workspace_state(request: Request, actor: Actor):
+    from sqlalchemy import select
+
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import Document, Organisation
+    from substrata.platform.records import list_records
+
+    actor.require("viewer")
+    store = request.app.state.platform_store
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = session.get(Organisation, actor.tenant_id)
+        organisation = (
+            {"name": org.name, "version": org.version, "policy": org.policy} if org else None
+        )
+        documents = [
+            {"id": doc.id, "sha256": doc.sha256, "provenance": doc.provenance}
+            for doc in session.scalars(
+                select(Document).where(Document.tenant_id == actor.tenant_id).limit(200)
+            )
+        ]
+    snapshot = store.snapshot(actor.tenant_id) if organisation and organisation["version"] else None
+    return {
+        "identity": actor,
+        "organisation": organisation,
+        "snapshot": snapshot,
+        "records": list_records(store, actor.tenant_id),
+        "documents": documents,
+        "audit": store.audit(actor.tenant_id)["verification"] if organisation else None,
+    }
 
 
 @router.post("/organisation", status_code=201)
@@ -311,6 +358,21 @@ def connector_read(name: str, resource: str, request: Request, actor: Actor):
         "provenance": connector_source(config, resource, synthetic=adapter.synthetic),
         "requires_mapping": True,
     }
+
+
+@router.get("/exports/graph.csv")
+def export_graph(request: Request, actor: Actor):
+    from fastapi.responses import Response
+
+    from substrata.platform.exports import graph_csv
+
+    actor.require("viewer")
+    snapshot = request.app.state.platform_store.snapshot(actor.tenant_id)
+    return Response(
+        graph_csv(snapshot),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="substrata-graph.csv"'},
+    )
 
 
 def install(application, store, verifier):

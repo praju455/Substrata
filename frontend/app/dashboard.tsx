@@ -380,6 +380,7 @@ export default function Dashboard() {
             <a href="#workflow">Replay</a>
             <a href="#approvals">Decisions</a>
             <a href="#audit">Audit</a>
+            <a href="/platform/">Tenant workspace</a>
           </nav>
           <span className="synthetic-label">Synthetic demo data</span>
         </div>
@@ -546,13 +547,18 @@ export default function Dashboard() {
                     Shared dependency
                   </span>
                 </div>
-                {workspace.shared_dependencies.some(
-                  (d) => d.node_id === "site_shared_source",
-                ) && (
+                {workspace.shared_dependencies.length > 0 && (
                   <div className="shared-callout">
-                    <strong>One source. Three apparent alternatives.</strong>
+                    <strong>
+                      Shared sources behind apparent alternatives.
+                    </strong>
                     <span>
-                      Meridian Semiconductors connects three supplier groups
+                      {workspace.shared_dependencies
+                        .map(
+                          (d) =>
+                            `${d.name} connects ${d.supplier_ids.length} supplier groups`,
+                        )
+                        .join("; ")}{" "}
                       through the synthetic ownership/control model.
                     </span>
                   </div>
@@ -671,8 +677,7 @@ export default function Dashboard() {
                     <div>
                       <h3>Replay a disruption</h3>
                       <p>
-                        The first event affects the synthetic semiconductor
-                        parent.
+                        Replay the next labelled synthetic disruption event.
                       </p>
                       <div className="button-row">
                         <button
