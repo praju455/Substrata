@@ -59,6 +59,7 @@ export type Workspace = {
   } | null;
   snapshot: Frozen | null;
   records: RecordItem[];
+  jobs?: RecordItem[];
   documents: { id: string; provenance: Provenance }[];
   audit: { valid: boolean; count: number; head: string } | null;
 };

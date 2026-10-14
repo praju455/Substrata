@@ -18,6 +18,9 @@ New-Item -ItemType Directory -Force data/dev-auth
 $env:SUBSTRATA_ENV = "development"
 $env:SUBSTRATA_AUTH_KEY_FILE = "data/dev-auth/auth.secret"
 python -m substrata.platform.cli dev-key
+$env:SUBSTRATA_AUTH_KEY_FILE = "data/dev-auth/confirmation.secret"
+python -m substrata.platform.cli dev-key
+$env:SUBSTRATA_AUTH_KEY_FILE = "data/dev-auth/auth.secret"
 docker compose up --build db migrate api
 ```
 
@@ -38,6 +41,13 @@ run with the restricted app database role. Starting an existing named volume doe
 not re-run PostgreSQL initialization SQL. The tenant worker also enforces approval
 SLA expiries; without it, API approval decisions still reject expired requests,
 but portal expiry notices are delayed until the worker runs.
+
+Start the local UI with `python scripts/dev.py ui` and open
+`http://127.0.0.1:3000/platform/`. Its evidence panel connects document storage,
+indexing, retrieval and cited discovery; the separate development confirmation key
+enables signed local supplier previews without sending email. Background tasks can
+be queued, inspected and run one at a time from the workspace when no worker is
+running. Risk review uses the existing A2A workflow and pins its graph revision.
 
 The PostgreSQL integration suite uses the migration administrator only for schema
 and test-role setup. Workflow checks run as a separate `NOSUPERUSER`, `NOBYPASSRLS`

@@ -21,6 +21,11 @@ approval review, notifications and audit/CSV/PDF report exports. The platform
 workspace, printable report and supplier confirmation portal support English and
 Hindi with a browser-persisted language choice; broader locale and accessibility
 QA remains open.
+The workspace now connects the existing evidence and job APIs: save sourced
+documents, index/search passages, discover cited links, request a signed supplier
+preview and queue/run a graph-pinned risk review. Development previews send no
+supplier email. Completed reviews refresh the runway, assessment and audit views.
+Saved assessment reports retain their original graph revision after later replies.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link

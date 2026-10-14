@@ -5,6 +5,15 @@ The existing synthetic replay remains available while platform capabilities
 arrive behind `SUBSTRATA_PLATFORM_ENABLED`. Completion of a foundation checkpoint
 does not establish pilot readiness or general availability.
 
+The user's current scope is integration of the implemented capabilities into the
+local product; deployment work is excluded. The workspace evidence and background
+task panels use existing API workflows, including signed development supplier
+previews and graph-pinned A2A risk reviews. Local browser verification covered
+document/index/search/discovery, a synthetic supplier reply and job dispatch into
+runway/audit views. Saved assessment exports retain their original graph snapshot
+when later supplier replies change the network. The deployment gates below remain
+reference material rather than the current integration task.
+
 ## Implemented foundation
 
 `substrata.platform` has a separate portable Alembic history. Its organisation,

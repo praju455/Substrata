@@ -7,6 +7,9 @@
   flex: 0 0 auto;
   margin: 0;
 }
+.header-inner nav {
+  flex-wrap: wrap;
+}
 .header-inner .locale-picker select {
   width: auto;
   min-width: 104px;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../platform/workspace.css";
 import {
   copyKeys,
@@ -21,6 +21,9 @@ export default function SupplierPortal() {
   const tStatus = (value: string) =>
     copyKeys.includes(value as CopyKey) ? t(value as CopyKey) : value;
   const [token, setToken] = useState("");
+  // Strict Mode repeats the effect after the first pass removes the fragment.
+  // Keep the captured token in memory only; never persist it in browser storage.
+  const fragmentToken = useRef<string | null>(null);
   const [request, setRequest] = useState<{
     source: string;
     target: string;
@@ -37,9 +40,13 @@ export default function SupplierPortal() {
     document.documentElement.lang = localeTag(locale);
   }, [locale]);
   useEffect(() => {
+    const controller = new AbortController();
     const load = async () => {
       const value =
-        new URLSearchParams(location.hash.slice(1)).get("token") || "";
+        fragmentToken.current ??
+        new URLSearchParams(location.hash.slice(1)).get("token") ??
+        "";
+      fragmentToken.current = value;
       history.replaceState(null, "", location.pathname);
       setToken(value);
       if (!value) {
@@ -50,13 +57,17 @@ export default function SupplierPortal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: value }),
+        signal: controller.signal,
       });
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.detail || "The link is unavailable or expired.");
-      setRequest(data);
+      if (!controller.signal.aborted) setRequest(data);
     };
-    void load().catch((error) => setMessage(error.message));
+    void load().catch((error) => {
+      if (!controller.signal.aborted) setMessage(error.message);
+    });
+    return () => controller.abort();
   }, []);
   const respond = async (decision: string) => {
     setBusy(true);
@@ -70,6 +81,10 @@ export default function SupplierPortal() {
       if (!response.ok)
         throw new Error(data.detail || "Your response could not be recorded.");
       setToken("");
+      fragmentToken.current = "";
+      setRequest((current) =>
+        current ? { ...current, status: decision } : current,
+      );
       setMessage(
         "Thank you. Your response has been recorded with its rationale.",
       );

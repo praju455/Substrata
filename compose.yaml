@@ -34,6 +34,7 @@ services:
       SUBSTRATA_AUTH_ALGORITHM: HS256
       SUBSTRATA_OIDC_ISSUER: http://localhost/dev
       SUBSTRATA_AUTH_KEY_FILE: /run/secrets/auth.secret
+      SUBSTRATA_CONFIRMATION_KEY_FILE: /run/secrets/confirmation.secret
       SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://substrata_app:local-only-change-me@db:5432/substrata
       SUBSTRATA_PLATFORM_LLM_PROVIDER: mock
       SUBSTRATA_OTLP_TRACES_ENDPOINT: ${SUBSTRATA_OTLP_TRACES_ENDPOINT:-}

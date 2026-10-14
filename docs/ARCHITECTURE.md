@@ -62,6 +62,19 @@ tag. Recovery stages a private ciphertext copy, verifies the whole tag, then str
 dump bytes to its consumer. Changes to the original archive cannot affect that
 verified stream. Key/artifact creation is exclusive; existing evidence is never
 overwritten, and interrupted encryption removes only its own incomplete artifact.
+
+The local workspace integrates document storage, evidence indexing/search/discovery,
+signed supplier confirmation previews and durable job operations through the same
+verified bearer transport. Risk-review controls invoke the existing A2A task handler;
+job status, pinned graph version and checkpoints are visible, and dispatch refreshes
+the current assessment/runway/audit views. Viewers can retrieve evidence and inspect
+work; write controls follow analyst/admin roles and the API remains authoritative.
+English and Hindi copy cover these panels. Local supplier previews require a separate
+development signing key and never send outbound mail.
+Supplier portal fragments are captured only in memory before URL removal; effect
+cancellation preserves the captured token during React development checks. Report
+exports use the saved assessment's input snapshot and reject a missing or mismatched
+snapshot instead of substituting the current network.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

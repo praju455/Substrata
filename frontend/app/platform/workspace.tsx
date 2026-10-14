@@ -27,40 +27,17 @@ import {
 } from "./i18n";
 
 import "./workspace.css";
+import { API, call } from "./client";
+import EvidencePanel from "./evidence-panel";
+import JobsPanel from "./jobs-panel";
+import { reportSnapshot } from "./report-snapshot";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
-
-const API = (
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
-).replace(/\/$/, "");
 
 const format = (value: number | null | undefined, locale: Locale) =>
   value == null
     ? "—"
     : new Intl.NumberFormat(localeTag(locale), { maximumFractionDigits: 2 }).format(value);
-
-async function call(path: string, token: string, body?: unknown) {
-  const response = await fetch(API + "/platform" + path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: "Bearer " + token } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-
-  const data = await response.json();
-
-  if (!response.ok)
-    throw new Error(
-      typeof data.detail === "string"
-        ? data.detail
-        : "Check the entered values and permissions.",
-    );
-
-  return data;
-}
 
 function provenance(note: string) {
   return {
@@ -200,7 +177,10 @@ export default function PlatformWorkspace() {
 
   const refresh = useCallback(
     async (accessToken = token) => {
-      const workspace: Workspace = await call("/state", accessToken);
+      const [workspace, jobRecords]: [Workspace, RecordItem[]] = await Promise.all([
+        call("/state", accessToken), call("/jobs", accessToken),
+      ]);
+      workspace.jobs = jobRecords;
 
       setState(workspace);
       const latest = workspace.records.find((r) => r.kind === "assessment");
@@ -401,6 +381,7 @@ export default function PlatformWorkspace() {
 
   const printRiskReport = async () => {
     const workspace = state;
+    const snapshot = reportSnapshot(historical || state?.snapshot, assessment);
     if (!workspace || !snapshot)
       throw new Error(t("Load a graph snapshot before exporting a report."));
     const reportWindow = window.open("", "_blank");
@@ -467,6 +448,8 @@ export default function PlatformWorkspace() {
             <a href="#onboarding">{t("Onboarding")}</a>
             <a href="#imports">{t("Imports")}</a>
             <a href="#graph">{t("Network")}</a>
+            <a href="#evidence">{t("Evidence")}</a>
+            <a href="#jobs">{t("Background tasks")}</a>
             <a href="#approvals">{t("Approvals")}</a>
           </nav>
           <label className="locale-picker">
@@ -685,6 +668,11 @@ export default function PlatformWorkspace() {
                   </div>
                 </section>
 
+                <EvidencePanel key={state.identity.tenant_id} token={token} workspace={state}
+                  canEdit={can("analyst")} busy={busy} run={run}
+                  development={auth?.development === true} />
+                <JobsPanel jobs={state.jobs || []} token={token} busy={busy}
+                  canEdit={can("analyst")} run={run} snapshot={snapshot || null} />
                 <section id="imports" className="panel">
                   <h2>{t("Data imports")}</h2>
                   <p className="muted">
@@ -1113,6 +1101,7 @@ export default function PlatformWorkspace() {
                     </div>
                     {report && (
                       <>
+                        <p className="muted">{t("Graph revision")} {report.graph_version}</p>
                         <p className="notice">{report.range_assumption}</p>
                         {report.truncated && (
                           <p role="alert">
