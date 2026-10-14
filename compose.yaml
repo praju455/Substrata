@@ -36,8 +36,12 @@ services:
       SUBSTRATA_AUTH_KEY_FILE: /run/secrets/auth.secret
       SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://substrata_app:local-only-change-me@db:5432/substrata
       SUBSTRATA_PLATFORM_LLM_PROVIDER: mock
+      SUBSTRATA_OTLP_TRACES_ENDPOINT: ${SUBSTRATA_OTLP_TRACES_ENDPOINT:-}
+      SUBSTRATA_TRACE_SAMPLE_RATIO: ${SUBSTRATA_TRACE_SAMPLE_RATIO:-0.1}
+      SUBSTRATA_OTLP_HEADERS_FILE: ${SUBSTRATA_OTLP_HEADERS_FILE:-}
     volumes:
       - ./data/dev-auth:/run/secrets:ro
+      - ./data/dev-telemetry:/run/telemetry:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -55,6 +59,11 @@ services:
     command: ["python", "scripts/platform_worker.py", "--tenant", "${SUBSTRATA_WORKER_TENANT:-demo}"]
     environment:
       SUBSTRATA_PLATFORM_DATABASE_URL: postgresql+psycopg://substrata_app:local-only-change-me@db:5432/substrata
+      SUBSTRATA_OTLP_TRACES_ENDPOINT: ${SUBSTRATA_OTLP_TRACES_ENDPOINT:-}
+      SUBSTRATA_TRACE_SAMPLE_RATIO: ${SUBSTRATA_TRACE_SAMPLE_RATIO:-0.1}
+      SUBSTRATA_OTLP_HEADERS_FILE: ${SUBSTRATA_OTLP_HEADERS_FILE:-}
+    volumes:
+      - ./data/dev-telemetry:/run/telemetry:ro
     depends_on:
       migrate:
         condition: service_completed_successfully

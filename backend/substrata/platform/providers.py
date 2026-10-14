@@ -11,9 +11,11 @@ import urllib.request
 from pathlib import Path
 from typing import Literal, Protocol
 
+from opentelemetry.trace import SpanKind
 from pydantic import Field
 from sklearn.feature_extraction.text import HashingVectorizer
 
+from substrata.observability import operation_span, outbound_headers
 from substrata.platform.connectors import NoRedirect
 from substrata.platform.domain import Citation, Contract, Identifier, Measure
 
@@ -190,19 +192,32 @@ class RemoteEmbeddings:
 
 
 def request_json(url, payload, headers, timeout):
+    with operation_span(
+        "provider.request", kind=SpanKind.CLIENT, attributes={"http.request.method": "POST"}
+    ) as span:
+        return _request_json(url, payload, headers, timeout, span)
+
+
+def _request_json(url, payload, headers, timeout, span):
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "User-Agent": "Substrata/0.2", **headers},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "Substrata/0.2",
+            **outbound_headers(headers),
+        },
     )
     try:
         with urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout) as response:
+            span.set_attribute("http.response.status_code", getattr(response, "status", 200))
             body = response.read(2_000_001)
         if len(body) > 2_000_000:
             raise ValueError("Provider response exceeds the limit.")
         return json.loads(body)
     except urllib.error.HTTPError as exc:
         code = exc.code
+        span.set_attribute("http.response.status_code", code)
         exc.close()
         raise ValueError(
             f"Provider request failed (HTTP {code}); credentials/body redacted."

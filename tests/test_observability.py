@@ -1,8 +1,15 @@
 """Trace causality, privacy, streaming durations, metrics and real local OTLP export."""
 
 import asyncio
+import io
 import json
+import os
+import subprocess
+import sys
+import urllib.error
+from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Thread
 from types import SimpleNamespace
 
@@ -13,6 +20,8 @@ from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTrace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from test_platform_api import KEY
+from test_platform_api import headers as auth_headers
 
 from substrata.app import create_app
 from substrata.observability import (
@@ -20,8 +29,14 @@ from substrata.observability import (
     HTTPObservability,
     Tracing,
     configured_tracing,
+    parent_context,
     trace_headers,
 )
+from substrata.platform.auth import Principal, TokenVerifier
+from substrata.platform.connectors import read_json
+from substrata.platform.jobs import JobInput, enqueue, run_next
+from substrata.platform.providers import request_json
+from substrata.platform.seeds import generate
 
 REMOTE_TRACE = "4bf92f3577b34da6a3ce929d0e0e4736"
 REMOTE_PARENT = "00f067aa0ba902b7"
@@ -254,3 +269,236 @@ def test_real_otlp_http_export_flushes_on_shutdown_and_uses_secret_header_file(
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_outbound_calls_have_child_spans_and_propagate_only_traceparent(recording, monkeypatch):
+    tracing, exporter = recording
+    outgoing = []
+
+    class Response(io.BytesIO):
+        status = 200
+
+    class Opener:
+        def open(self, request, timeout):
+            outgoing.append({key.lower(): value for key, value in request.header_items()})
+            return Response(b'{"ok":true}')
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *args: Opener())
+    with tracing.span("parent-operation", parent=parent_context(PARENT)) as parent:
+        headers = {
+            "Authorization": "Bearer private-provider-key",
+            "tracestate": "private-state",
+            "baggage": "private-baggage",
+            "traceparent": "forged",
+        }
+        assert request_json(
+            "https://provider.example/v1/messages?private=query",
+            {"private": "document"},
+            headers,
+            5,
+        ) == {"ok": True}
+        assert read_json("https://connector.example/vendors?private=query", headers=headers) == {
+            "ok": True
+        }
+    clients = [span for span in exporter.get_finished_spans() if span.kind == trace.SpanKind.CLIENT]
+    assert [span.name for span in clients] == ["provider.request", "connector.read"]
+    for span, headers in zip(clients, outgoing, strict=True):
+        assert span.parent.span_id == parent.get_span_context().span_id
+        assert span.context.trace_id == int(REMOTE_TRACE, 16)
+        assert span.attributes["http.response.status_code"] == 200
+        assert headers["traceparent"] == f"00-{REMOTE_TRACE}-{span.context.span_id:016x}-01"
+        assert headers["authorization"] == "Bearer private-provider-key"
+        assert "tracestate" not in headers and "baggage" not in headers
+        assert "private" not in str(span.attributes)
+
+
+@pytest.mark.parametrize("client", ["provider", "connector"])
+def test_outbound_http_failures_are_closed_and_export_status_without_secrets(
+    recording, monkeypatch, client
+):
+    tracing, exporter = recording
+    response = io.BytesIO(b"private-error-body")
+
+    class Opener:
+        def open(self, request, timeout):
+            raise urllib.error.HTTPError(request.full_url, 429, "private-error", {}, response)
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *args: Opener())
+    with tracing.activate(), pytest.raises(ValueError):
+        if client == "provider":
+            request_json(
+                "https://provider.example/v1/messages", {}, {"Authorization": "private"}, 5
+            )
+        else:
+            read_json("https://connector.example/vendors")
+    (span,) = exporter.get_finished_spans()
+    assert span.status.status_code == trace.StatusCode.ERROR
+    assert span.attributes["http.response.status_code"] == 429
+    assert response.closed
+    assert span.events == ()
+    assert "private" not in str(span.attributes)
+
+
+def queued_assessment(platform, *, key="synthetic-queue-key"):
+    now = datetime.now(UTC)
+    platform.save("alpha", generate("pharma", as_of=now), "analyst", expected_version=0)
+    return JobInput(
+        kind="assessment",
+        idempotency_key=key,
+        payload={
+            "graph_version": 1,
+            "assessment": {
+                "source_id": "upstream",
+                "severity": 0.8,
+                "as_of": now.isoformat(),
+                "max_depth": 4,
+            },
+        },
+    )
+
+
+def test_authenticated_http_queue_and_worker_execution_share_causal_trace(
+    platform, recording, caplog
+):
+    tracing, exporter = recording
+    caplog.set_level("INFO", logger="substrata")
+    body = queued_assessment(platform, key="private-client-key")
+    app = create_app(
+        platform_store=platform,
+        tracing=tracing,
+        auth_verifier=TokenVerifier(
+            issuer="test-issuer", audience="substrata", key=KEY, algorithm="HS256"
+        ),
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/platform/jobs",
+            json=body.model_dump(mode="json"),
+            headers={**auth_headers(), "traceparent": PARENT},
+        )
+    assert response.status_code == 200
+    queued = response.json()
+    with tracing.activate():
+        result = run_next(
+            platform, Principal(subject="worker", tenant_id="alpha", roles={"analyst"})
+        )
+    assert result["status"] == "succeeded"
+    spans = exporter.get_finished_spans()
+    (producer,) = [span for span in spans if span.kind == trace.SpanKind.PRODUCER]
+    (consumer,) = [span for span in spans if span.kind == trace.SpanKind.CONSUMER]
+    (server,) = [span for span in spans if span.kind == trace.SpanKind.SERVER]
+    assert producer.parent.span_id == server.context.span_id
+    assert consumer.parent.span_id == producer.context.span_id
+    assert consumer.context.trace_id == int(REMOTE_TRACE, 16)
+    assert (
+        queued["payload"]["traceparent"] == f"00-{REMOTE_TRACE}-{producer.context.span_id:016x}-01"
+    )
+    assert consumer.attributes["job.type"] == "assessment"
+    assert consumer.attributes["job.attempt"] == 1
+    (event,) = [json.loads(line) for line in caplog.messages if '"event":"job.execution"' in line]
+    assert event["trace_id"] == REMOTE_TRACE
+    assert event["span_id"] == f"{consumer.context.span_id:016x}"
+    assert "private-client-key" not in caplog.text + str(consumer.attributes)
+    assert trace_headers() == {}
+
+
+def test_retry_attempt_span_records_failure_class_without_failure_message(
+    platform, recording, monkeypatch, caplog
+):
+    tracing, exporter = recording
+    caplog.set_level("INFO", logger="substrata")
+    body = queued_assessment(platform)
+    worker = Principal(subject="worker", tenant_id="alpha", roles={"analyst"})
+    with tracing.activate():
+        enqueue(platform, worker, body)
+
+    def unavailable(*args, **kwargs):
+        raise TimeoutError("private-customer-document-and-credential")
+
+    monkeypatch.setattr("substrata.platform.governance.save_assessment", unavailable)
+    with tracing.activate():
+        assert run_next(platform, worker)["status"] == "retry_scheduled"
+    (consumer,) = [
+        span for span in exporter.get_finished_spans() if span.kind == trace.SpanKind.CONSUMER
+    ]
+    assert consumer.status.status_code == trace.StatusCode.ERROR
+    assert consumer.attributes["error.type"] == "TimeoutError"
+    assert consumer.events == ()
+    assert "private-customer-document-and-credential" not in caplog.text + str(consumer.attributes)
+
+
+@pytest.fixture
+def worker_collector():
+    received = []
+
+    class Collector(BaseHTTPRequestHandler):
+        def do_POST(self):
+            received.append(self.rfile.read(int(self.headers["Content-Length"])))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Collector)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server, received
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+@pytest.mark.parametrize("export", [False, True])
+def test_worker_process_logs_summary_without_dumping_persisted_graph_inputs(
+    platform, export, worker_collector
+):
+    server, received = worker_collector
+    body = queued_assessment(platform, key="private-client-key")
+    worker = Principal(subject="worker", tenant_id="alpha", roles={"analyst"})
+    queued = enqueue(platform, worker, body)
+    script = Path(__file__).resolve().parents[1] / "scripts/platform_worker.py"
+    completed = subprocess.run(
+        [sys.executable, str(script), "--tenant", "alpha", "--once"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={
+            **os.environ,
+            "SUBSTRATA_ENV": "development",
+            "SUBSTRATA_OTLP_TRACES_ENDPOINT": (
+                f"http://127.0.0.1:{server.server_port}/v1/traces" if export else ""
+            ),
+            "SUBSTRATA_TRACE_SAMPLE_RATIO": "1",
+            "SUBSTRATA_OTLP_HEADERS_FILE": "",
+            "OTEL_SERVICE_NAME": "substrata-worker",
+            "SUBSTRATA_PLATFORM_DATABASE_URL": platform.engine.url.render_as_string(
+                hide_password=False
+            ),
+        },
+    )
+    assert completed.returncode == 0, completed.stderr
+    entries = [json.loads(line) for line in completed.stderr.splitlines()]
+    (event,) = [entry for entry in entries if entry["event"] == "job.execution"]
+    assert event["status"] == "succeeded"
+    assert event["trace_id"] == queued["payload"]["traceparent"][3:35]
+    output = completed.stdout + completed.stderr
+    for private in ("private-client-key", "upstream", "input_snapshot", "inventory", "payload"):
+        assert private not in output
+    if export:
+        assert len(received) == 1
+        exported = ExportTraceServiceRequest.FromString(received[0])
+        spans = [
+            span
+            for resource in exported.resource_spans
+            for scope in resource.scope_spans
+            for span in scope.spans
+        ]
+        assert len(spans) == 1 and spans[0].name == "job.execute"
+        assert spans[0].trace_id.hex() == queued["payload"]["traceparent"][3:35]
+        assert spans[0].parent_span_id.hex() == queued["payload"]["traceparent"][36:52]
+        assert b"upstream" not in received[0] and b"private-client-key" not in received[0]
+    else:
+        assert received == []

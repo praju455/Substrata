@@ -35,3 +35,4 @@ out/
 *.secret
 .hypothesis/
 data/models/
+data/dev-telemetry/

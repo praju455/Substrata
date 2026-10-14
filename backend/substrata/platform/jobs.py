@@ -1,13 +1,18 @@
 """Durable tenant job records with bounded leases, retries and typed handlers."""
 
 import hashlib
+import json
+import logging
 import math
+import time
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from pydantic import AwareDatetime, Field, TypeAdapter, model_validator
 from sqlalchemy import func, or_, select
 
+from substrata.observability import operation_span, parent_context, trace_headers
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Contract, Identifier
 from substrata.platform.models import WorkRecord
@@ -16,6 +21,7 @@ from substrata.seed import canonical
 
 MAX_ATTEMPTS = 4
 MAX_ACTIVE_JOBS_PER_TENANT = 100
+JOB_TYPES = {"event_poll", "assessment", "agent_task", "agent_plan"}
 LEASE = timedelta(minutes=2)
 RETRY = (5, 30, 120)
 
@@ -92,6 +98,15 @@ class JobInput(Contract):
 
 
 def enqueue(store, actor, body: JobInput):
+    with operation_span(
+        "job.enqueue",
+        kind=SpanKind.PRODUCER,
+        attributes={"job.type": body.kind if body.kind in JOB_TYPES else "unknown"},
+    ):
+        return _enqueue(store, actor, body)
+
+
+def _enqueue(store, actor, body):
     actor.require("analyst")
     if body.kind not in {"event_poll", "assessment", "agent_task", "agent_plan"}:
         raise ValueError("Job type is not registered.")
@@ -131,6 +146,7 @@ def enqueue(store, actor, body: JobInput):
                 "input_sha256": hashlib.sha256(canonical(body.payload).encode()).hexdigest(),
                 "attempts": 0,
                 "retry_at": datetime.now(UTC).isoformat(),
+                **trace_headers(),
             },
             id,
         )
@@ -203,6 +219,37 @@ def run_next(store, actor):
             else None
         )
     job_id, payload = claimed
+    job_type = payload["job_type"] if payload["job_type"] in JOB_TYPES else "unknown"
+    started = time.perf_counter()
+    with operation_span(
+        "job.execute",
+        kind=SpanKind.CONSUMER,
+        parent=parent_context(payload.get("traceparent")),
+        attributes={"job.type": job_type, "job.attempt": payload["attempts"]},
+    ) as span:
+        result = None
+        try:
+            result = _run_claimed(store, actor, job_id, payload, span)
+            return result
+        finally:
+            ids = span.get_span_context()
+            logging.getLogger("substrata.jobs").info(
+                json.dumps(
+                    {
+                        "event": "job.execution",
+                        "job_type": job_type,
+                        "attempt": payload["attempts"],
+                        "status": result["status"] if result else "error",
+                        "trace_id": f"{ids.trace_id:032x}",
+                        "span_id": f"{ids.span_id:016x}",
+                        "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                    },
+                    separators=(",", ":"),
+                )
+            )
+
+
+def _run_claimed(store, actor, job_id, payload, span):
     try:
         if payload["job_type"] == "event_poll":
             from substrata.platform.events import poll
@@ -212,10 +259,16 @@ def run_next(store, actor):
             from substrata.platform.governance import save_assessment
 
             job_input = payload["input"]
+            assessment = {
+                **job_input["assessment"],
+                "as_of": TypeAdapter(AwareDatetime).validate_python(
+                    job_input["assessment"]["as_of"]
+                ),
+            }
             result = save_assessment(
                 store,
                 actor,
-                **job_input["assessment"],
+                **assessment,
                 version=job_input["graph_version"],
                 idempotency_key=job_id,
             )
@@ -235,6 +288,8 @@ def run_next(store, actor):
         else:
             raise ValueError("Persisted job type is not registered.")
     except Exception as error:
+        span.set_status(Status(StatusCode.ERROR))
+        span.set_attribute("error.type", type(error).__name__)
         now = datetime.now(UTC)
         attempts = payload["attempts"]
         failed = attempts >= MAX_ATTEMPTS

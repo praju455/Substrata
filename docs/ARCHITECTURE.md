@@ -31,6 +31,13 @@ Trace IDs follow validated W3C traceparent contexts; optional application-owned
 OpenTelemetry providers export batches over OTLP/HTTP with a locally enforced
 sample ratio. Vendor tracestate, baggage, credentials, raw paths/query strings
 and business payloads are excluded, and providers shut down with the API lifespan.
+Queue submission creates a producer span and stores only traceparent alongside
+the durable job metadata. Each worker attempt starts a consumer span linked to
+that producer; a restart does not require in-memory trace state. HTTP provider and
+connector operations use child client spans and pass only traceparent. Worker
+logs include coarse job type, attempt, status, duration and trace/span IDs without
+business payloads. Persisted assessment ISO timestamps are validated back into
+aware datetimes at dispatch, preserving the deterministic engine's time contract.
 Tenant document vectors, exact passages and provider-neutral extraction feed only
 inferred link proposals. Durable cost reservations gate live provider calls.
 Single-use supplier tokens bind confirmation to tenant/request/link inputs;

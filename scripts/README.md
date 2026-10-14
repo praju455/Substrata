@@ -31,3 +31,9 @@ enabled. Docker Desktop's Windows CLI is discovered even when missing from PATH;
 `--docker PATH` overrides discovery. Generated test credentials stay in child
 environments, the loopback port is selected dynamically, and cleanup removes only
 this command's container/anonymous volume. See [Operations](../docs/OPERATIONS.md).
+
+`scripts/platform_worker.py --tenant TENANT --once` drains eligible durable jobs
+and exits when idle. It emits structured execution summaries instead of full
+job payloads. Optional OTLP tracing links each attempt to its persisted producer
+context and flushes on shutdown; configuration matches the API's backend-only
+settings. See [Operations](../docs/OPERATIONS.md#optional-otlp-tracing).

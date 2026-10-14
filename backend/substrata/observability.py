@@ -46,6 +46,17 @@ def trace_headers():
     return {"traceparent": carrier["traceparent"]} if "traceparent" in carrier else {}
 
 
+def outbound_headers(headers=None):
+    return {
+        **{
+            key: value
+            for key, value in (headers or {}).items()
+            if key.lower() not in {"traceparent", "tracestate", "baggage"}
+        },
+        **trace_headers(),
+    }
+
+
 class Tracing:
     def __init__(self, provider=None, *, owned=False):
         self.provider = provider

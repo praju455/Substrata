@@ -12,8 +12,10 @@ from pathlib import Path
 from typing import Protocol
 
 from fastapi import HTTPException
+from opentelemetry.trace import SpanKind
 from pydantic import Field
 
+from substrata.observability import operation_span, outbound_headers
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Contract, GraphData, Provenance
 from substrata.platform.models import WorkRecord
@@ -44,16 +46,28 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def read_json(url: str, *, headers=None, timeout=10):
+    with operation_span(
+        "connector.read", kind=SpanKind.CLIENT, attributes={"http.request.method": "GET"}
+    ) as span:
+        return _read_json(url, headers=headers, timeout=timeout, span=span)
+
+
+def _read_json(url, *, headers, timeout, span):
     opener = urllib.request.build_opener(NoRedirect())
     try:
         request = urllib.request.Request(
-            url, headers={"Accept": "application/json", **(headers or {})}
+            url, headers={"Accept": "application/json", **outbound_headers(headers)}
         )
         with opener.open(request, timeout=timeout) as response:
+            span.set_attribute("http.response.status_code", getattr(response, "status", 200))
             body = response.read(3_000_001)
         if len(body) > 3_000_000:
             raise ValueError("Connector response exceeds 3 MB.")
         return json.loads(body)
+    except urllib.error.HTTPError as exc:
+        span.set_attribute("http.response.status_code", exc.code)
+        exc.close()
+        raise ValueError("Connector request failed; check endpoint/configuration.") from None
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
         raise ValueError("Connector request failed; check endpoint/configuration.") from None
 

@@ -69,7 +69,7 @@ connections and passes the admin URL directly to the pytest child environment.
 There are no host mounts or named volumes. On success, test failure or interruption,
 it stops only the container it created and removes its anonymous database volume;
 the existing Compose stack is untouched. Failed tests propagate a nonzero exit.
-The complete run passed 222 Python tests on 14 October 2026 with no skips.
+The latest complete run passed 243 Python tests on 14 October 2026 with no skips.
 
 ## Health, logs and metrics
 
@@ -123,6 +123,25 @@ information in `OTEL_SERVICE_NAME`. A temporary loopback collector verifies real
 protobuf OTLP export and shutdown flushing in the regression suite. Production
 collector credentials, certificate trust, retention and log/metric shipping still
 require deployment configuration.
+
+Producer spans persist traceparent as durable job metadata. Each worker attempt
+creates a linked consumer span even after process restart; retries preserve the
+original producer context. Provider and connector requests create child client
+spans and propagate traceparent, excluding vendor state/baggage. Trace context is
+observability metadata and never grants tenant authority. Worker job logs include
+only job type, attempt, status, duration and trace/span IDs, not saved graph inputs,
+documents, contacts or mitigation rationales. Assessment jobs reconstruct their
+aware datetime from persisted JSON before calling the deterministic calculator.
+Tests exercise API-to-worker causality, provider/connector propagation and error
+redaction, plus real worker-process OTLP export/flush to a temporary local collector.
+
+Compose passes the optional endpoint, sample ratio and header-file settings to both
+API and worker. For local secret-file use, put `otlp-headers.secret` in the ignored
+`data/dev-telemetry/` directory and set
+`SUBSTRATA_OTLP_HEADERS_FILE=/run/telemetry/otlp-headers.secret`. Both containers
+mount that directory read-only; the worker does not receive the API signing key.
+Use a collector endpoint reachable from inside each container. Loopback refers
+to that container, and HTTPS is required for a collector on another host/service.
 
 ## Database backup and restore
 

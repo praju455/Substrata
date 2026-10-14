@@ -49,6 +49,11 @@ HTTP observability includes route-template latency/status metrics and W3C trace
 context correlation. Optional OTLP/HTTP export uses a bounded queue and local
 sampling; credentials, query strings, path parameters and business inputs are
 excluded from span attributes and request logs.
+Durable jobs store their producer traceparent and worker attempts resume the same
+trace. Provider/connector HTTP calls create child spans and propagate traceparent
+without vendor state or baggage. Worker logs contain execution summaries rather
+than graph or mitigation payloads; queued assessment dates are restored to aware
+datetimes before deterministic calculation.
 PostgreSQL integration checks exercise forced tenant policies on every business
 table, pgvector retrieval/model versions, import history and rollback, concurrent
 graph/audit writes, and resumed risk-review jobs followed by named approval.
