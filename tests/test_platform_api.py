@@ -106,7 +106,15 @@ def test_agent_card_and_mcp_tools_keep_exposure_deterministic_and_authenticated(
     store.provision("alpha", "Alpha", "test-admin")
     data = __import__("substrata.platform.seeds", fromlist=["generate"]).generate("pharma")
     store.save("alpha", data, "test-admin", expected_version=0)
-    assert client.get("/.well-known/agent.json").json()["url"].endswith("/platform/a2a")
+    card = client.get("/.well-known/agent.json").json()
+    assert card["url"].endswith("/platform/a2a")
+    assert {
+        "mapper-discovery",
+        "sensor-event",
+        "cascade-caller",
+        "action-draft",
+        "compliance-audit",
+    } <= {skill["id"] for skill in card["skills"]}
     assert (
         client.post(
             "/platform/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}

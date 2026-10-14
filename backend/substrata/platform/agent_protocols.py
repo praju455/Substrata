@@ -102,7 +102,7 @@ def _tool_definitions():
     }
 
 
-def execute_tool(store, actor, name, arguments):
+def execute_tool(store, actor, name, arguments, *, idempotency_key: str | None = None):
     definitions = _tool_definitions()
     if name not in definitions:
         raise ValueError("Unknown tool.")
@@ -127,7 +127,7 @@ def execute_tool(store, actor, name, arguments):
     if name == "mitigation.propose":
         from substrata.platform.governance import propose
 
-        return propose(store, actor, request)
+        return propose(store, actor, request, idempotency_key=idempotency_key)
     if name == "approval.decide":
         from substrata.platform.governance import decide
 
@@ -226,6 +226,41 @@ def a2a_card(base_url: str):
 
 A2A_SKILLS = [
     (
+        "mapper-discovery",
+        "Mapper agent",
+        "Retrieve evidence and propose source-cited supplier links for human review.",
+        ["agent", "evidence", "mapping"],
+        ["Find evidence for a supplier dependency."],
+    ),
+    (
+        "sensor-event",
+        "Sensor agent",
+        "Classify and map a sourced event through tenant alert rules.",
+        ["agent", "events", "sensing"],
+        ["Submit a sourced supplier disruption alert."],
+    ),
+    (
+        "cascade-caller",
+        "Cascade-caller agent",
+        "Run a deterministic assessment on a versioned graph snapshot.",
+        ["agent", "assessment", "risk"],
+        ["Assess exposure from an upstream supplier."],
+    ),
+    (
+        "action-draft",
+        "Action agent",
+        "Create a sourced mitigation draft for an authorised human approval gate.",
+        ["agent", "mitigation", "governance"],
+        ["Draft a mitigation for assessment abc."],
+    ),
+    (
+        "compliance-audit",
+        "Compliance and audit agent",
+        "Verify the tenant audit chain and report its current integrity state.",
+        ["agent", "compliance", "audit"],
+        ["Verify the current tenant audit chain."],
+    ),
+    (
         "cascade-assessment",
         "Deterministic cascade assessment",
         "Assess supplier exposure across a versioned tenant graph.",
@@ -278,6 +313,11 @@ A2A_SKILLS = [
 
 
 SKILL_TO_TOOL = {
+    "mapper-discovery": "evidence.discover",
+    "sensor-event": "event.submit",
+    "cascade-caller": "cascade.assess",
+    "action-draft": "mitigation.propose",
+    "compliance-audit": "audit.verify",
     "cascade-assessment": "cascade.assess",
     "graph-snapshot": "graph.snapshot",
     "evidence-discovery": "evidence.discover",
@@ -285,6 +325,15 @@ SKILL_TO_TOOL = {
     "mitigation-draft": "mitigation.propose",
     "approval-decision": "approval.decide",
     "audit-verification": "audit.verify",
+}
+
+
+AGENT_TASK_TO_TOOL = {
+    "mapper": "evidence.discover",
+    "sensor": "event.submit",
+    "cascade_caller": "cascade.assess",
+    "action": "mitigation.propose",
+    "compliance_audit": "audit.verify",
 }
 
 

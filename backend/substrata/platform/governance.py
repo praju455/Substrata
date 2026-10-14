@@ -220,10 +220,27 @@ def expire_pending_approvals(store, actor: Principal, *, limit=500):
     return expired_ids
 
 
-def propose(store, actor: Principal, body: ProposalInput):
+def propose(store, actor: Principal, body: ProposalInput, *, idempotency_key: str | None = None):
     actor.require("analyst")
+    request_sha256 = hashlib.sha256(canonical(body.model_dump(mode="json")).encode()).hexdigest()
+    action_id = None
+    if idempotency_key is not None:
+        if not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 96:
+            raise ValueError("Mitigation idempotency key is invalid.")
+        action_id = (
+            "mitigation-"
+            + hashlib.sha256(f"{actor.tenant_id}|{idempotency_key}".encode()).hexdigest()
+        )
     with tenant_transaction(store.engine, actor.tenant_id) as session:
         org = store.organisation(session, actor.tenant_id)
+        if action_id is not None:
+            existing = session.get(WorkRecord, (actor.tenant_id, action_id))
+            if existing is not None:
+                if existing.payload.get("idempotency_sha256") != request_sha256:
+                    raise Conflict(
+                        "Mitigation idempotency key was already used with different input."
+                    )
+                return encode(existing)
         assessment = require_record(session, actor.tenant_id, body.assessment_id, "assessment")
         report = assessment.payload["report"]
         reasons = []
@@ -263,6 +280,7 @@ def propose(store, actor: Principal, body: ProposalInput):
             ).isoformat(),
             "assigned_to": None,
             "blocked_reasons": reasons,
+            "idempotency_sha256": request_sha256 if action_id is not None else None,
             "approval": {
                 "actor": "Tenant policy",
                 "reason": "Within configured automatic threshold.",
@@ -270,7 +288,7 @@ def propose(store, actor: Principal, body: ProposalInput):
             if status == "approved"
             else None,
         }
-        action = add(session, actor.tenant_id, "mitigation", status, payload)
+        action = add(session, actor.tenant_id, "mitigation", status, payload, action_id)
         store.append(
             session,
             org,

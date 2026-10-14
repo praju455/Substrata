@@ -89,7 +89,15 @@ LangGraph is the proposed orchestration layer; a plain typed state machine is th
 | Planning | `inventory.snapshot`, `bom.where_used`, `simulation.calculate`, `sourcing.alternatives` | Read inputs and calculate/draft options **[Design]** |
 | Governance | `policy.evaluate`, `approval.request`, `audit.append`, `audit.verify_chain` | Block/review, queue a human, append audit events **[Design]** |
 
-An optional A2A wrapper may expose a read-only analysis capability to Joule as a stretch goal, following the cited SAP agent architecture. **[Design]** Access and compatibility are **[TBD]**.
+Authenticated MCP and A2A endpoints expose typed tenant tools; broad external
+client interoperability has not been verified, and no SAP affiliation is claimed.
+
+The current offline slice exposes typed Mapper, Sensor, Cascade-caller, Action and
+Compliance/Audit skills over the shared tool registry. Agent tasks can use the
+tenant job queue, which persists inputs, retries and results and caps active jobs
+per tenant. These are bounded service/tool roles rather than a LangGraph planner;
+cross-role autonomous plans, push notifications and hosted agent interoperability
+remain deployment/integration work.
 
 ### Layer 5 — API and experience
 

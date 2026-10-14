@@ -228,8 +228,15 @@ lists.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
 records. Run `python scripts/platform_worker.py --tenant demo` as a separately
-supervised process; each worker is bound to one tenant. The queue currently handles
-event polls and deterministic assessments. The worker also scans tenant approval
+supervised process; each worker is bound to one tenant. The queue handles event
+polls, deterministic assessments and typed agent tasks for Mapper, Sensor,
+Cascade-caller, Action and Compliance/Audit roles. Agent task schemas are validated
+against the same typed tools exposed over MCP/A2A; each tenant can hold at most 100
+active jobs. Results, attempts and terminal states persist in the tenant job record.
+Retries reuse the job's idempotency key for the underlying deterministic assessment;
+external email retains its documented at-least-once delivery boundary. LLM-derived
+link discovery keeps the existing per-tenant daily cost reservation, and no model
+calculates exposure. The worker also scans tenant approval
 deadlines on each poll, expires overdue pending decisions, closes the original
 portal notice and creates an audited expiry notice. Approval endpoints enforce the
 same deadline even when the worker is offline. Portal approval notices remain
@@ -298,7 +305,8 @@ heads separately to detect privileged tail truncation.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
    slice; weather feeds beyond MeteoAlarm and NWS, port feeds, additional
-   jurisdiction-specific sanctions/export-control sources, agent specialisations,
+   jurisdiction-specific sanctions/export-control sources, agent coordination
+   across multiple roles,
    SMS and approval delegation notifications, managed queue orchestration and
    production operations remain.
 

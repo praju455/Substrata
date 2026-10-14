@@ -87,7 +87,7 @@ class EventSubmitInput(Contract):
 
 
 class JobInput(Contract):
-    kind: Literal["event_poll", "assessment"]
+    kind: Literal["event_poll", "assessment", "agent_task"]
     idempotency_key: Identifier
     payload: dict = Field(default_factory=dict)
 

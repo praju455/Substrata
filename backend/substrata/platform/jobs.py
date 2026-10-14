@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import AwareDatetime, Field, model_validator
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import Contract, Identifier
@@ -15,12 +15,13 @@ from substrata.platform.records import add, encode, list_records
 from substrata.seed import canonical
 
 MAX_ATTEMPTS = 4
+MAX_ACTIVE_JOBS_PER_TENANT = 100
 LEASE = timedelta(minutes=2)
 RETRY = (5, 30, 120)
 
 
 class JobInput(Contract):
-    kind: Literal["event_poll", "assessment"]
+    kind: Literal["event_poll", "assessment", "agent_task"]
     idempotency_key: Identifier
     payload: dict = Field(default_factory=dict)
 
@@ -55,12 +56,26 @@ class JobInput(Contract):
 
             TypeAdapter(Identifier).validate_python(assessment["source_id"])
             TypeAdapter(AwareDatetime).validate_python(assessment["as_of"])
+        if self.kind == "agent_task":
+            if set(self.payload) != {"agent", "arguments"}:
+                raise ValueError("Agent task requires a registered agent and typed arguments.")
+            from substrata.platform.agent_protocols import AGENT_TASK_TO_TOOL, _tool_definitions
+
+            agent = self.payload["agent"]
+            arguments = self.payload["arguments"]
+            tool = AGENT_TASK_TO_TOOL.get(agent) if isinstance(agent, str) else None
+            if tool is None or not isinstance(arguments, dict):
+                raise ValueError("Agent task name or arguments are invalid.")
+            model = _tool_definitions()[tool][0]
+            model.model_validate(arguments)
+            if len(canonical(self.payload).encode()) > 65_536:
+                raise ValueError("Agent task input exceeds the configured size limit.")
         return self
 
 
 def enqueue(store, actor, body: JobInput):
     actor.require("analyst")
-    if body.kind not in {"event_poll", "assessment"}:
+    if body.kind not in {"event_poll", "assessment", "agent_task"}:
         raise ValueError("Job type is not registered.")
     key = hashlib.sha256(
         f"{actor.tenant_id}|{body.kind}|{body.idempotency_key}".encode()
@@ -76,6 +91,17 @@ def enqueue(store, actor, body: JobInput):
             ):
                 raise ValueError("Job idempotency key was already used with different input.")
             return encode(existing)
+        active_jobs = session.scalar(
+            select(func.count())
+            .select_from(WorkRecord)
+            .where(
+                WorkRecord.tenant_id == actor.tenant_id,
+                WorkRecord.kind == "job",
+                WorkRecord.status.in_(("pending", "running")),
+            )
+        )
+        if active_jobs >= MAX_ACTIVE_JOBS_PER_TENANT:
+            raise ValueError("Tenant has reached the active job limit.")
         record = add(
             session,
             actor.tenant_id,
@@ -173,6 +199,17 @@ def run_next(store, actor):
                 actor,
                 **job_input["assessment"],
                 version=job_input["graph_version"],
+                idempotency_key=job_id,
+            )
+        elif payload["job_type"] == "agent_task":
+            from substrata.platform.agent_protocols import AGENT_TASK_TO_TOOL, execute_tool
+
+            task = payload["input"]
+            result = execute_tool(
+                store,
+                actor,
+                AGENT_TASK_TO_TOOL[task["agent"]],
+                task["arguments"],
                 idempotency_key=job_id,
             )
         else:

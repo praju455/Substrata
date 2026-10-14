@@ -80,6 +80,24 @@ def test_named_authority_separation_and_dry_run_idempotency(platform):
     assert platform.audit("alpha")["verification"]["valid"]
 
 
+def test_mitigation_proposal_accepts_stable_job_idempotency_key(platform):
+    existing = prepared(platform)
+    body = ProposalInput(
+        assessment_id=existing["payload"]["assessment_id"],
+        kind="buffer_buy",
+        title="Retry-safe buffer quote",
+        cost=measure(15000, "USD"),
+        duration=measure(7, "day"),
+        rationale="Supplier quote with a stable worker key",
+    )
+    first = propose(platform, actor(), body, idempotency_key="agent-job-123")
+    second = propose(platform, actor(), body, idempotency_key="agent-job-123")
+    assert first["id"] == second["id"]
+    changed = body.model_copy(update={"title": "Different request"})
+    with pytest.raises(Conflict, match="different input"):
+        propose(platform, actor(), changed, idempotency_key="agent-job-123")
+
+
 def test_policy_or_graph_change_expires_approval_and_other_tenant_cannot_decide(platform):
     action = prepared(platform)
     platform.save("alpha", platform.snapshot("alpha").data, "analyst", expected_version=1)

@@ -26,7 +26,7 @@ from substrata.platform.events import (
     poll,
     subscription,
 )
-from substrata.platform.jobs import JobInput, enqueue, jobs, run_next
+from substrata.platform.jobs import MAX_ACTIVE_JOBS_PER_TENANT, JobInput, enqueue, jobs, run_next
 from substrata.platform.models import WorkRecord
 from substrata.platform.records import list_records
 from substrata.platform.seeds import generate
@@ -693,6 +693,48 @@ def test_job_is_idempotent_durable_and_dispatches_scoped_feed_poll(platform, mon
     assert platform.audit("alpha")["verification"]["valid"]
 
 
+def test_specialized_agent_task_runs_typed_deterministic_work_durably(platform):
+    seeded(platform)
+    snapshot = platform.snapshot("alpha")
+    item = JobInput(
+        kind="agent_task",
+        idempotency_key="cascade-agent-1",
+        payload={
+            "agent": "cascade_caller",
+            "arguments": {
+                "source_id": "upstream",
+                "severity": 0.8,
+                "as_of": datetime.now(UTC).isoformat(),
+                "max_depth": 4,
+                "graph_version": snapshot.version,
+            },
+        },
+    )
+    created = enqueue(platform, actor(), item)
+    assert created["payload"]["job_type"] == "agent_task"
+    assert enqueue(platform, actor(), item)["id"] == created["id"]
+    completed = run_next(platform, actor())
+    assert completed["status"] == "succeeded"
+    assert completed["payload"]["result"]["graph_version"] == snapshot.version
+    assert completed["payload"]["result"]["source_id"] == "upstream"
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_tenant_job_queue_enforces_active_work_limit(platform):
+    for index in range(MAX_ACTIVE_JOBS_PER_TENANT):
+        enqueue(
+            platform,
+            actor(),
+            JobInput(kind="event_poll", idempotency_key=f"queued-{index}"),
+        )
+    with pytest.raises(ValueError, match="active job limit"):
+        enqueue(platform, actor(), JobInput(kind="event_poll", idempotency_key="overflow"))
+    assert len(jobs(platform, "alpha", limit=MAX_ACTIVE_JOBS_PER_TENANT)) == (
+        MAX_ACTIVE_JOBS_PER_TENANT
+    )
+    assert jobs(platform, "beta") == []
+
+
 def test_failed_jobs_preserve_retry_state_and_retry_after_lease(monkeypatch, platform):
     actor_admin = actor()
     job = enqueue(
@@ -727,5 +769,11 @@ def test_job_payload_validation_and_role_checks(platform):
         )
     with pytest.raises(ValueError, match="not registered"):
         enqueue(platform, actor(), JobInput.model_construct(kind="arbitrary", idempotency_key="x"))
+    with pytest.raises(ValueError, match="Agent task name"):
+        JobInput(
+            kind="agent_task",
+            idempotency_key="unknown-agent",
+            payload={"agent": "unregistered", "arguments": {}},
+        )
     with pytest.raises(HTTPException, match="role"):
         enqueue(platform, actor(role="viewer"), JobInput(kind="event_poll", idempotency_key="poll"))
