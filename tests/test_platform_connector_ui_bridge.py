@@ -86,6 +86,26 @@ def test_connector_preview_frontend_mapping_apply_and_rollback(platform, monkeyp
         staged = client.post("/platform/imports/stage", headers=headers(), json=body)
         assert staged.status_code == 200
         import_id = staged.json()["id"]
+        assert staged.json()["status"] == "needs_review"
+        assert (
+            client.post(
+                f"/platform/imports/{import_id}/apply", headers=headers(), json={}
+            ).status_code
+            == 409
+        )
+        # Similar synthetic vendor names now receive the same review as matches
+        # against prior graph data. This fixture intentionally keeps them separate.
+        reviewed = client.post(
+            f"/platform/imports/{import_id}/resolve",
+            headers=headers(),
+            json={
+                "reason": "Synthetic mock vendors are distinct source identities.",
+                "decisions": {
+                    review["incoming_id"]: None for review in staged.json()["payload"]["reviews"]
+                },
+            },
+        )
+        assert reviewed.status_code == 200
         assert (
             client.post(
                 f"/platform/imports/{import_id}/apply", headers=headers(), json={}

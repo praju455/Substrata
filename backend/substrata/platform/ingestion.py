@@ -104,7 +104,17 @@ def describe(body: TabularImport):
     return content, columns, rows, schema
 
 
+def validate_mapping(mapping):
+    for field in mapping:
+        parts = field.split(".")
+        if len(parts) > 3 or any(not part or part.startswith("_") for part in parts):
+            raise ValueError("Mapping path is invalid.")
+        if any(".".join(parts[:length]) in mapping for length in range(1, len(parts))):
+            raise ValueError("Mapping paths must not overlap a field and its nested values.")
+
+
 def mapped_record(row, body):
+    validate_mapping(body.mapping)
     values = (
         {"provenance": body.provenance.model_dump(mode="json")}
         if body.target in {"entities", "links"}
@@ -117,11 +127,11 @@ def mapped_record(row, body):
         if value is None or value == "":
             continue
         parts = field.split(".")
-        if len(parts) > 3 or any(not part or part.startswith("_") for part in parts):
-            raise ValueError("Mapping path is invalid.")
         target = values
         for part in parts[:-1]:
             target = target.setdefault(part, {})
+            if not isinstance(target, dict):
+                raise ValueError("Mapping path overlaps a scalar value.")
         if field in body.units:
             value = {
                 "value": float(value),
@@ -147,10 +157,26 @@ def _embedding_similarity(left, right):
     )
 
 
+def merge_entity(existing, incoming):
+    # Optional dictionaries default to empty when their columns were not mapped.
+    # Merge individual supplied facts so reviewing an alias cannot erase known
+    # measurements (and their provenance), identifiers or attributes.
+    return {
+        **existing,
+        **incoming,
+        "id": existing["id"],
+        **{
+            field: {**existing[field], **incoming[field]}
+            for field in ("identifiers", "attributes", "measures")
+        },
+    }
+
+
 def stage(store, tenant_id, body: TabularImport, actor, *, embedder=None):
     content, columns, rows, schema = describe(body)
     if not body.mapping:
         return {"columns": columns, "sample": rows[:5], "schema_sha256": schema, "rows": len(rows)}
+    validate_mapping(body.mapping)
     if body.schema_sha256 is not None and schema != body.schema_sha256:
         raise Conflict("Schema drift detected; inspect columns and confirm a new mapping.")
     fingerprint = hashlib.sha256(
@@ -178,9 +204,6 @@ def stage(store, tenant_id, body: TabularImport, actor, *, embedder=None):
     # Do provider work outside the graph transaction. Recheck the version before
     # writing so embeddings never hold a tenant lock or stage against stale data.
     parsed, errors, reviews = {}, [], []
-    known = [Entity.model_validate(e) for e in data["entities"]]
-    incoming_entities = []
-    reviewed_ids = set()
     for index, row in enumerate(rows, start=2):
         if not any(value not in {None, ""} for value in row.values()):
             continue
@@ -190,15 +213,23 @@ def stage(store, tenant_id, body: TabularImport, actor, *, embedder=None):
             if key in parsed and parsed[key] != item:
                 raise ValueError("Conflicting duplicate identity in upload.")
             parsed[key] = item
-            if (
-                body.target == "entities"
-                and item["id"] not in reviewed_ids
-                and not any(e.id == item["id"] for e in known)
-            ):
-                reviewed_ids.add(item["id"])
+        except (ValueError, ValidationError, TypeError) as exc:
+            errors.append({"row": index, "reason": str(exc)[:1000]})
+
+    incoming_entities = []
+    if body.target == "entities":
+        known = {value["id"]: Entity.model_validate(value) for value in data["entities"]}
+        for id in known.keys() & parsed.keys():
+            parsed[id] = merge_entity(known[id].model_dump(mode="json"), parsed[id])
+            known[id] = Entity.model_validate(parsed[id])
+        # Only offer earlier new IDs as in-upload candidates. This makes the
+        # review graph acyclic and the survivor independent of CSV row order.
+        for id in sorted(parsed.keys() - known.keys()):
+            item = parsed[id]
+            if known:
                 lexical = [
                     (e, SequenceMatcher(None, normalise(e.name), normalise(item["name"])).ratio())
-                    for e in known
+                    for e in known.values()
                     if e.kind == item["kind"]
                 ]
                 shortlisted = sorted(
@@ -207,8 +238,7 @@ def stage(store, tenant_id, body: TabularImport, actor, *, embedder=None):
                 )[:100]
                 if shortlisted:
                     incoming_entities.append((item, shortlisted))
-        except (ValueError, ValidationError, TypeError) as exc:
-            errors.append({"row": index, "reason": str(exc)[:1000]})
+            known[id] = Entity.model_validate(item)
 
     if incoming_entities:
         embedder = embedder or configured_embedder()
@@ -328,15 +358,23 @@ def resolve_import(store, tenant_id, id, decisions: dict[str, str | None], actor
                 raise ValueError(
                     "Resolution must select a reviewed candidate or create a new entity."
                 )
-            # Preserve reviewed identity and merge the incoming source identifiers.
-            entities[target] = {
-                **entities[incoming],
-                "id": target,
-                "identifiers": {
-                    **entities[target]["identifiers"],
-                    **entities[incoming]["identifiers"],
-                },
-            }
+
+        survivors = {}
+        for incoming in sorted(decisions):
+            target = incoming
+            visited = set()
+            while decisions.get(target) is not None:
+                if target in visited:
+                    raise ValueError("Entity-resolution decisions must not form a cycle.")
+                visited.add(target)
+                target = decisions[target]
+            survivors[incoming] = target
+        # Resolve all paths before deleting any aliases: a reviewed candidate
+        # may itself be merged into an earlier survivor in this upload.
+        for incoming, target in survivors.items():
+            if incoming == target:
+                continue
+            entities[target] = merge_entity(entities[target], entities[incoming])
             del entities[incoming]
         candidate = {**candidate, "entities": list(entities.values())}
         GraphData.model_validate(candidate)

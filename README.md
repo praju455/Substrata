@@ -42,6 +42,10 @@ source provenance are preserved; reading a preview never changes the source ERP.
 Ambiguous imports show each incoming identity and candidate similarity scores;
 analysts explicitly choose an existing match or a separate entity and record a
 reason before the import can be applied.
+Identity review includes similar names within the same upload. Matching an alias
+or updating the same identifier preserves existing optional facts and their
+provenance unless incoming mapped facts replace them. Conflicting scalar/nested
+column mappings are rejected before row processing.
 The scorer panel lists model versions, holdout metrics, calibration and artifact
 hashes. Administrators can train candidates from supplier response labels and
 explicitly activate eligible versions; synthetic training remains labelled and

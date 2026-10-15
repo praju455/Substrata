@@ -7,6 +7,7 @@ import pytest
 from openpyxl import Workbook
 from test_platform_store import graph, source
 
+from substrata.platform.domain import Entity, GraphData, Measure
 from substrata.platform.ingestion import (
     TabularImport,
     apply_import,
@@ -137,3 +138,137 @@ def test_conflicting_duplicate_ids_and_stale_stage(platform):
     platform.save("alpha", graph(), "analyst", expected_version=0)
     with pytest.raises(Conflict, match="changed"):
         stage(platform, "alpha", upload(), "analyst")
+
+
+@pytest.mark.parametrize("incoming_id", ["supplier", "alias"])
+def test_entity_updates_preserve_unmapped_facts_and_replace_supplied_facts(platform, incoming_id):
+    original_source = source().model_copy(update={"uri": "synthetic://original"})
+    original = GraphData(
+        entities=[
+            Entity(
+                id="supplier",
+                name="Acme Pharma",
+                kind="Supplier",
+                identifiers={"vat": "GB-original", "erp": "old"},
+                attributes={"country": "UK", "currency": "GBP"},
+                measures={
+                    "lead_days": Measure(value=12, unit="day", provenance=original_source),
+                    "requalification_days": Measure(
+                        value=30, unit="day", provenance=original_source
+                    ),
+                },
+                provenance=original_source,
+            )
+        ]
+    )
+    first = platform.save("alpha", original, "analyst", expected_version=0)
+    body = upload(
+        f"ID,Name,Type,Country,LeadDays,ERP\n{incoming_id},ACME PHARMA,Supplier,DE,20,new\n",
+        version=1,
+    ).model_copy(
+        update={
+            "mapping": {
+                "id": "ID",
+                "name": "Name",
+                "kind": "Type",
+                "attributes.country": "Country",
+                "measures.lead_days": "LeadDays",
+                "identifiers.erp": "ERP",
+            },
+            "units": {"measures.lead_days": "day"},
+        }
+    )
+    staged = stage(platform, "alpha", body, "analyst")
+    if incoming_id == "alias":
+        assert staged["status"] == "needs_review"
+        resolve_import(
+            platform, "alpha", staged["id"], {"alias": "supplier"}, "analyst", "Verified alias"
+        )
+    else:
+        assert staged["status"] == "staged"
+    apply_import(platform, "alpha", staged["id"], "analyst")
+    supplier = platform.snapshot("alpha").data.entities[0]
+    assert supplier.id == "supplier"
+    assert supplier.name == "ACME PHARMA"
+    assert supplier.identifiers == {"vat": "GB-original", "erp": "new"}
+    assert supplier.attributes == {"country": "DE", "currency": "GBP"}
+    assert supplier.measures["lead_days"].value == 20
+    assert supplier.measures["lead_days"].provenance == body.provenance
+    assert (
+        supplier.measures["requalification_days"]
+        == original.entities[0].measures["requalification_days"]
+    )
+    assert platform.snapshot("alpha", version=first.version).sha256 == first.sha256
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_new_upload_aliases_need_review_and_chained_matches_have_a_stable_survivor(platform):
+    rows = ["c,Acme Pharma,Supplier", "b,ACME PHARMA,Supplier", "a,Acme Pharma,Supplier"]
+    body = upload("ID,Name,Type\n" + "\n".join(rows))
+    staged = stage(platform, "alpha", body, "analyst")
+    reordered = stage(
+        platform,
+        "beta",
+        upload("ID,Name,Type\n" + "\n".join(reversed(rows))).model_copy(
+            update={"provenance": body.provenance}
+        ),
+        "analyst",
+    )
+    assert staged["status"] == reordered["status"] == "needs_review"
+    assert staged["payload"]["reviews"] == reordered["payload"]["reviews"]
+    assert [review["incoming_id"] for review in staged["payload"]["reviews"]] == ["b", "c"]
+    assert {item["id"] for item in staged["payload"]["reviews"][0]["candidates"]} == {"a"}
+    with pytest.raises(Conflict, match="reviewed"):
+        apply_import(platform, "alpha", staged["id"], "analyst")
+    with pytest.raises(ValueError, match="reviewed candidate"):
+        resolve_import(
+            platform, "alpha", staged["id"], {"b": "c", "c": None}, "analyst", "Invalid target"
+        )
+    # The decisions deliberately refer to an alias that is itself being merged.
+    resolve_import(
+        platform, "alpha", staged["id"], {"c": "b", "b": "a"}, "analyst", "Same supplier"
+    )
+    apply_import(platform, "alpha", staged["id"], "analyst")
+    assert [entity.id for entity in platform.snapshot("alpha").data.entities] == ["a"]
+    resolve_import(
+        platform,
+        "beta",
+        reordered["id"],
+        {"b": None, "c": "b"},
+        "analyst",
+        "Source identifiers distinguish the first supplier",
+    )
+    apply_import(platform, "beta", reordered["id"], "analyst")
+    assert {entity.id for entity in platform.snapshot("beta").data.entities} == {"a", "b"}
+    assert platform.audit("alpha")["verification"]["valid"]
+    assert platform.audit("beta")["verification"]["valid"]
+
+
+def test_identical_duplicate_rows_do_not_create_an_identity_review(platform):
+    staged = stage(
+        platform,
+        "alpha",
+        upload("ID,Name,Type\na,Acme Pharma,Supplier\na,Acme Pharma,Supplier\n"),
+        "analyst",
+    )
+    assert staged["status"] == "staged"
+    assert staged["payload"]["reviews"] == []
+    assert staged["payload"]["deduped_count"] == 1
+
+
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        {"name": "Name", "name.foo.bar": "ID"},
+        {"name.foo.bar": "ID", "name": "Name"},
+        {"measures.lead_days.value": "ID", "measures.lead_days": "Name"},
+    ],
+)
+def test_overlapping_mapping_paths_fail_cleanly_before_creating_an_import(platform, mapping):
+    before = platform.audit("alpha")["verification"]["head"]
+    body = upload().model_copy(update={"mapping": mapping})
+    with pytest.raises(ValueError, match="Mapping paths must not overlap"):
+        stage(platform, "alpha", body, "analyst")
+    assert platform.audit("alpha")["verification"]["head"] == before
+    with pytest.raises(ValueError, match="No graph"):
+        platform.snapshot("alpha")

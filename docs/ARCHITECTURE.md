@@ -108,6 +108,13 @@ Identity review presents name-rule and embedding similarity separately and requi
 an explicit decision for every incoming identity plus a reason. The existing
 resolution endpoint validates tenant, role and candidate membership; resolving
 only stages the reviewed import, while applying creates the graph revision.
+Reviewed identity merges and same-ID updates retain existing identifiers,
+attributes and sourced measures omitted by incoming columns. Explicit incoming
+facts replace the corresponding values. Within-upload candidates follow a stable
+ID ordering, creating an acyclic review graph; chained decisions resolve to a
+survivor before aliases are deleted. Overlapping scalar/nested mapping paths fail
+validation before parsing rows. The connector bridge verifies that similar mock
+vendor names cannot bypass this review simply because the graph was empty.
 The scorer panel reads a dedicated tenant model-record list during workspace
 refresh, so older versions are not hidden by unrelated recent workflow records.
 Training and activation reuse existing administrator-only endpoints; the server
