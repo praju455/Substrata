@@ -129,3 +129,14 @@ def principal(request: Request) -> Principal:
     actor = request.app.state.auth_verifier.verify(token)
     request.app.state.platform_rate_limiter.check((actor.tenant_id, actor.subject))
     return actor
+
+
+def public_request(request: Request) -> None:
+    """Bound public credential work by transport peer and the fixed endpoint name.
+
+    Caller-supplied forwarding headers, tokens and request bodies never form keys.
+    The separate limiter leaves authenticated tenant budgets unchanged.
+    """
+    peer = request.client.host if request.client else "unknown"
+    route = request.scope["route"]
+    request.app.state.platform_public_rate_limiter.check((route.name, peer))

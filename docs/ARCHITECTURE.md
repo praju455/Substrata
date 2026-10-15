@@ -146,6 +146,14 @@ lease was lost. SQLite and PostgreSQL regressions simulate both late success and
 late failure after reclamation. Fencing does not preempt an in-flight provider
 call; whole-job cancellation/deadlines and tenant-wide execution-rate budgets
 remain separate pending work.
+Public auth configuration/exchange and supplier describe/reply endpoints enforce
+a bounded per-process budget of 30 requests per minute per fixed endpoint and
+transport peer before provider or token work. Forwarding headers and credentials
+are not used as keys; authenticated tenant limits remain independent. This is a
+local guard, not a distributed ingress limiter. Manual `/events/poll` calls now
+enqueue a new job per request instead of reusing a date-only terminal job.
+Clients needing retry idempotency can still submit an explicit key through
+`/jobs`; feed-item deduplication remains authoritative during repeated polls.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

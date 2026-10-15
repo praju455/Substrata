@@ -2,11 +2,12 @@
 
 from datetime import UTC, datetime
 from typing import Annotated, Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import AwareDatetime, Field
 
-from substrata.platform.auth import Principal, principal
+from substrata.platform.auth import Principal, principal, public_request
 from substrata.platform.confirmations import ConfirmationInput, SupplierReply
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
 from substrata.platform.governance import Policy, ProposalInput
@@ -110,14 +111,14 @@ def identity(actor: Actor):
     return actor
 
 
-@router.get("/auth/config")
+@router.get("/auth/config", dependencies=[Depends(public_request)])
 def auth_config():
     from substrata.platform.oidc import login_config
 
     return login_config()
 
 
-@router.post("/auth/exchange")
+@router.post("/auth/exchange", dependencies=[Depends(public_request)])
 def auth_exchange(body: CodeExchange, request: Request):
     from substrata.platform.oidc import exchange
 
@@ -279,7 +280,7 @@ def event_poll(request: Request, actor: Actor):
     return enqueue(
         request.app.state.platform_store,
         actor,
-        DurableJobInput(kind="event_poll", idempotency_key=f"feed-poll-{datetime.now().date()}"),
+        DurableJobInput(kind="event_poll", idempotency_key=f"feed-poll-{uuid4().hex}"),
     )
 
 
@@ -587,14 +588,14 @@ def confirmation_request(body: ConfirmationInput, request: Request, actor: Actor
     return create_request(request.app.state.platform_store, actor, body)
 
 
-@router.post("/supplier-portal/describe")
+@router.post("/supplier-portal/describe", dependencies=[Depends(public_request)])
 def portal_describe(body: PortalToken, request: Request):
     from substrata.platform.confirmations import describe_request
 
     return describe_request(request.app.state.platform_store, body.token)
 
 
-@router.post("/supplier-portal/reply")
+@router.post("/supplier-portal/reply", dependencies=[Depends(public_request)])
 def portal_reply(body: SupplierReply, request: Request):
     from substrata.platform.confirmations import reply
 
@@ -622,6 +623,7 @@ def install(application, store, verifier):
     application.state.platform_store = store
     application.state.auth_verifier = verifier
     application.state.platform_rate_limiter = RateLimiter()
+    application.state.platform_public_rate_limiter = RateLimiter(limit=30)
     application.include_router(router)
 
     @application.get("/.well-known/agent.json", tags=["agents"])

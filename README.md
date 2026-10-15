@@ -70,6 +70,10 @@ the same tenant event pipeline.
 Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
 Worker claims carry unique ownership markers. Expired attempts cannot overwrite
 a reclaimed job's result or publish later workflow checkpoints.
+Manual event-poll requests create fresh work so updated feeds can be checked
+again within a day; source-item deduplication still prevents duplicate events.
+Public sign-in and supplier portal routes have bounded request budgets before
+credential/provider work, separate from authenticated tenant request budgets.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
 skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and
