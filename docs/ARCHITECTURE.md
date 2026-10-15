@@ -136,6 +136,16 @@ shared edges once in each conjunction. A BOM product without a graph route keeps
 a conservative zero-to-upper revenue range with an explicit missing-route reason.
 Full-route depth, path and combination limits propagate truncation. These remain
 Fréchet/union evidence-support bounds, not calibrated disruption probabilities.
+Durable jobs fence each lease with a fresh internal ownership marker. Workers
+verify ownership and the lease deadline before starting work, before each plan
+step/checkpoint, and before persisting success or retry state under row locks.
+Late attempts return `lease_lost` without changing a newer attempt's state or
+audit entries; ownership markers are redacted from record responses. Recovery can
+reuse the existing idempotent assessment result if a tool completed before its
+lease was lost. SQLite and PostgreSQL regressions simulate both late success and
+late failure after reclamation. Fencing does not preempt an in-flight provider
+call; whole-job cancellation/deadlines and tenant-wide execution-rate budgets
+remain separate pending work.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

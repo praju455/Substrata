@@ -7,6 +7,7 @@ import math
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Literal
+from uuid import uuid4
 
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from pydantic import AwareDatetime, Field, TypeAdapter, model_validator
@@ -24,6 +25,34 @@ MAX_ACTIVE_JOBS_PER_TENANT = 100
 JOB_TYPES = {"event_poll", "assessment", "agent_task", "agent_plan"}
 LEASE = timedelta(minutes=2)
 RETRY = (5, 30, 120)
+
+
+class LeaseLost(RuntimeError):
+    """The worker no longer owns this attempt and must not update its job state."""
+
+
+def _require_claim(session, tenant_id, job_id, claim):
+    record = session.scalar(
+        select(WorkRecord)
+        .where(WorkRecord.tenant_id == tenant_id, WorkRecord.id == job_id)
+        .with_for_update()
+    )
+    if (
+        record is None
+        or record.kind != "job"
+        or record.status != "running"
+        or not claim.get("claim_id")
+        or record.payload.get("claim_id") != claim["claim_id"]
+        or record.payload["attempts"] != claim["attempts"]
+        or not record.payload.get("lease_until")
+        or datetime.fromisoformat(record.payload["lease_until"]) <= datetime.now(UTC)
+    ):
+        raise LeaseLost("Job attempt is no longer owned by this worker.")
+    return record
+
+
+def _lost_claim(job_id, payload):
+    return {"id": job_id, "status": "lease_lost", "attempt": payload["attempts"]}
 
 
 class JobInput(Contract):
@@ -181,7 +210,7 @@ def _claim(store, tenant_id: str):
                 continue
             if record.payload["attempts"] >= MAX_ATTEMPTS:
                 record.status = "failed"
-                record.payload = {**record.payload, "lease_until": None}
+                record.payload = {**record.payload, "lease_until": None, "claim_id": None}
                 store.append(
                     session,
                     org,
@@ -199,6 +228,7 @@ def _claim(store, tenant_id: str):
                 **record.payload,
                 "attempts": record.payload["attempts"] + 1,
                 "lease_until": (now + LEASE).isoformat(),
+                "claim_id": uuid4().hex,
             }
             return record.id, record.payload
     return None
@@ -251,6 +281,8 @@ def run_next(store, actor):
 
 def _run_claimed(store, actor, job_id, payload, span):
     try:
+        with tenant_transaction(store.engine, actor.tenant_id) as session:
+            _require_claim(session, actor.tenant_id, job_id, payload)
         if payload["job_type"] == "event_poll":
             from substrata.platform.events import poll
 
@@ -287,6 +319,9 @@ def _run_claimed(store, actor, job_id, payload, span):
             result = _run_agent_plan(store, actor, job_id, payload)
         else:
             raise ValueError("Persisted job type is not registered.")
+    except LeaseLost:
+        span.set_attribute("job.lease_lost", True)
+        return _lost_claim(job_id, payload)
     except Exception as error:
         span.set_status(Status(StatusCode.ERROR))
         span.set_attribute("error.type", type(error).__name__)
@@ -296,12 +331,17 @@ def _run_claimed(store, actor, job_id, payload, span):
         retry_at = now + timedelta(seconds=RETRY[min(attempts - 1, len(RETRY) - 1)])
         with tenant_transaction(store.engine, actor.tenant_id) as session:
             org = store.organisation(session, actor.tenant_id)
-            record = session.get(WorkRecord, (actor.tenant_id, job_id))
+            try:
+                record = _require_claim(session, actor.tenant_id, job_id, payload)
+            except LeaseLost:
+                span.set_attribute("job.lease_lost", True)
+                return _lost_claim(job_id, payload)
             latest_payload = record.payload
             record.status = "failed" if failed else "pending"
             record.payload = {
                 **latest_payload,
                 "lease_until": None,
+                "claim_id": None,
                 "retry_at": retry_at.isoformat(),
                 "error": type(error).__name__,
             }
@@ -324,9 +364,18 @@ def _run_claimed(store, actor, job_id, payload, span):
         }
     with tenant_transaction(store.engine, actor.tenant_id) as session:
         org = store.organisation(session, actor.tenant_id)
-        record = session.get(WorkRecord, (actor.tenant_id, job_id))
+        try:
+            record = _require_claim(session, actor.tenant_id, job_id, payload)
+        except LeaseLost:
+            span.set_attribute("job.lease_lost", True)
+            return _lost_claim(job_id, payload)
         record.status = "succeeded"
-        record.payload = {**record.payload, "result": result, "lease_until": None}
+        record.payload = {
+            **record.payload,
+            "result": result,
+            "lease_until": None,
+            "claim_id": None,
+        }
         store.append(
             session,
             org,
@@ -352,6 +401,8 @@ def _run_agent_plan(store, actor, job_id, payload):
     for step in steps:
         if step in checkpoints:
             continue
+        with tenant_transaction(store.engine, actor.tenant_id) as session:
+            _require_claim(session, actor.tenant_id, job_id, payload)
         if step == "cascade_caller.assessment":
             assessment = save_assessment(
                 store,
@@ -378,7 +429,7 @@ def _run_agent_plan(store, actor, job_id, payload):
         checkpoints[step] = checkpoint
         with tenant_transaction(store.engine, actor.tenant_id) as session:
             org = store.organisation(session, actor.tenant_id)
-            record = session.get(WorkRecord, (actor.tenant_id, job_id))
+            record = _require_claim(session, actor.tenant_id, job_id, payload)
             record.payload = {**record.payload, "checkpoints": checkpoints}
             store.append(
                 session,

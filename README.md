@@ -68,6 +68,8 @@ DOC, U.S. NWS alerts, European MeteoAlarm weather warnings, review-only OFAC SDN
 and ITA consolidated screening candidates, and field-mapped JSON APIs run through
 the same tenant event pipeline.
 Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
+Worker claims carry unique ownership markers. Expired attempts cannot overwrite
+a reclaimed job's result or publish later workflow checkpoints.
 Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
 engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
 skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and

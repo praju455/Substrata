@@ -31,7 +31,8 @@ def encode(record):
         "payload": {
             key: value
             for key, value in record.payload.items()
-            if key not in {"recipient_ciphertext", "portal_url", "portal_ciphertext", "token"}
+            if key
+            not in {"recipient_ciphertext", "portal_url", "portal_ciphertext", "token", "claim_id"}
         },
     }
 

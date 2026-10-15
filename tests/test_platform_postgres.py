@@ -45,6 +45,14 @@ RUNTIME_ROLE = "substrata_test_runtime"
 RUNTIME_PASSWORD = "test-only-substrata-runtime-password"
 
 
+@pytest.mark.parametrize("late_failure", [False, True])
+def test_postgres_reclaimed_job_preserves_new_attempt(postgres_tenants, monkeypatch, late_failure):
+    from test_platform_job_leases import exercise_reclaimed_job
+
+    store, tenant, _ = postgres_tenants
+    exercise_reclaimed_job(store, tenant, monkeypatch, late_failure)
+
+
 @pytest.fixture(scope="module")
 def postgres_store():
     if not ADMIN_URL:
