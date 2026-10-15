@@ -37,6 +37,7 @@ import { eventForAlert, recordTitle } from "./record-title";
 import Delegation from "./delegation";
 import ConnectorPanel from "./connector-panel";
 import ScorerPanel from "./scorer-panel";
+import IdentityReview from "./identity-review";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -878,34 +879,8 @@ export default function PlatformWorkspace() {
                           </button>
                         )}
                         {r.status === "needs_review" && (
-                          <details>
-                            <summary>{t("Resolve ambiguous identities")}</summary>
-                            <pre>
-                              {JSON.stringify(r.payload.reviews, null, 2)}
-                            </pre>
-                            <button
-                              disabled={busy || !reason.trim()}
-                              onClick={() =>
-                                void run(() =>
-                                  call(`/imports/${r.id}/resolve`, token, {
-                                    reason,
-                                    decisions: Object.fromEntries(
-                                      (
-                                        r.payload.reviews as {
-                                          incoming_id: string;
-                                        }[]
-                                      ).map((review) => [
-                                        review.incoming_id,
-                                        null,
-                                      ]),
-                                    ),
-                                  }),
-                                )
-                              }
-                            >
-                              {t("Keep each incoming entity separate")}
-                            </button>
-                          </details>
+                          <IdentityReview key={r.id} record={r} token={token} busy={busy}
+                            canEdit={can("analyst")} run={run} />
                         )}
                       </article>
                     ))}

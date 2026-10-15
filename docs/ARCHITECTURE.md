@@ -93,6 +93,10 @@ converter against the Python import API with the synthetic OData fixture; it che
 tenant scoping, provenance, idempotent apply and retained history after rollback.
 The Python CI job installs Node 24 for this bridge test; backend-only environments
 without Node skip that one check.
+Identity review presents name-rule and embedding similarity separately and requires
+an explicit decision for every incoming identity plus a reason. The existing
+resolution endpoint validates tenant, role and candidate membership; resolving
+only stages the reviewed import, while applying creates the graph revision.
 The scorer panel reads a dedicated tenant model-record list during workspace
 refresh, so older versions are not hidden by unrelated recent workflow records.
 Training and activation reuse existing administrator-only endpoints; the server

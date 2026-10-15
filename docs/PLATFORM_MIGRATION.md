@@ -14,6 +14,26 @@ runway/audit views. Saved assessment exports retain their original graph snapsho
 when later supplier replies change the network. The deployment gates below remain
 reference material rather than the current integration task.
 
+The remaining local controls now connect sourced event intake and alert rules,
+approval delegation, read-only connector previews and scorer management to their
+existing tenant APIs. Connector previews preserve source provenance and enter the
+same mapped, staged, idempotent import/rollback workflow as uploads. Identity
+review exposes each proposed match, separate name-rule/embedding scores and an
+explicit match-or-separate decision with a reason. Resolving stages an import;
+applying remains a separate action. The scorer registry shows versions, held-out
+metrics, calibration and artifact hashes; training/activation remain admin-only
+and the server enforces label, evaluation and synthetic-data gates. Compose
+preserves generated model files in a named volume shared with workers.
+
+On 15 October, all 263 Python tests passed through the disposable PostgreSQL
+runner with no skips; nine frontend tests, type checking, lint and the static
+production build also passed. Browser checks verified the unconfigured connector state, insufficient
+training-label message, incomplete identity-review blocking and mixed identity
+decisions staging successfully without changing the graph. Focused API tests cover
+tenant/role boundaries, allowed candidate choices, history and audit integrity.
+The synthetic UI review remains staged for inspection, with no operational import
+applied. This verification used local Docker PostgreSQL/API and an exported UI.
+
 ## Implemented foundation
 
 `substrata.platform` has a separate portable Alembic history. Its organisation,
@@ -359,7 +379,7 @@ heads separately to detect privileged tail truncation.
 | 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
 | 8. Product surface | Onboarding, quality counts, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports; English/Hindi catalog covers the workspace, printable report and supplier confirmation portal with a persisted browser choice | Full locale coverage, translated third-party/API content and locale/accessibility QA remain |
 | 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, complete-response HTTP latency/status metrics, HTTP/queue/worker/provider/connector trace causality, optional OTLP export, health checks and worker | Production secret manager, TLS topology, encrypted backup/restore drills, production collector/metrics/log shipping and managed broker require deployment work |
-| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, extraction/scoring evaluation fixtures and graph load harness; PostgreSQL checks cover every tenant table, pgvector, imports/history, concurrent audit writes, resumable jobs and approvals; HTTP/worker OTLP export and trace privacy regressions; disposable runner verified all 243 Python tests with no skips | Docker or a configured test admin URL is required for PostgreSQL integration; customer-shaped load/evaluation baselines are still needed |
+| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, extraction/scoring evaluation fixtures and graph load harness; PostgreSQL checks cover every tenant table, pgvector, imports/history, concurrent audit writes, resumable jobs and approvals; HTTP/worker OTLP export and trace privacy regressions; disposable runner verified all 263 Python tests with no skips | Docker or a configured test admin URL is required for PostgreSQL integration; customer-shaped load/evaluation baselines are still needed |
 
 This map describes implementation evidence, not a pilot or GA certification. A
 production release still needs the listed deployment gates, real-system validation,

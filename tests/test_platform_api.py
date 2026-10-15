@@ -67,6 +67,51 @@ def test_wrong_claims_fail_closed(client, changes):
     assert client.get("/platform/identity", headers=headers(**changes)).status_code == 401
 
 
+def test_identity_review_requires_complete_authorized_choices_before_apply(client):
+    from test_platform_ingestion import upload
+    from test_platform_store import graph
+
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "admin")
+    store.provision("beta", "Beta", "admin")
+    original = store.save("alpha", graph("Acme Pharma"), "admin", expected_version=0)
+    body = upload(
+        "ID,Name,Type\nmerge-me,ACME PHARMA,Supplier\nkeep-me,Acme Pharma,Supplier\n",
+        version=1,
+    ).model_dump(mode="json")
+    staged = client.post("/platform/imports/stage", json=body, headers=headers()).json()
+    assert staged["status"] == "needs_review"
+    path = f"/platform/imports/{staged['id']}/resolve"
+    reviewed = {
+        "reason": "Reviewed source identifiers: one match and one distinct supplier.",
+        "decisions": {"merge-me": "supplier", "keep-me": None},
+    }
+    assert client.post(path, json=reviewed, headers=headers(role="viewer")).status_code == 403
+    assert client.post(path, json=reviewed, headers=headers("beta")).status_code == 409
+    for invalid in (
+        {**reviewed, "reason": " "},
+        {**reviewed, "decisions": {"merge-me": "supplier"}},
+        {**reviewed, "decisions": {"merge-me": "unreviewed", "keep-me": None}},
+    ):
+        assert client.post(path, json=invalid, headers=headers()).status_code == 409
+    assert store.snapshot("alpha").sha256 == original.sha256
+    resolved = client.post(path, json=reviewed, headers=headers(role="analyst"))
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "staged"
+    assert resolved.json()["payload"]["resolution"] == reviewed["decisions"]
+    assert store.snapshot("alpha").sha256 == original.sha256
+    applied = client.post(
+        f"/platform/imports/{staged['id']}/apply", json={}, headers=headers(role="analyst")
+    )
+    assert applied.status_code == 200
+    assert {entity.id for entity in store.snapshot("alpha").data.entities} == {
+        "supplier",
+        "keep-me",
+    }
+    assert store.snapshot("alpha", version=1).sha256 == original.sha256
+    assert store.audit("alpha")["verification"]["valid"]
+
+
 def test_required_auth_and_demo_reset_absent_in_platform_mode(client, caplog):
     caplog.set_level("INFO", logger="substrata.http")
     assert client.get("/platform/identity").status_code == 401

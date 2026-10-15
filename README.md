@@ -35,6 +35,9 @@ checks still decide whether that reviewer may approve.
 Read-only connector previews feed the same column-mapping, staged review,
 idempotent apply and rollback workflow as CSV/Excel uploads. Nested fields and
 source provenance are preserved; reading a preview never changes the source ERP.
+Ambiguous imports show each incoming identity and candidate similarity scores;
+analysts explicitly choose an existing match or a separate entity and record a
+reason before the import can be applied.
 The scorer panel lists model versions, holdout metrics, calibration and artifact
 hashes. Administrators can train candidates from supplier response labels and
 explicitly activate eligible versions; synthetic training remains labelled and
