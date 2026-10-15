@@ -84,6 +84,17 @@ Approval delegation controls reuse the existing governed endpoint, require a
 reviewer subject/reason and display the resulting assignment and portal notice.
 They do not create roles or approvals; the backend checks assignment, tenant,
 approver role, policy and separation of duties when a decision is submitted.
+Policy edits start from the complete stored policy instead of replacing hidden
+controls with defaults. The editor exposes approval hours and the optional USD
+inference budget, preserves configured roles/separation/action kinds, and retains
+provenance for unchanged measurements. Changed measurements carry the named
+administrator's stated reason as a workspace assumption; the audit still records
+the authenticated actor. Empty required inputs are rejected instead of becoming
+zero; a blank inference budget explicitly removes live-inference authorization,
+while zero remains a configured budget. A cross-stack regression submits the
+actual TypeScript edit through the policy API and verifies unchanged tenant
+controls and enforced cost reservations. The component resets when the server
+policy changes and preserves draft fields across unrelated workspace refreshes.
 Connector controls enumerate only the authenticated tenant's configured resources.
 The browser flattens bounded JSON rows into UTF-8 CSV, quoting multiline/Unicode
 values and rejecting ambiguous flattened columns. Preview staging keeps the

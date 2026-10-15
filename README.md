@@ -32,6 +32,10 @@ alert centre rather than requiring separate API calls.
 Pending approvals can be delegated to a named reviewer from the inbox, with a
 required reason and visible assignment. Existing role and separation-of-duties
 checks still decide whether that reviewer may approve.
+The policy editor retains configured approver roles, action kinds, approval
+deadlines and inference budgets when spending limits change. Administrators can
+edit deadlines and USD inference budgets explicitly, with a reason recorded as
+provenance for changed values; unchanged values keep their original sources.
 Read-only connector previews feed the same column-mapping, staged review,
 idempotent apply and rollback workflow as CSV/Excel uploads. Nested fields and
 source provenance are preserved; reading a preview never changes the source ERP.

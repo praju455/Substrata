@@ -38,6 +38,7 @@ import Delegation from "./delegation";
 import ConnectorPanel from "./connector-panel";
 import ScorerPanel from "./scorer-panel";
 import IdentityReview from "./identity-review";
+import PolicyPanel from "./policy-panel";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -166,10 +167,6 @@ export default function PlatformWorkspace() {
     null,
   );
 
-  const [spend, setSpend] = useState(50000);
-
-  const [automatic, setAutomatic] = useState(0);
-
   const [currency, setCurrency] = useState("USD");
 
   const [quote, setQuote] = useState("");
@@ -197,8 +194,6 @@ export default function PlatformWorkspace() {
       setReport(latest ? (latest.payload.report as Report) : null);
       const policy = workspace.organisation?.policy;
       if (policy?.spend_limit) {
-        setSpend((policy.spend_limit as Measure).value);
-        setAutomatic((policy.auto_approve_limit as Measure).value);
         setCurrency(String(policy.currency));
       }
     },
@@ -1137,70 +1132,8 @@ export default function PlatformWorkspace() {
                   </section>
                 )}
 
-                <section className="panel">
-                  <h2>{t("Approval policy")}</h2>
-                  <p className="muted">
-                    {t("Limits are explicit organisation assumptions. A separate approver is required by default.")}
-                  </p>
-                  <div className="platform-form-row">
-                    <label>
-                      {t("Currency")}
-                      <input
-                        maxLength={3}
-                        value={currency}
-                        onChange={(e) =>
-                          setCurrency(e.target.value.toUpperCase())
-                        }
-                      />
-                    </label>
-                    <label>
-                      {t("Maximum spend")}
-                      <input
-                        type="number"
-                        min="0"
-                        value={spend}
-                        onChange={(e) => setSpend(Number(e.target.value))}
-                      />
-                    </label>
-                    <label>
-                      {t("Automatic approval limit")}
-                      <input
-                        type="number"
-                        min="0"
-                        value={automatic}
-                        onChange={(e) => setAutomatic(Number(e.target.value))}
-                      />
-                    </label>
-                    <button
-                      className="secondary"
-                      disabled={busy || !can("admin")}
-                      onClick={() =>
-                        void run(() =>
-                          call("/policy", token, {
-                            currency,
-                            spend_limit: measure(
-                              spend,
-                              currency,
-                                t("Organisation spending limit"),
-                            ),
-                            auto_approve_limit: measure(
-                              automatic,
-                              currency,
-                                t("Organisation automatic approval limit"),
-                            ),
-                            approval_sla: measure(
-                              24,
-                              "hour",
-                              t("Organisation approval SLA"),
-                            ),
-                          }),
-                        )
-                      }
-                    >
-                      {t("Save policy")}
-                    </button>
-                  </div>
-                </section>
+                <PolicyPanel key={JSON.stringify(state.organisation.policy)} policy={state.organisation.policy}
+                  token={token} busy={busy} canAdmin={can("admin")} run={run} />
 
                 <section id="approvals" className="panel">
                   <h2>{t("Approvals inbox")}</h2>
