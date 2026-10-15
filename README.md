@@ -32,6 +32,8 @@ alert centre rather than requiring separate API calls.
 Pending approvals can be delegated to a named reviewer from the inbox, with a
 required reason and visible assignment. Existing role and separation-of-duties
 checks still decide whether that reviewer may approve.
+Delegation itself also enforces the tenant's configured approver roles. Changed
+inputs or an elapsed approval deadline expire the action before reassignment.
 The policy editor retains configured approver roles, action kinds, approval
 deadlines and inference budgets when spending limits change. Administrators can
 edit deadlines and USD inference budgets explicitly, with a reason recorded as

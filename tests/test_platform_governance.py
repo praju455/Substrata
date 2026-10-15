@@ -124,6 +124,85 @@ def test_delegation_rejection_and_blocked_spending(platform):
         execute(platform, actor("delegate", "approver"), action["id"])
 
 
+@pytest.mark.parametrize(
+    "allowed_role,excluded_role", [("admin", "approver"), ("approver", "admin")]
+)
+def test_delegation_requires_tenant_approval_authority_without_side_effects(
+    platform, allowed_role, excluded_role
+):
+    from substrata.platform.database import tenant_transaction
+
+    previous = prepared(platform)
+    with tenant_transaction(platform.engine, "alpha") as session:
+        policy = Policy.model_validate(platform.organisation(session, "alpha").policy)
+    configure_policy(
+        platform,
+        actor("administrator", "admin"),
+        policy.model_copy(update={"approver_roles": {allowed_role}}),
+    )
+    action = propose(
+        platform,
+        actor(),
+        ProposalInput(**{key: previous["payload"][key] for key in ProposalInput.model_fields}),
+    )
+    before_audit = platform.audit("alpha")
+    before_actions = list_records(platform, "alpha", kind="mitigation")
+    before_notifications = list_records(platform, "alpha", kind="notification")
+
+    with pytest.raises(ValueError, match="outside the tenant's approval policy"):
+        delegate(
+            platform, actor("excluded", excluded_role), action["id"], "delegate", "Covering leave"
+        )
+
+    assert platform.audit("alpha") == before_audit
+    assert list_records(platform, "alpha", kind="mitigation") == before_actions
+    assert list_records(platform, "alpha", kind="notification") == before_notifications
+    delegated = delegate(
+        platform, actor("allowed", allowed_role), action["id"], "delegate", "Covering leave"
+    )
+    assert delegated["payload"]["assigned_to"] == "delegate"
+    assert platform.audit("alpha")["verification"]["valid"]
+
+
+@pytest.mark.parametrize("change", ["graph", "policy", "deadline"])
+def test_delegation_expires_stale_or_overdue_approvals_without_reassignment(platform, change):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+
+    action = prepared(platform)
+    if change == "graph":
+        platform.save("alpha", platform.snapshot("alpha").data, "analyst", expected_version=1)
+    elif change == "policy":
+        with tenant_transaction(platform.engine, "alpha") as session:
+            policy = Policy.model_validate(platform.organisation(session, "alpha").policy)
+        configure_policy(
+            platform,
+            actor("administrator", "admin"),
+            policy.model_copy(update={"require_separate_approver": False}),
+        )
+    else:
+        with tenant_transaction(platform.engine, "alpha") as session:
+            record = session.get(WorkRecord, ("alpha", action["id"]))
+            record.payload = {
+                **record.payload,
+                "expires_at": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+            }
+    before_notifications = list_records(platform, "alpha", kind="notification")
+    before_count = platform.audit("alpha")["verification"]["count"]
+
+    with pytest.raises(Conflict, match="Approval expired"):
+        delegate(platform, actor("buyer", "approver"), action["id"], "delegate", "Covering leave")
+
+    saved = list_records(platform, "alpha", kind="mitigation")[0]
+    assert saved["status"] == "expired"
+    assert saved["payload"]["assigned_to"] is None
+    assert list_records(platform, "alpha", kind="notification") == before_notifications
+    audit = platform.audit("alpha")
+    assert audit["verification"]["valid"]
+    assert audit["verification"]["count"] == before_count + 1
+    assert audit["records"][-1]["event_type"] == "approval.expired"
+
+
 def test_worker_expiry_marks_sla_and_emits_portal_notification(platform):
     from substrata.platform.database import tenant_transaction
     from substrata.platform.models import WorkRecord

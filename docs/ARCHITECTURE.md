@@ -84,6 +84,11 @@ Approval delegation controls reuse the existing governed endpoint, require a
 reviewer subject/reason and display the resulting assignment and portal notice.
 They do not create roles or approvals; the backend checks assignment, tenant,
 approver role, policy and separation of duties when a decision is submitted.
+The same tenant approver-role restriction applies to delegation, including an
+administrator excluded by that policy. Unauthorized attempts leave assignment,
+notifications and audit unchanged. An authorized delegation against changed graph
+or policy inputs, or an elapsed SLA, records expiry and requires a fresh action
+instead of issuing a new review assignment.
 Policy edits start from the complete stored policy instead of replacing hidden
 controls with defaults. The editor exposes approval hours and the optional USD
 inference budget, preserves configured roles/separation/action kinds, and retains

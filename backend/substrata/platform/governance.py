@@ -370,9 +370,13 @@ def delegate(store, actor: Principal, id: str, subject: str, reason: str):
     actor.require("approver")
     if not subject.strip() or len(subject) > 256 or not reason.strip():
         raise ValueError("Delegation requires an identity-provider subject and reason.")
+    expired = False
     with tenant_transaction(store.engine, actor.tenant_id) as session:
         org = store.organisation(session, actor.tenant_id)
         action = require_record(session, actor.tenant_id, id, "mitigation")
+        policy = Policy.model_validate(org.policy)
+        if not actor.roles & policy.approver_roles:
+            raise ValueError("Authenticated role is outside the tenant's approval policy.")
         if action.status != "pending":
             raise Conflict("Only pending approvals may be delegated.")
         if (
@@ -380,27 +384,56 @@ def delegate(store, actor: Principal, id: str, subject: str, reason: str):
             and "admin" not in actor.roles
         ):
             raise ValueError("Only the assigned approver or an administrator can delegate.")
-        action.payload = {**action.payload, "assigned_to": subject}
-        store.append(
-            session,
-            org,
-            "approval.delegated",
-            actor.subject,
-            {"id": id, "assigned_to": subject, "reason": reason},
+        now = datetime.now(UTC)
+        expired = (
+            org.version != action.payload["graph_version"]
+            or action.payload["policy_sha256"]
+            != hashlib.sha256(canonical(org.policy).encode()).hexdigest()
+            or now >= datetime.fromisoformat(action.payload["expires_at"])
         )
-        add(
-            session,
-            actor.tenant_id,
-            "notification",
-            "pending",
-            {
-                "type": "approval_delegated",
-                "action_id": id,
-                "subject": subject,
-                "channel": "portal",
-            },
-        )
-        return encode(action)
+        if expired:
+            action.status = "expired"
+            action.payload = {
+                **action.payload,
+                "approval": {
+                    "actor": actor.subject,
+                    "roles": sorted(actor.roles),
+                    "reason": "Inputs/policy changed or SLA expired.",
+                    "decided_at": now.isoformat(),
+                },
+            }
+            store.append(
+                session,
+                org,
+                "approval.expired",
+                actor.subject,
+                {"id": id, "decision": "expired", "approval": action.payload["approval"]},
+            )
+        else:
+            action.payload = {**action.payload, "assigned_to": subject}
+            store.append(
+                session,
+                org,
+                "approval.delegated",
+                actor.subject,
+                {"id": id, "assigned_to": subject, "reason": reason},
+            )
+            add(
+                session,
+                actor.tenant_id,
+                "notification",
+                "pending",
+                {
+                    "type": "approval_delegated",
+                    "action_id": id,
+                    "subject": subject,
+                    "channel": "portal",
+                },
+            )
+        result = encode(action)
+    if expired:
+        raise Conflict("Approval expired; reassess and draft a new action.")
+    return result
 
 
 def execute(store, actor: Principal, id: str, *, adapter: ExecutionAdapter | None = None):
