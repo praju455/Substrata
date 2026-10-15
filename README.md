@@ -3,6 +3,8 @@
 The approved industry-neutral platform migration is tracked in
 [Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
 remains available during the migration; new tenant features use a separate schema.
+The [remaining local work audit](docs/PLATFORM_REMAINING.md) records unfulfilled
+requirements separately from deployment and customer configuration gates.
 For manual Python installs, use `python -m pip install -e ".[dev,platform]"`;
 the setup runner installs these extras for the complete test suite.
 Platform API access requires verified tokens; see the migration guide for setup.
@@ -124,7 +126,7 @@ an isolated database container that is removed afterward.
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** the complete synthetic vertical slice is implemented: evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, ranked mitigation drafts, named approval and hash-chained audit. Gemini is the primary LLM and Groq is its backup. Live extraction needs your provider keys; explicit mock mode works offline after installation. No model training, SAP connection, live supplier contact or real purchase execution is claimed.
+> **Retained prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Its Gemini/Groq extraction needs provider keys; mock mode works offline. The separate platform now includes a small link scorer training/registry pipeline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
 
 See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
 
@@ -294,7 +296,10 @@ The prototype will not issue purchase orders, onboard suppliers or move real shi
 
 ## Models and training
 
-> **No model training is planned for the core system.** <sup>[Design]</sup>
+The platform trains a small gradient-boosted link scorer from reviewed supplier
+labels, with grouped holdouts, calibration and explicit model activation. It does
+not fine-tune an LLM. Synthetic evaluation establishes pipeline behavior, not
+customer accuracy. See the platform migration guide for the implemented scope.
 
 | Pretrained AI may assist with | Deterministic code remains responsible for |
 |---|---|

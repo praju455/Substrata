@@ -299,7 +299,10 @@ sequenceDiagram
 | Action feasibility and spend/risk policy | Rationale only | Rules and tool-returned values **[Design]** |
 | Audit hashes and approval validity | No | Governance service **[Design]** |
 
-No model training is planned for core scope. **[Design]** An optional GNN is a synthetic-only research baseline and cannot replace the governed graph record. **[Design]**
+The implemented platform trains and calibrates a small gradient-boosted link
+scorer on supplier-response labels; the registry enforces explicit activation and
+synthetic-data gates. It does not fine-tune an LLM. A GNN remains an unimplemented
+research idea rather than the current scorer or governed graph record.
 
 ## 7. Failure and recovery design
 
@@ -316,4 +319,10 @@ No model training is planned for core scope. **[Design]** An optional GNN is a s
 
 ## 8. Security and governance work still required
 
-Role design, identity provider, secret management, encryption, field-level authorization, tenant isolation, retention, source licensing, threat modelling and incident handling are not complete. **[TBD]** The prototype should begin with least privilege, synthetic data, no external mutation and redacted structured logs. **[Design]** These controls are necessary but not sufficient for production. **[Design]**
+The retained prototype is not a production security boundary. The separate
+platform implements verified OIDC roles, tenant RLS, encrypted contact storage,
+file-based secrets and redacted logs. Customer IdP validation, production secret
+management/TLS, retention, source licensing, threat modelling and incident handling
+remain release gates. Remaining local implementation gaps are tracked in
+[PLATFORM_REMAINING.md](PLATFORM_REMAINING.md); passing offline controls alone does
+not establish production readiness.
