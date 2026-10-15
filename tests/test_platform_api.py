@@ -335,3 +335,69 @@ def test_budget_returns_429_and_auth_configuration_rejects_production_hmac(
     monkeypatch.setenv("SUBSTRATA_ENV", "production")
     with pytest.raises(ValueError, match="development"):
         configured_verifier()
+
+
+def test_scorer_controls_train_list_activate_and_preserve_tenant_and_role_gates(
+    client, monkeypatch, tmp_path
+):
+    from test_platform_scoring import labels
+
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.records import add
+
+    monkeypatch.setenv("SUBSTRATA_ENV", "development")
+    monkeypatch.setenv("SUBSTRATA_MODEL_REGISTRY", str(tmp_path / "models"))
+    assert (
+        client.post(
+            "/platform/organisation",
+            headers=headers(),
+            json={"name": "Synthetic scorer API fixture"},
+        ).status_code
+        == 201
+    )
+    assert (
+        client.post("/platform/models/train", headers=headers(role="viewer"), json={}).status_code
+        == 403
+    )
+    assert (
+        client.post("/platform/models/train", headers=headers(role="analyst"), json={}).status_code
+        == 403
+    )
+    insufficient = client.post("/platform/models/train", headers=headers(), json={})
+    assert insufficient.status_code == 409 and "50 labels" in insufficient.json()["detail"]
+    store = client.app.state.platform_store
+    with tenant_transaction(store.engine, "alpha") as session:
+        for label in labels():
+            add(session, "alpha", "training_label", "labelled", label)
+    trained = client.post("/platform/models/train", headers=headers(), json={})
+    assert trained.status_code == 200
+    first = trained.json()
+    assert first["status"] == "candidate"
+    assert first["payload"]["report"]["synthetic"] is True
+    assert len(first["payload"]["model_sha256"]) == 64
+    listed = client.get(
+        "/platform/records?kind=model_registry", headers=headers(role="viewer")
+    ).json()
+    assert listed[0]["id"] == first["id"]
+    assert client.get("/platform/records?kind=model_registry", headers=headers("beta")).json() == []
+    route = f"/platform/models/{first['id']}/activate"
+    assert client.post(route, headers=headers(role="analyst"), json={}).status_code == 403
+    assert client.post(route, headers=headers("beta"), json={}).status_code == 409
+    monkeypatch.setenv("SUBSTRATA_ENV", "production")
+    assert client.post(route, headers=headers(), json={}).status_code == 409
+    monkeypatch.setenv("SUBSTRATA_ENV", "development")
+    assert client.post(route, headers=headers(), json={}).json()["status"] == "active"
+    second = client.post("/platform/models/train", headers=headers(), json={}).json()
+    assert (
+        client.post(
+            f"/platform/models/{second['id']}/activate", headers=headers(), json={}
+        ).status_code
+        == 200
+    )
+    versions = client.get("/platform/records?kind=model_registry", headers=headers()).json()
+    assert {item["id"]: item["status"] for item in versions} == {
+        first["id"]: "retired",
+        second["id"]: "active",
+    }
+    assert (tmp_path / "models" / "alpha" / first["id"] / "model.joblib").is_file()
+    assert client.get("/platform/audit", headers=headers()).json()["verification"]["valid"]

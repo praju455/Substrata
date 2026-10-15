@@ -102,6 +102,24 @@
 .delegation-form {
   max-width: 520px;
 }
+.connector-sample {
+  overflow: auto;
+  max-height: 320px;
+  margin: 16px 0;
+}
+.connector-sample table {
+  border-collapse: collapse;
+}
+.connector-sample th,
+.connector-sample td {
+  min-width: 100px;
+  max-width: 300px;
+  border: 1px solid #d4d1de;
+  padding: 8px;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .record-row pre {
   white-space: pre-wrap;
   max-width: 100%;

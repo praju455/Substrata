@@ -48,6 +48,12 @@ indexing, retrieval and cited discovery; the separate development confirmation k
 enables signed local supplier previews without sending email. Background tasks can
 be queued, inspected and run one at a time from the workspace when no worker is
 running. Risk review uses the existing A2A workflow and pins its graph revision.
+The local scorer panel uses the existing supplier-label training and activation
+endpoints. Compose stores generated artifacts in `platform-models`, shared by the
+API and workers; the worker mount is read-only. Recreating containers preserves
+registered model files. Keep the model volume alongside the database when moving
+or recovering a local workspace: a database-only dump does not include model files,
+and the scorer rejects artifacts that do not match the registered hash.
 
 The PostgreSQL integration suite uses the migration administrator only for schema
 and test-role setup. Workflow checks run as a separate `NOSUPERUSER`, `NOBYPASSRLS`

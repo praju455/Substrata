@@ -84,6 +84,24 @@ Approval delegation controls reuse the existing governed endpoint, require a
 reviewer subject/reason and display the resulting assignment and portal notice.
 They do not create roles or approvals; the backend checks assignment, tenant,
 approver role, policy and separation of duties when a decision is submitted.
+Connector controls enumerate only the authenticated tenant's configured resources.
+The browser flattens bounded JSON rows into UTF-8 CSV, quoting multiline/Unicode
+values and rejecting ambiguous flattened columns. Preview staging keeps the
+connector provenance and uses the existing import schema fingerprint, mapping,
+review/apply and rollback endpoints. A cross-stack test runs the actual TypeScript
+converter against the Python import API with the synthetic OData fixture; it checks
+tenant scoping, provenance, idempotent apply and retained history after rollback.
+The Python CI job installs Node 24 for this bridge test; backend-only environments
+without Node skip that one check.
+The scorer panel reads a dedicated tenant model-record list during workspace
+refresh, so older versions are not hidden by unrelated recent workflow records.
+Training and activation reuse existing administrator-only endpoints; the server
+enforces supplier-label minimums, independent holdouts, activation quality gates
+and the synthetic-data restriction. API regressions cover these controls, tenant
+isolation and retirement of the previous active version. Local Docker artifacts
+live in a named registry volume writable by the API's unprivileged user and
+mounted read-only by workers. Database records and artifact hashes remain linked;
+model files are server-generated and cannot be uploaded through the workspace.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

@@ -63,13 +63,15 @@ def verify(*, executable: Path, full_suite: bool) -> int:
         cwd=ROOT,
         capture_output=True,
         text=True,
-        timeout=15,
+        # Cold imports on synced Windows workspaces can exceed 15 seconds.
+        # Keep a deadline, but do not misclassify a slow environment as missing deps.
+        timeout=60,
     )
     if dependencies.returncode:
         raise RuntimeError(
             'Install project test dependencies with pip install -e ".[dev,platform]".'
         )
-    docker("info", "--format", "{{.ServerVersion}}", timeout=15)
+    docker("info", "--format", "{{.ServerVersion}}", timeout=60)
     name = f"substrata-pg-test-{uuid4().hex}"
     container_id = None
     try:

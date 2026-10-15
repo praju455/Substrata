@@ -32,6 +32,13 @@ alert centre rather than requiring separate API calls.
 Pending approvals can be delegated to a named reviewer from the inbox, with a
 required reason and visible assignment. Existing role and separation-of-duties
 checks still decide whether that reviewer may approve.
+Read-only connector previews feed the same column-mapping, staged review,
+idempotent apply and rollback workflow as CSV/Excel uploads. Nested fields and
+source provenance are preserved; reading a preview never changes the source ERP.
+The scorer panel lists model versions, holdout metrics, calibration and artifact
+hashes. Administrators can train candidates from supplier response labels and
+explicitly activate eligible versions; synthetic training remains labelled and
+restricted to development. Local Docker API and workers share the model registry.
 Evidence retrieval supports pgvector and exact passage citations; configurable
 OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link

@@ -35,6 +35,8 @@ import { reportSnapshot } from "./report-snapshot";
 import EventsPanel from "./events-panel";
 import { eventForAlert, recordTitle } from "./record-title";
 import Delegation from "./delegation";
+import ConnectorPanel from "./connector-panel";
+import ScorerPanel from "./scorer-panel";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -181,10 +183,12 @@ export default function PlatformWorkspace() {
 
   const refresh = useCallback(
     async (accessToken = token) => {
-      const [workspace, jobRecords]: [Workspace, RecordItem[]] = await Promise.all([
+      const [workspace, jobRecords, models]: [Workspace, RecordItem[], RecordItem[]] = await Promise.all([
         call("/state", accessToken), call("/jobs", accessToken),
+        call("/records?kind=model_registry", accessToken),
       ]);
       workspace.jobs = jobRecords;
+      workspace.models = models;
 
       setState(workspace);
       const latest = workspace.records.find((r) => r.kind === "assessment");
@@ -680,6 +684,14 @@ export default function PlatformWorkspace() {
                   canEdit={can("analyst")} run={run} snapshot={snapshot || null} />
                 <section id="imports" className="panel">
                   <h2>{t("Data imports")}</h2>
+                  <ConnectorPanel token={token} busy={busy} canEdit={can("analyst")} run={run}
+                    prepareMapping={async (preview) => {
+                      const body = { filename: preview.filename, content_base64: preview.content_base64,
+                        provenance: preview.provenance, target, mapping: {}, expected_version: state.organisation!.version };
+                      const staged = await call("/imports/stage", token, body);
+                      setFile(null); setMapping({}); setColumns(staged.columns);
+                      setUploadBody({ ...body, schema_sha256: staged.schema_sha256 });
+                    }} />
                   <p className="muted">
                     {t("Preview CSV or Excel columns, validate the mapping, then apply a reviewed import.")}
                   </p>
@@ -1365,6 +1377,8 @@ export default function PlatformWorkspace() {
                   )}
                 </section>
 
+                <ScorerPanel token={token} models={state.models || []} busy={busy}
+                  canAdmin={can("admin")} development={auth?.development === true} run={run} />
                 <EventsPanel token={token} records={records} busy={busy}
                   canEdit={can("analyst")} canAdmin={can("admin")} run={run} />
                 <section className="panel">
