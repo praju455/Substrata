@@ -129,6 +129,13 @@ isolation and retirement of the previous active version. Local Docker artifacts
 live in a named registry volume writable by the API's unprivileged user and
 mounted read-only by workers. Database records and artifact hashes remain linked;
 model files are server-generated and cannot be uploaded through the workspace.
+Cascade formula `platform-runway-v2` composes source-to-material and
+material-to-plant paths before establishing impact certainty, support bounds and
+citations. Product revenue requires both plant and product support, counting
+shared edges once in each conjunction. A BOM product without a graph route keeps
+a conservative zero-to-upper revenue range with an explicit missing-route reason.
+Full-route depth, path and combination limits propagate truncation. These remain
+Fréchet/union evidence-support bounds, not calibrated disruption probabilities.
 `platform.backup_ops` exports a REPEATABLE READ snapshot; native `pg_dump` and the
 encrypted manifest use the same committed state. The manifest records graph hashes,
 audit heads, schema version and table counts. Native tool credentials stay in the

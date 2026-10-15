@@ -8,6 +8,9 @@ the setup runner installs these extras for the complete test suite.
 Platform API access requires verified tokens; see the migration guide for setup.
 The platform includes automotive, pharma and food fixtures and a deterministic
 assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
+Exposure support follows the complete route through the material to the plant;
+product revenue also requires product-route support. Inferred downstream usage
+therefore widens ranges instead of appearing certain.
 CSV/Excel imports are staged with column mapping, validation and identity review;
 optional semantic embeddings add scored, review-only entity candidates when a
 provider and tenant cost budget are configured. History and safe rollback preserve

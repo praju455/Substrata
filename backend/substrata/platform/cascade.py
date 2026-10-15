@@ -6,10 +6,10 @@ from datetime import datetime
 import networkx as nx
 
 from substrata.cascade import runway
-from substrata.graph import dependency_paths
+from substrata.graph import EvidencePath, PathResult, dependency_paths
 from substrata.platform.domain import GraphData, Snapshot
 
-FORMULA_VERSION = "platform-runway-v1"
+FORMULA_VERSION = "platform-runway-v2"
 
 
 def projection(data: GraphData, as_of: datetime):
@@ -31,11 +31,60 @@ def projection(data: GraphData, as_of: datetime):
 
 def confidence_bounds(paths, links):
     """Fréchet/union bounds avoid treating overlapping paths as independent."""
+    return _support_bounds([path.edge_ids for path in paths], links)
+
+
+def _support_bounds(scenarios, links):
     bounds = []
-    for path in paths:
-        weights = [links[id].confidence for id in path.edge_ids]
+    for edge_ids in scenarios:
+        weights = [links[id].confidence for id in edge_ids]
         bounds.append((max(0, sum(weights) - len(weights) + 1), min(weights, default=1)))
     return [max((low for low, _ in bounds), default=0), min(1, sum(high for _, high in bounds))]
+
+
+def _join_paths(prefix, suffix, max_depth, max_paths, budget):
+    """Compose bounded simple routes through the assessed material."""
+    result = PathResult(truncated=prefix.truncated or suffix.truncated)
+    work = 0
+    for first in prefix.paths:
+        for second in suffix.paths:
+            work += 1
+            if work > budget:
+                result.truncated = True
+                return result
+            if set(first.nodes[:-1]) & set(second.nodes[1:]):
+                continue
+            edges = [*first.edge_ids, *second.edge_ids]
+            if len(edges) > max_depth:
+                result.truncated = True
+                continue
+            if len(result.paths) >= max_paths:
+                result.truncated = True
+                return result
+            result.paths.append(
+                EvidencePath(
+                    nodes=[*first.nodes, *second.nodes[1:]],
+                    edge_ids=edges,
+                    confidence=first.confidence * second.confidence,
+                )
+            )
+    return result
+
+
+def _joint_support(first, second, max_paths, budget):
+    """A revenue claim requires both plant and product support, sharing each edge once."""
+    scenarios = set()
+    work = 0
+    for plant_path in first.paths:
+        for product_path in second.paths:
+            work += 1
+            if work > budget:
+                return sorted(scenarios), True
+            edges = tuple(sorted(set(plant_path.edge_ids) | set(product_path.edge_ids)))
+            if edges not in scenarios and len(scenarios) >= max_paths:
+                return sorted(scenarios), True
+            scenarios.add(edges)
+    return sorted(scenarios), first.truncated or second.truncated
 
 
 def assess(
@@ -68,11 +117,30 @@ def assess(
     links = {e.id: e for e in data.links}
     impacts = []
     truncated = False
+    upstream_cache = {}
+
+    def upstream(material_id):
+        if material_id not in upstream_cache:
+            upstream_cache[material_id] = dependency_paths(
+                graph, source_id, material_id, max_depth, max_paths, budget
+            )
+        return upstream_cache[material_id]
+
     for stock in data.inventory:
-        paths = dependency_paths(graph, source_id, stock.material_id, max_depth, max_paths, budget)
-        truncated |= paths.truncated
-        if not paths.paths:
+        material_paths = upstream(stock.material_id)
+        truncated |= material_paths.truncated
+        if not material_paths.paths:
             continue
+        paths = _join_paths(
+            material_paths,
+            dependency_paths(
+                graph, stock.material_id, stock.plant_id, max_depth, max_paths, budget
+            ),
+            max_depth,
+            max_paths,
+            budget,
+        )
+        impact_truncated = paths.truncated
         material = entities[stock.material_id]
         plant = entities[stock.plant_id]
         qualification = material.measures.get("requalification_days")
@@ -88,9 +156,7 @@ def assess(
             reason = "Consumption and stock units differ."
         if qualification and qualification.unit != "day":
             reason = "Qualification time must be expressed in days."
-        if not dependency_paths(
-            graph, stock.material_id, stock.plant_id, max_depth, max_paths, budget
-        ).paths:
+        if not paths.paths:
             reason = "No where-used path connects material to plant."
         # Roll stock forward to assessment time rather than counting historical stock as current.
         cursor = stock.as_of
@@ -140,24 +206,47 @@ def assess(
             {bom.product_id for bom in data.boms if bom.material_id == stock.material_id}
         )
         revenue = []
+        cited_paths = list(paths.paths)
         for product in products:
+            product_paths = _join_paths(
+                material_paths,
+                dependency_paths(graph, stock.material_id, product, max_depth, max_paths, budget),
+                max_depth,
+                max_paths,
+                budget,
+            )
+            cited_paths.extend(product_paths.paths)
+            support, support_truncated = _joint_support(paths, product_paths, max_paths, budget)
+            impact_truncated |= support_truncated
+            product_established = any(
+                all(links[id].status in {"declared", "confirmed"} for id in scenario)
+                for scenario in support
+            )
+            support_bounds = _support_bounds(support, links)
+            if support_truncated or not product_paths.paths:
+                support_bounds[1] = 1
             rate = entities[product].measures.get("daily_revenue")
             if rate and rate.unit.endswith("/day") and exposure is not None:
                 revenue.append(
                     {
                         "product_id": product,
                         "value_range": [
-                            exposure * rate.value if established else 0,
+                            exposure * rate.value if product_established else 0,
                             exposure * rate.value,
                         ],
                         "unit": rate.unit.removesuffix("/day"),
                         "provenance": rate.provenance.model_dump(mode="json"),
+                        "confidence_bounds": support_bounds,
+                        "confidence_label": "Evidence support bounds; not disruption probability",
+                        "reason": None
+                        if product_paths.paths
+                        else "BOM product has no supported where-used graph path.",
                     }
                 )
         citations = sorted(
             {
                 c.document_id
-                for path in paths.paths
+                for path in cited_paths
                 for id in path.edge_ids
                 for c in links[id].evidence
             }
@@ -177,12 +266,14 @@ def assess(
                 "exposure_days_range": [exposure if established else 0, exposure]
                 if exposure is not None
                 else None,
-                "confidence_bounds": confidence_bounds(paths.paths, links),
+                "confidence_bounds": [confidence_bounds(paths.paths, links)[0], 1]
+                if paths.truncated
+                else confidence_bounds(paths.paths, links),
                 "confidence_label": "Evidence support bounds; not disruption probability",
                 "paths": [p.nodes for p in paths.paths],
                 "evidence_ids": citations,
                 "eligible_order_ids": eligible,
-                "truncated": paths.truncated,
+                "truncated": impact_truncated,
                 "revenue": revenue,
                 "provenance": {
                     "stock": stock.model_dump(mode="json"),
@@ -195,17 +286,24 @@ def assess(
     # Missing inventory is explicitly incomplete instead of disappearing from exposure.
     existing = {(i["material_id"], i["plant_id"]) for i in impacts}
     for material in data.entities:
-        if (
-            material.kind != "Material"
-            or not dependency_paths(
-                graph, source_id, material.id, max_depth, max_paths, budget
-            ).paths
-        ):
+        if material.kind != "Material":
+            continue
+        material_paths = upstream(material.id)
+        truncated |= material_paths.truncated
+        if not material_paths.paths:
             continue
         for plant in data.entities:
             if plant.kind != "Plant" or (material.id, plant.id) in existing:
                 continue
-            if dependency_paths(graph, material.id, plant.id, max_depth, max_paths, budget).paths:
+            paths = _join_paths(
+                material_paths,
+                dependency_paths(graph, material.id, plant.id, max_depth, max_paths, budget),
+                max_depth,
+                max_paths,
+                budget,
+            )
+            truncated |= paths.truncated
+            if paths.paths:
                 impacts.append(
                     {
                         "material_id": material.id,
@@ -216,7 +314,7 @@ def assess(
                         "reason": "Inventory is missing.",
                         "cover_days": None,
                         "exposure_days_range": None,
-                        "truncated": False,
+                        "truncated": paths.truncated,
                     }
                 )
     shared = []
