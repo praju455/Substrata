@@ -50,6 +50,7 @@ def test_gemini_native_request_and_primary_success(monkeypatch):
     request, timeout = calls[0]
     assert len(calls) == 1
     assert request.full_url == "https://generativelanguage.googleapis.com/v1beta/interactions"
+    assert request.get_header("User-agent") == "Substrata/0.1"
     assert request.get_header("X-goog-api-key") == "gemini-test-secret"
     payload = json.loads(request.data)
     assert payload["model"] == llm.GEMINI_MODEL
@@ -80,6 +81,7 @@ def test_fallback_then_returns_to_primary_next_call(monkeypatch, failure):
     assert [a["status"] for a in client.attempts] == ["failed", "completed"]
     request, _ = calls[1]
     assert request.full_url == "https://api.groq.com/openai/v1/chat/completions"
+    assert request.get_header("User-agent") == "Substrata/0.1"
     assert request.get_header("Authorization") == "Bearer groq-test-secret"
     payload = json.loads(request.data)
     assert payload["model"] == llm.GROQ_MODEL

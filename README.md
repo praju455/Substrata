@@ -1,5 +1,120 @@
 # Substrata
 
+The approved industry-neutral platform migration is tracked in
+[Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
+remains available during the migration; new tenant features use a separate schema.
+The [remaining local work audit](docs/PLATFORM_REMAINING.md) records unfulfilled
+requirements separately from deployment and customer configuration gates.
+For manual Python installs, use `python -m pip install -e ".[dev,platform]"`;
+the setup runner installs these extras for the complete test suite.
+Platform API access requires verified tokens; see the migration guide for setup.
+The platform includes automotive, pharma and food fixtures and a deterministic
+assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
+Exposure support follows the complete route through the material to the plant;
+product revenue also requires product-route support. Inferred downstream usage
+therefore widens ranges instead of appearing certain.
+CSV/Excel imports are staged with column mapping, validation and identity review;
+optional semantic embeddings add scored, review-only entity candidates when a
+provider and tenant cost budget are configured. History and safe rollback preserve
+graph revisions.
+Tenant policies enforce named approval, separation of duties, delegation, SLA
+expiry and dry-run execution of sourced mitigation drafts.
+Read-only OData, authenticated REST and signed webhook adapters are available,
+with a synthetic local mock and an explicit Business Network/Ariba stub.
+Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
+approval review, notifications and audit/CSV/PDF report exports. The platform
+workspace, printable report and supplier confirmation portal support English and
+Hindi with a browser-persisted language choice; broader locale and accessibility
+QA remains open.
+The workspace now connects the existing evidence and job APIs: save sourced
+documents, index/search passages, discover cited links, request a signed supplier
+preview and queue/run a graph-pinned risk review. Development previews send no
+supplier email. Completed reviews refresh the runway, assessment and audit views.
+Saved assessment reports retain their original graph revision after later replies.
+The event intake panel submits sourced events and lets administrators configure,
+edit or disable tenant alert rules; resulting events feed the existing review and
+alert centre rather than requiring separate API calls.
+Pending approvals can be delegated to a named reviewer from the inbox, with a
+required reason and visible assignment. Existing role and separation-of-duties
+checks still decide whether that reviewer may approve.
+Delegation itself also enforces the tenant's configured approver roles. Changed
+inputs or an elapsed approval deadline expire the action before reassignment.
+The policy editor retains configured approver roles, action kinds, approval
+deadlines and inference budgets when spending limits change. Administrators can
+edit deadlines and USD inference budgets explicitly, with a reason recorded as
+provenance for changed values; unchanged values keep their original sources.
+Read-only connector previews feed the same column-mapping, staged review,
+idempotent apply and rollback workflow as CSV/Excel uploads. Nested fields and
+source provenance are preserved; reading a preview never changes the source ERP.
+Ambiguous imports show each incoming identity and candidate similarity scores;
+analysts explicitly choose an existing match or a separate entity and record a
+reason before the import can be applied.
+Identity review includes similar names within the same upload. Matching an alias
+or updating the same identifier preserves existing optional facts and their
+provenance unless incoming mapped facts replace them. Conflicting scalar/nested
+column mappings are rejected before row processing.
+The scorer panel lists model versions, holdout metrics, calibration and artifact
+hashes. Administrators can train candidates from supplier response labels and
+explicitly activate eligible versions; synthetic training remains labelled and
+restricted to development. Local Docker API and workers share the model registry.
+Evidence retrieval supports pgvector and exact passage citations; configurable
+OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
+Supplier portal replies use signed, expiring tokens and preserve historical link
+states while producing confirm/reject training labels. SMTP-over-TLS supplier
+email and tenant-configured approval notices are optional in production and
+disabled in development.
+The scorer training script calibrates a small gradient-boosted model on supplier
+labels with grouped holdouts and a versioned registry; it never fine-tunes an LLM.
+Tenant event feeds use HTTPS host allowlists and explicit license notes; RSS, GDELT
+DOC, U.S. NWS alerts, European MeteoAlarm weather warnings, review-only OFAC SDN
+and ITA consolidated screening candidates, and field-mapped JSON APIs run through
+the same tenant event pipeline.
+Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
+Worker claims carry unique ownership markers. Expired attempts cannot overwrite
+a reclaimed job's result or publish later workflow checkpoints.
+Manual event-poll requests create fresh work so updated feeds can be checked
+again within a day; source-item deduplication still prevents duplicate events.
+Public sign-in and supplier portal routes have bounded request budgets before
+credential/provider work, separate from authenticated tenant request budgets.
+Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
+engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
+skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and
+results. The fixed risk-review plan checkpoints a pinned cascade assessment and
+audit verification across retries. A2A clients can enqueue that plan and poll its
+tenant-scoped task; clients cannot delegate exposure arithmetic to an LLM.
+Run a synthetic graph traversal load check with
+`python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
+Its local timings are not production service-level objectives.
+For the local PostgreSQL/API/worker scaffold and production operations gates, see
+[Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
+Backup primitives encrypt custom PostgreSQL archives and their manifests with
+AES-256-GCM and authenticate the complete artifact before exposing restore input.
+Plaintext dumps are streamed; only ciphertext is staged temporarily for recovery.
+
+Run `python scripts/verify_recovery.py` with Docker running to verify encrypted
+backup/restore using two disposable PostgreSQL/pgvector databases and clearly
+synthetic automotive/food fixtures. The drill checks a consistent snapshot during
+concurrent writes, graph history, audit heads, forced tenant isolation, vector
+retrieval and durable job resumption. It writes a safe local JSON report under
+ignored `data/recovery-drills/` and removes its own containers. Operational commands
+are available through `python scripts/platform_backup.py --help`; see the
+[backup/recovery runbook](docs/OPERATIONS.md#database-backup-and-restore).
+HTTP observability includes route-template latency/status metrics and W3C trace
+context correlation. Optional OTLP/HTTP export uses a bounded queue and local
+sampling; credentials, query strings, path parameters and business inputs are
+excluded from span attributes and request logs.
+Durable jobs store their producer traceparent and worker attempts resume the same
+trace. Provider/connector HTTP calls create child spans and propagate traceparent
+without vendor state or baggage. Worker logs contain execution summaries rather
+than graph or mitigation payloads; queued assessment dates are restored to aware
+datetimes before deterministic calculation.
+PostgreSQL integration checks exercise forced tenant policies on every business
+table, pgvector retrieval/model versions, import history and rollback, concurrent
+graph/audit writes, and resumed risk-review jobs followed by named approval.
+With Docker running, `python scripts/verify_postgres.py --full-suite` runs all
+Python tests against synthetic fixtures with PostgreSQL integration enabled in
+an isolated database container that is removed afterward.
+
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
 ![Stage](https://img.shields.io/badge/stage-working%20prototype-6f42c1)
@@ -11,7 +126,7 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current status:** the complete synthetic vertical slice is implemented: evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, ranked mitigation drafts, named approval and hash-chained audit. Gemini is the primary LLM and Groq is its backup. Live extraction needs your provider keys; explicit mock mode works offline after installation. No model training, SAP connection, live supplier contact or real purchase execution is claimed.
+> **Retained prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Its Gemini/Groq extraction needs provider keys; mock mode works offline. The separate platform now includes a small link scorer training/registry pipeline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
 
 See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
 
@@ -28,7 +143,7 @@ python scripts/dev.py demo
 
 Before starting the demo, add `GEMINI_API_KEY` and `GROQ_API_KEY` to the root `.env`. See [LLM setup and failover](docs/LLM_SETUP.md). To follow the exact offline demo instead, set `SUBSTRATA_LLM_PROVIDER=mock`.
 
-Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health) or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
+Open [the local workspace](http://127.0.0.1:3000), [API health](http://127.0.0.1:8000/health), [readiness](http://127.0.0.1:8000/ready), process metrics at `/metrics`, or [API documentation](http://127.0.0.1:8000/docs). `Ctrl+C` stops both servers. The documentation page uses FastAPI's default CDN assets; the workspace, `/health` and `/openapi.json` work offline after installation.
 
 ```json
 {"status":"ok","service":"substrata-api","data_mode":"synthetic"}
@@ -181,7 +296,10 @@ The prototype will not issue purchase orders, onboard suppliers or move real shi
 
 ## Models and training
 
-> **No model training is planned for the core system.** <sup>[Design]</sup>
+The platform trains a small gradient-boosted link scorer from reviewed supplier
+labels, with grouped holdouts, calibration and explicit model activation. It does
+not fine-tune an LLM. Synthetic evaluation establishes pipeline behavior, not
+customer accuracy. See the platform migration guide for the implemented scope.
 
 | Pretrained AI may assist with | Deterministic code remains responsible for |
 |---|---|

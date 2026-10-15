@@ -84,7 +84,7 @@ def setup() -> None:
             "pip",
             "install",
             "-e",
-            ".[dev]",
+            ".[dev,platform]",
             "-c",
             "requirements-dev.lock",
         ]
@@ -158,6 +158,7 @@ def serve(task: str) -> int:
                     "-m",
                     "uvicorn",
                     "substrata.app:app",
+                    "--no-access-log",
                     "--host",
                     HOST,
                     "--port",

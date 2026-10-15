@@ -1,0 +1,5 @@
+{
+  "automotive": {"cover": 18.0, "qualification": 90.0, "exposure": [72.0, 72.0], "shared": ["supplier-0", "supplier-1", "supplier-2"]},
+  "pharma": {"cover": 17.54, "qualification": 120.0, "exposure": [102.46, 102.46], "shared": ["supplier-0", "supplier-1", "supplier-2"]},
+  "food": {"cover": 17.54, "qualification": 21.0, "exposure": [3.46, 3.46], "shared": ["supplier-0", "supplier-1", "supplier-2"]}
+}

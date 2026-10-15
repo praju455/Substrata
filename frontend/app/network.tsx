@@ -3,6 +3,7 @@
 import cytoscape, { type Core, type StylesheetJson } from "cytoscape";
 import { useEffect, useRef, useState } from "react";
 import type { GraphData } from "./types";
+import { dependencyDepths } from "./graph-layout";
 
 export default function Network({
   graph,
@@ -30,19 +31,11 @@ export default function Network({
     );
     const visible = new Set(nodes.map((n) => n.id));
     const buckets: Record<number, typeof nodes> = {};
+    const depths = dependencyDepths(data);
+    const maximum = Math.max(1, ...depths.values());
     for (const node of nodes) {
-      const column =
-        node.node_type === "SupplierSite"
-          ? node.id.includes("_t1_")
-            ? 2
-            : node.id.includes("_t2_")
-              ? 1
-              : 0
-          : node.node_type === "Component"
-            ? 3
-            : node.node_type === "Plant" || node.node_type === "Product"
-              ? 4
-              : 5;
+      const depth = depths.get(node.id);
+      const column = depth === undefined ? maximum + 1 : maximum - depth;
       (buckets[column] ??= []).push(node);
     }
     const positions = new Map<string, { x: number; y: number }>();
@@ -183,7 +176,7 @@ export default function Network({
   return (
     <>
       <div className="graph-toolbar">
-        <span>Supplier sites → components → plants</span>
+        <span>Supplier sites → materials → products and plants</span>
         <div>
           <label>
             <input
@@ -205,7 +198,7 @@ export default function Network({
         ref={container}
         className="graph-canvas network-grid"
         role="img"
-        aria-label="Interactive synthetic supplier network. Use the relationship list below for keyboard access."
+        aria-label="Interactive supplier network. Use the relationship list below for keyboard access."
       />
     </>
   );

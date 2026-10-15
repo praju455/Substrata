@@ -181,3 +181,18 @@ See [LLM setup](LLM_SETUP.md) and decision D016 for configuration and boundaries
   no new visual-pass claim is made for this panel.
 - The user will add keys later. Live provider access and fallback with real
   credentials remain unverified. No credentials were committed.
+
+## Live walkthrough — 9 October 2026
+
+- Used a separate practice database, preserving the original local demo history.
+- Fixed Groq HTTP 403 responses by identifying the HTTP client as
+  `Substrata/0.1`; request-contract tests cover both providers' user-agent headers.
+- Live Gemini extraction returned `connection_failed`. Groq fallback completed
+  extraction: two inferred links and three claims requiring supplier review.
+  This run does not verify Gemini extraction or real-world accuracy.
+- Browser walkthrough completed all six events, two confirmed and one rejected
+  supplier reply, the 18/90/72-day calculation, named simulated buffer approval,
+  recalculation preserving previous results, and analyst resolution of an
+  ambiguous event. Final audit verification passed for 75 records.
+- 33 focused provider, Mapper and workflow tests passed; Ruff lint/format and
+  whitespace checks passed. Keys were kept in the ignored local `.env`.

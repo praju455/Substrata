@@ -4,7 +4,7 @@ Invoke `python scripts/dev.py TASK` from the root, or use the script's absolute 
 
 | Task | Behavior |
 |---|---|
-| setup | Install locked dependencies; create .venv and preserve existing .env |
+| setup | Install locked dev/platform dependencies; create .venv and preserve existing .env |
 | migrate | Upgrade schema without resetting records |
 | seed | Write fixtures and reset synthetic business/session data |
 | evaluate | Measure fixture, persist results and regenerate EVALUATION.md results |
@@ -23,3 +23,17 @@ See [LLM setup](../docs/LLM_SETUP.md). Stop servers before setup or CLI seed.
 Makefile forwards the same tasks. GNU Make is unavailable on this Windows
 workstation; the Python runner is verified. Non-Windows process cleanup remains
 unverified. See docs/DEMO_SCRIPT.md for recovery.
+
+`python scripts/verify_postgres.py` starts an owned disposable PostgreSQL/pgvector
+container and runs the PostgreSQL workflow/isolation checks using project `.venv`
+dependencies. `--full-suite` runs every Python test with PostgreSQL integration
+enabled. Docker Desktop's Windows CLI is discovered even when missing from PATH;
+`--docker PATH` overrides discovery. Generated test credentials stay in child
+environments, the loopback port is selected dynamically, and cleanup removes only
+this command's container/anonymous volume. See [Operations](../docs/OPERATIONS.md).
+
+`scripts/platform_worker.py --tenant TENANT --once` drains eligible durable jobs
+and exits when idle. It emits structured execution summaries instead of full
+job payloads. Optional OTLP tracing links each attempt to its persisted producer
+context and flushes on shutdown; configuration matches the API's backend-only
+settings. See [Operations](../docs/OPERATIONS.md#optional-otlp-tracing).

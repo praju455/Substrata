@@ -32,3 +32,10 @@ out/
 *.sqlite3-shm
 *.sqlite3-wal
 *.log
+*.secret
+.hypothesis/
+data/models/
+data/dev-telemetry/
+data/backups/
+data/recovery-drills/
+data/pytest-*/

@@ -67,7 +67,12 @@ def post_json(url: str, headers: dict, payload: dict, provider: str, timeout: fl
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "Accept": "application/json", **headers},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Substrata/0.1",
+            **headers,
+        },
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

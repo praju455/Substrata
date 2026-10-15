@@ -1,5 +1,10 @@
 # Frontend
 
+`/platform/` is the tenant workspace: OIDC/PKCE sign-in, onboarding, CSV/Excel
+mapping, graph search/status/depth/history, runway, policies, approvals and exports.
+Access tokens remain in memory. The existing `/` synthetic replay remains usable.
+`npm run test` verifies graph depth/cycle/rejected-link behavior with arbitrary IDs.
+
 Next.js App Router, TypeScript, Tailwind and client-only Cytoscape dashboard:
 graph/evidence inspector, replay controls, direct FastAPI SSE, server-calculated
 runway, simulated approval queue and audit history. Synthetic data is labelled.

@@ -11,17 +11,28 @@ dependencies = [
     "alembic==1.20.0",
     "fastapi==0.142.4",
     "networkx==3.7",
+    "opentelemetry-api==1.45.1",
     "pydantic==2.13.5",
     "SQLAlchemy==2.0.54",
     "uvicorn==0.54.0",
 ]
 
 [project.optional-dependencies]
+platform = [
+    "cryptography==50.0.2",
+    "psycopg[binary]==3.3.6",
+    "PyJWT[crypto]==2.15.1",
+    "openpyxl==3.1.5",
+    "scikit-learn==1.9.1",
+    "opentelemetry-sdk==1.45.1",
+    "opentelemetry-exporter-otlp-proto-http==1.45.1",
+]
 dev = [
     "httpx2==2.13.1",
     "pytest==9.1.1",
     "python-dotenv==1.2.4",
     "ruff==0.16.10",
+    "hypothesis==6.169.1",
 ]
 
 [tool.setuptools.packages.find]

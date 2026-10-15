@@ -1,0 +1,1188 @@
+"""Tenant event feeds, rules, entity matching, deduplication and alert records."""
+
+import csv
+import hashlib
+import html
+import io
+import json
+import os
+import re
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
+from difflib import SequenceMatcher
+from email.utils import parsedate_to_datetime
+from pathlib import Path
+from typing import Literal, Protocol
+
+from pydantic import AwareDatetime, Field
+
+from substrata.platform.database import tenant_transaction
+from substrata.platform.domain import Contract, Identifier, Label, Provenance
+from substrata.platform.models import WorkRecord
+from substrata.platform.records import add, encode
+
+MAX_FEED_BYTES = 1_000_000
+MAX_FEED_ITEMS = 200
+MAX_OFAC_BYTES = 40_000_000
+MAX_OFAC_ENTRIES = 50_000
+MAX_CSL_BYTES = 30_000_000
+MAX_CSL_ENTRIES = 100_000
+
+
+class EventSubmission(Contract):
+    source_id: Identifier
+    title: Label
+    description: str = Field(default="", max_length=10000)
+    observed_at: AwareDatetime
+    provenance: Provenance
+
+
+class EventRule(Contract):
+    categories: set[Literal["supply_disruption", "weather", "transport", "sanctions", "other"]]
+    minimum_severity: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    enabled: bool = True
+
+
+class FeedItem(Contract):
+    id: str = Field(min_length=1, max_length=2048)
+    title: Label
+    description: str = Field(default="", max_length=10000)
+    observed_at: AwareDatetime
+
+
+class EventFeed(Protocol):
+    def read(self) -> list[FeedItem]: ...
+
+
+class RSSFeed:
+    """Bounded RSS/Atom reader; HTTPS and an explicit host allowlist prevent SSRF."""
+
+    def __init__(self, url: str, allowed_hosts: set[str], *, timeout: float = 10):
+        parsed = urllib.parse.urlsplit(url)
+        host = (parsed.hostname or "").casefold().rstrip(".")
+        if (
+            parsed.scheme != "https"
+            or not host
+            or parsed.username
+            or parsed.password
+            or host not in {item.casefold().rstrip(".") for item in allowed_hosts}
+        ):
+            raise ValueError("Event feed must use HTTPS on a configured host allowlist.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.url, self.host, self.timeout = url, host, timeout
+
+    def read(self) -> list[FeedItem]:
+        request = urllib.request.Request(
+            self.url,
+            headers={"Accept": "application/rss+xml, application/atom+xml, application/xml"},
+        )
+        try:
+
+            class NoRedirect(urllib.request.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, headers, newurl):
+                    return None
+
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.url:
+                    raise ValueError("Event feed redirects are not allowed.")
+                body = response.read(MAX_FEED_BYTES + 1)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured event feed could not be reached.") from None
+        if (
+            len(body) > MAX_FEED_BYTES
+            or b"<!DOCTYPE" in body.upper()
+            or b"<!ENTITY" in body.upper()
+        ):
+            raise ValueError("Feed is oversized or contains unsupported XML declarations.")
+        try:
+            root = ET.fromstring(body)
+        except ET.ParseError:
+            raise ValueError("Event feed XML is invalid.") from None
+
+        def local(tag):
+            return tag.rsplit("}", 1)[-1].casefold()
+
+        entries = [node for node in root.iter() if local(node.tag) in {"item", "entry"}]
+        result = []
+        for entry in entries[:MAX_FEED_ITEMS]:
+            values = {
+                local(node.tag): (node.text or "").strip()
+                for node in entry.iter()
+                if len(node) == 0
+            }
+            link = values.get("link", "")
+            if not link:
+                link_node = next((node for node in entry if local(node.tag) == "link"), None)
+                link = link_node.attrib.get("href", "") if link_node is not None else ""
+            timestamp = values.get("published") or values.get("updated") or values.get("pubdate")
+            try:
+                observed = (
+                    datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    if timestamp and "T" in timestamp
+                    else parsedate_to_datetime(timestamp)
+                    if timestamp
+                    else datetime.now(UTC)
+                )
+                if observed.tzinfo is None or observed.utcoffset() is None:
+                    observed = observed.replace(tzinfo=UTC)
+            except ValueError:
+                observed = datetime.now(UTC)
+            title = html.unescape(values.get("title", "")).strip()
+            description = html.unescape(values.get("description", values.get("summary", "")))
+            link = link or values.get("id", "")
+            if title and link:
+                result.append(
+                    FeedItem(
+                        id=link[:2048],
+                        title=title[:256],
+                        description=re.sub(r"<[^>]{0,256}>", " ", description)[:10000],
+                        observed_at=observed,
+                    )
+                )
+        return result
+
+
+class GDELTFeed:
+    """Bounded GDELT DOC ArticleList adapter that consumes its documented RSS mode."""
+
+    HOST = "api.gdeltproject.org"
+
+    def __init__(
+        self,
+        query: str,
+        allowed_hosts: set[str],
+        *,
+        timespan: str = "24h",
+        max_records: int = 50,
+        timeout: float = 10,
+    ):
+        if not isinstance(query, str) or not query.strip() or len(query) > 256:
+            raise ValueError("GDELT query must contain 1 to 256 characters.")
+        duration = (
+            re.fullmatch(r"(\d{1,3})(min|h|d|w|m)", timespan) if isinstance(timespan, str) else None
+        )
+        if duration is None:
+            raise ValueError("GDELT timespan must be a bounded duration such as 24h or 7d.")
+        amount, unit = int(duration.group(1)), duration.group(2)
+        duration_minutes = amount * {"min": 1, "h": 60, "d": 1440, "w": 10080, "m": 43200}[unit]
+        if duration_minutes < 15 or duration_minutes > 129600:
+            raise ValueError("GDELT timespan must be at least 15 minutes and at most 90 days.")
+        if (
+            isinstance(max_records, bool)
+            or not isinstance(max_records, int)
+            or not 1 <= max_records <= 75
+        ):
+            raise ValueError("GDELT max_records must be between 1 and 75.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("GDELT host must be added to the event feed allowlist.")
+        query_string = urllib.parse.urlencode(
+            {
+                "query": query,
+                "mode": "artlist",
+                "format": "rss",
+                "timespan": timespan,
+                "maxrecords": max_records,
+                "sort": "datedesc",
+            }
+        )
+        url = f"https://{self.HOST}/api/v2/doc/doc?{query_string}"
+        self.reader = RSSFeed(url, allowed_hosts, timeout=timeout)
+
+    def read(self) -> list[FeedItem]:
+        return self.reader.read()
+
+
+class NWSWeatherFeed:
+    """Bounded adapter for active U.S. National Weather Service area alerts."""
+
+    HOST = "api.weather.gov"
+
+    def __init__(
+        self,
+        area: str,
+        allowed_hosts: set[str],
+        user_agent: str,
+        *,
+        timeout: float = 10,
+    ):
+        if not isinstance(area, str) or not re.fullmatch(r"[A-Z]{2}", area):
+            raise ValueError("NWS weather area must be a two-letter uppercase area code.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("NWS weather host must be added to the event feed allowlist.")
+        if not isinstance(user_agent, str) or not 10 <= len(user_agent) <= 256:
+            raise ValueError(
+                "NWS weather requires an identifying User-Agent of 10 to 256 characters."
+            )
+        if "\r" in user_agent or "\n" in user_agent:
+            raise ValueError("NWS weather User-Agent cannot contain line breaks.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.url = f"https://{self.HOST}/alerts/active?area={area}"
+        self.user_agent = user_agent
+        self.timeout = timeout
+
+    def read(self) -> list[FeedItem]:
+        request = urllib.request.Request(
+            self.url,
+            headers={
+                "Accept": "application/geo+json, application/ld+json",
+                "User-Agent": self.user_agent,
+            },
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.url:
+                    raise ValueError("NWS weather redirects are not allowed.")
+                body = response.read(MAX_FEED_BYTES + 1)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured NWS weather feed could not be reached.") from None
+        if len(body) > MAX_FEED_BYTES:
+            raise ValueError("NWS weather response exceeds the configured size limit.")
+        try:
+            payload = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ValueError("NWS weather response is invalid JSON.") from None
+        features = payload.get("features") if isinstance(payload, dict) else None
+        if not isinstance(features, list):
+            raise ValueError("NWS weather response has no feature list.")
+        result = []
+        for feature in features[:MAX_FEED_ITEMS]:
+            if not isinstance(feature, dict):
+                continue
+            uri = feature.get("id")
+            properties = feature.get("properties")
+            if (
+                not isinstance(uri, str)
+                or urllib.parse.urlsplit(uri).scheme != "https"
+                or urllib.parse.urlsplit(uri).hostname != self.HOST
+                or not isinstance(properties, dict)
+            ):
+                continue
+            title = properties.get("headline") or properties.get("event")
+            if not isinstance(title, str) or not title.strip():
+                continue
+            observed = properties.get("sent") or properties.get("effective")
+            try:
+                timestamp = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                    continue
+            except (AttributeError, ValueError):
+                continue
+            description_parts = [
+                value.strip()
+                for value in (
+                    properties.get("description"),
+                    properties.get("areaDesc"),
+                    f"NWS severity: {properties['severity']}"
+                    if isinstance(properties.get("severity"), str)
+                    else None,
+                )
+                if isinstance(value, str) and value.strip()
+            ]
+            result.append(
+                FeedItem(
+                    id=uri[:2048],
+                    title=title.strip()[:256],
+                    description="\n".join(description_parts)[:10000],
+                    observed_at=timestamp,
+                )
+            )
+        return result
+
+
+class MeteoAlarmFeed:
+    """Read one official country Atom feed maintained by MeteoAlarm."""
+
+    HOST = "feeds.meteoalarm.org"
+    FEED_PREFIX = "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-"
+
+    def __init__(self, country: str, allowed_hosts: set[str], *, timeout: float = 10):
+        if not isinstance(country, str) or not re.fullmatch(r"[a-z][a-z-]{1,62}", country):
+            raise ValueError("MeteoAlarm country must be a lowercase country slug.")
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("MeteoAlarm host must be added to the event feed allowlist.")
+        self.country = country
+        self.reader = RSSFeed(f"{self.FEED_PREFIX}{country}", allowed_hosts, timeout=timeout)
+
+    def read(self) -> list[FeedItem]:
+        # The source has migrated from RSS to Atom; the bounded common parser handles both.
+        return [
+            item.model_copy(update={"title": f"MeteoAlarm weather alert: {item.title}"[:256]})
+            for item in self.reader.read()
+        ]
+
+
+class JSONAPIEventFeed:
+    """Field-mapped JSON feed adapter for operator-licensed public event APIs."""
+
+    def __init__(
+        self,
+        url: str,
+        allowed_hosts: set[str],
+        *,
+        records_path: str,
+        id_field: str,
+        title_field: str,
+        observed_at_field: str,
+        description_field: str = "",
+        category_hint: str = "",
+        api_key_file: str = "",
+        timeout: float = 10,
+    ):
+        parsed = urllib.parse.urlsplit(url)
+        host = (parsed.hostname or "").casefold().rstrip(".")
+        permitted = {item.casefold().rstrip(".") for item in allowed_hosts}
+        if (
+            parsed.scheme != "https"
+            or not host
+            or parsed.username
+            or parsed.password
+            or host not in permitted
+        ):
+            raise ValueError("JSON event API must use HTTPS on a configured host allowlist.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        paths = (records_path, id_field, title_field, observed_at_field)
+        if any(not self._valid_path(path) for path in paths) or (
+            description_field and not self._valid_path(description_field)
+        ):
+            raise ValueError("JSON event API field paths are invalid.")
+        if not isinstance(category_hint, str) or len(category_hint) > 128:
+            raise ValueError("JSON event API category hint must be at most 128 characters.")
+        self.url = url
+        self.host = host
+        self.records_path = records_path
+        self.id_field = id_field
+        self.title_field = title_field
+        self.observed_at_field = observed_at_field
+        self.description_field = description_field
+        self.category_hint = category_hint
+        self.api_key_file = api_key_file
+        self.timeout = timeout
+
+    @staticmethod
+    def _valid_path(path: str):
+        return isinstance(path, str) and bool(
+            re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*", path)
+        )
+
+    @staticmethod
+    def _at_path(value, path: str):
+        for part in path.split("."):
+            if not isinstance(value, dict):
+                return None
+            value = value.get(part)
+        return value
+
+    def read(self) -> list[FeedItem]:
+        headers = {"Accept": "application/json", "User-Agent": "Substrata-event-adapter/1.0"}
+        if self.api_key_file:
+            token = Path(self.api_key_file).read_text(encoding="utf-8").strip()
+            if not token or "\r" in token or "\n" in token:
+                raise ValueError("JSON event API credential file is invalid.")
+            headers["Authorization"] = "Bearer " + token
+        request = urllib.request.Request(self.url, headers=headers)
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.url:
+                    raise ValueError("JSON event API redirects are not allowed.")
+                body = response.read(MAX_FEED_BYTES + 1)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured JSON event API could not be reached.") from None
+        if len(body) > MAX_FEED_BYTES:
+            raise ValueError("JSON event API response exceeds the configured size limit.")
+        try:
+            payload = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ValueError("JSON event API response is invalid JSON.") from None
+        items = self._at_path(payload, self.records_path)
+        if not isinstance(items, list):
+            raise ValueError("JSON event API records field is not a list.")
+        result = []
+        for item in items[:MAX_FEED_ITEMS]:
+            item_id = self._at_path(item, self.id_field)
+            title = self._at_path(item, self.title_field)
+            observed = self._at_path(item, self.observed_at_field)
+            description = (
+                self._at_path(item, self.description_field) if self.description_field else ""
+            )
+            if not isinstance(item_id, (str, int)) or isinstance(item_id, bool):
+                continue
+            if not isinstance(title, str) or not title.strip() or not isinstance(observed, str):
+                continue
+            try:
+                timestamp = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+                if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+                    continue
+            except ValueError:
+                continue
+            description_parts = [str(description).strip()] if description not in (None, "") else []
+            if self.category_hint:
+                description_parts.append(f"Operator category hint: {self.category_hint}")
+            result.append(
+                FeedItem(
+                    id=str(item_id)[:2048],
+                    title=title.strip()[:256],
+                    description="\n".join(description_parts)[:10000],
+                    observed_at=timestamp,
+                )
+            )
+        return result
+
+
+class OFACSDNFeed:
+    """Bounded name-candidate reader for OFAC's published SDN XML list."""
+
+    HOST = "sanctionslistservice.ofac.treas.gov"
+    URL = f"https://{HOST}/api/PublicationPreview/exports/SDN.XML"
+    DOWNLOAD_SUFFIX = ".s3.us-gov-west-1.amazonaws.com"
+    NAMESPACE = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/XML"
+
+    def __init__(self, allowed_hosts: set[str], user_agent: str, *, timeout: float = 30):
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("OFAC SLS host must be added to the event feed allowlist.")
+        if not isinstance(user_agent, str) or not 10 <= len(user_agent) <= 256:
+            raise ValueError("OFAC SLS requires an identifying User-Agent of 10 to 256 characters.")
+        if "\r" in user_agent or "\n" in user_agent:
+            raise ValueError("OFAC SLS User-Agent cannot contain line breaks.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.user_agent = user_agent
+        self.timeout = timeout
+
+    @staticmethod
+    def _local(tag: str) -> str:
+        return tag.rsplit("}", 1)[-1]
+
+    @staticmethod
+    def _text(parent, name: str) -> str:
+        return next(
+            (
+                (child.text or "").strip()
+                for child in parent
+                if OFACSDNFeed._local(child.tag) == name
+            ),
+            "",
+        )
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        return " ".join(re.findall(r"[^\W_]+", value.casefold()))
+
+    def screen(self, entities) -> list[dict]:
+        """Return possible supplier name matches; this is not a clearance decision."""
+        suppliers = [entity for entity in entities if entity.kind == "Supplier"]
+        if not suppliers:
+            return []
+        request = urllib.request.Request(
+            self.URL,
+            headers={"Accept": "application/xml", "User-Agent": self.user_agent},
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            try:
+                response = opener.open(request, timeout=self.timeout)
+                expected_url = self.URL
+            except urllib.error.HTTPError as redirect:
+                if redirect.code not in {301, 302, 303, 307, 308}:
+                    raise
+                destination = redirect.headers.get("Location", "")
+                parsed = urllib.parse.urlsplit(destination)
+                host = (parsed.hostname or "").casefold().rstrip(".")
+                if (
+                    parsed.scheme != "https"
+                    or parsed.username
+                    or parsed.password
+                    or parsed.port not in {None, 443}
+                    or not host.endswith(self.DOWNLOAD_SUFFIX)
+                    or not host[: -len(self.DOWNLOAD_SUFFIX)]
+                ):
+                    redirect.close()
+                    raise ValueError("OFAC SLS returned an untrusted download redirect.") from None
+                redirect.close()
+                expected_url = destination
+                download_request = urllib.request.Request(
+                    destination,
+                    headers={"Accept": "application/xml", "User-Agent": self.user_agent},
+                )
+                response = opener.open(download_request, timeout=self.timeout)
+            with response:
+                if response.geturl() != expected_url:
+                    raise ValueError("OFAC SLS download redirects are not allowed.")
+                body = response.read(MAX_OFAC_BYTES + 1)
+                last_modified = response.headers.get("Last-Modified")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured OFAC SLS feed could not be reached.") from None
+        if (
+            len(body) > MAX_OFAC_BYTES
+            or b"<!DOCTYPE" in body.upper()
+            or b"<!ENTITY" in body.upper()
+        ):
+            raise ValueError(
+                "OFAC SLS response is oversized or contains unsupported XML declarations."
+            )
+        try:
+            observed_at = (
+                parsedate_to_datetime(last_modified) if last_modified else datetime.now(UTC)
+            )
+            if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+                observed_at = observed_at.replace(tzinfo=UTC)
+        except (TypeError, ValueError):
+            observed_at = datetime.now(UTC)
+
+        exact_index: dict[str, list] = {}
+        fuzzy_index: dict[tuple[str, int], list[tuple[object, str]]] = {}
+        for entity in suppliers:
+            normalized = self._normalize(entity.name)
+            if not normalized:
+                continue
+            exact_index.setdefault(normalized, []).append(entity)
+            if len(normalized) >= 8:
+                fuzzy_index.setdefault((normalized[0], len(normalized) // 4), []).append(
+                    (entity, normalized)
+                )
+
+        matches: dict[str, dict] = {}
+        entry_count = 0
+        root_seen = False
+        try:
+            for event, node in ET.iterparse(io.BytesIO(body), events=("start", "end")):
+                local = self._local(node.tag)
+                if event == "start" and not root_seen:
+                    root_seen = True
+                    if local != "sdnList" or not node.tag.startswith(f"{{{self.NAMESPACE}}}"):
+                        raise ValueError("OFAC SLS returned an unsupported SDN XML schema.")
+                if event != "end" or local != "sdnEntry":
+                    continue
+                entry_count += 1
+                if entry_count > MAX_OFAC_ENTRIES:
+                    raise ValueError("OFAC SLS contains more entries than the configured limit.")
+                uid = self._text(node, "uid")
+                primary = " ".join(
+                    part
+                    for part in (self._text(node, "firstName"), self._text(node, "lastName"))
+                    if part
+                )
+                names = [primary] if primary else []
+                programs = []
+                aliases = []
+                for child in node:
+                    child_name = self._local(child.tag)
+                    if child_name == "programList":
+                        programs.extend(
+                            (item.text or "").strip()
+                            for item in child
+                            if self._local(item.tag) == "program" and (item.text or "").strip()
+                        )
+                    elif child_name == "akaList":
+                        for alias in child:
+                            if self._local(alias.tag) != "aka":
+                                continue
+                            alias_name = " ".join(
+                                part
+                                for part in (
+                                    self._text(alias, "firstName"),
+                                    self._text(alias, "lastName"),
+                                )
+                                if part
+                            )
+                            if alias_name:
+                                names.append(alias_name)
+                                aliases.append(alias_name)
+                if uid and primary:
+                    unique_names = list(dict.fromkeys(names))
+                    for listed_name in unique_names:
+                        normalized = self._normalize(listed_name)
+                        if not normalized:
+                            continue
+                        candidates = [
+                            (entity, 1.0, "exact") for entity in exact_index.get(normalized, [])
+                        ]
+                        if not candidates and len(normalized) >= 8:
+                            length_bucket = len(normalized) // 4
+                            possible = []
+                            for bucket in range(length_bucket - 1, length_bucket + 2):
+                                possible.extend(fuzzy_index.get((normalized[0], bucket), []))
+                            if len(possible) <= 1000:
+                                for entity, supplier_name in possible:
+                                    if abs(len(supplier_name) - len(normalized)) > max(
+                                        2, int(max(len(supplier_name), len(normalized)) * 0.1)
+                                    ):
+                                        continue
+                                    score = SequenceMatcher(
+                                        None, supplier_name, normalized, autojunk=False
+                                    ).ratio()
+                                    if score >= 0.9:
+                                        candidates.append(
+                                            (entity, score, "heuristic_name_similarity")
+                                        )
+                        for entity, score, method in candidates:
+                            match_id = f"{entity.id}|{uid}"
+                            previous = matches.get(match_id)
+                            if previous is None or score > previous["score"]:
+                                matches[match_id] = {
+                                    "entity": entity,
+                                    "uid": uid,
+                                    "listed_name": listed_name,
+                                    "aliases": aliases,
+                                    "programs": programs,
+                                    "sdn_type": self._text(node, "sdnType"),
+                                    "score": score,
+                                    "method": method,
+                                    "observed_at": observed_at,
+                                }
+                node.clear()
+        except ET.ParseError:
+            raise ValueError("OFAC SLS SDN XML is invalid.") from None
+        if not root_seen or entry_count == 0:
+            raise ValueError("OFAC SLS returned an empty or incomplete SDN list.")
+        return sorted(matches.values(), key=lambda item: (item["entity"].id, item["uid"]))
+
+
+class ITACSLFeed:
+    """Bounded name-candidate reader for ITA's consolidated public screening-list CSV."""
+
+    HOST = "data.trade.gov"
+    URL = "https://data.trade.gov/downloadable_consolidated_screening_list/v1/consolidated.csv"
+
+    def __init__(self, allowed_hosts: set[str], *, timeout: float = 30):
+        if self.HOST not in {host.casefold().rstrip(".") for host in allowed_hosts}:
+            raise ValueError("ITA CSL host must be added to the event feed allowlist.")
+        if not 0 < timeout <= 30:
+            raise ValueError("Feed timeout must be between 0 and 30 seconds.")
+        self.timeout = timeout
+
+    def screen(self, entities) -> list[dict]:
+        suppliers = [entity for entity in entities if entity.kind == "Supplier"]
+        if not suppliers:
+            return []
+        request = urllib.request.Request(
+            self.URL,
+            headers={"Accept": "text/csv", "User-Agent": "Substrata public-list adapter"},
+        )
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        try:
+            opener = urllib.request.build_opener(NoRedirect)
+            with opener.open(request, timeout=self.timeout) as response:
+                if response.geturl() != self.URL:
+                    raise ValueError("ITA CSL download redirects are not allowed.")
+                body = response.read(MAX_CSL_BYTES + 1)
+                last_modified = response.headers.get("Last-Modified")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise ValueError("Configured ITA CSL feed could not be reached.") from None
+        if len(body) > MAX_CSL_BYTES:
+            raise ValueError("ITA CSL response exceeds the configured size limit.")
+        try:
+            observed_at = (
+                parsedate_to_datetime(last_modified) if last_modified else datetime.now(UTC)
+            )
+            if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+                observed_at = observed_at.replace(tzinfo=UTC)
+            text = body.decode("utf-8-sig")
+        except (UnicodeDecodeError, TypeError, ValueError):
+            raise ValueError("ITA CSL CSV encoding or update metadata is invalid.") from None
+
+        exact_index: dict[str, list] = {}
+        fuzzy_index: dict[tuple[str, int], list[tuple[object, str]]] = {}
+        for entity in suppliers:
+            normalized = OFACSDNFeed._normalize(entity.name)
+            if not normalized:
+                continue
+            exact_index.setdefault(normalized, []).append(entity)
+            if len(normalized) >= 8:
+                fuzzy_index.setdefault((normalized[0], len(normalized) // 4), []).append(
+                    (entity, normalized)
+                )
+
+        matches: dict[str, dict] = {}
+        entry_count = 0
+        fuzzy_comparisons = 0
+        try:
+            rows = csv.DictReader(io.StringIO(text, newline=""))
+            required_columns = {
+                "_id",
+                "source",
+                "name",
+                "alt_names",
+                "programs",
+                "source_information_url",
+            }
+            if not rows.fieldnames or not required_columns.issubset(rows.fieldnames):
+                raise ValueError("ITA CSL returned an unsupported CSV schema.")
+            for row in rows:
+                entry_count += 1
+                if entry_count > MAX_CSL_ENTRIES:
+                    raise ValueError("ITA CSL contains more entries than the configured limit.")
+                uid = (row.get("_id") or "").strip()[:256]
+                primary = (row.get("name") or "").strip()[:1000]
+                if not uid or not primary:
+                    continue
+                aliases = [
+                    value.strip()[:1000]
+                    for value in (row.get("alt_names") or "").split(";")[:100]
+                    if value.strip()
+                ]
+                candidates_by_entity: dict[str, tuple[object, str, float, str]] = {}
+                for listed_name in dict.fromkeys([primary, *aliases]):
+                    normalized = OFACSDNFeed._normalize(listed_name)
+                    if not normalized:
+                        continue
+                    candidates = [
+                        (entity, 1.0, "exact") for entity in exact_index.get(normalized, [])
+                    ]
+                    if not candidates and len(normalized) >= 8:
+                        bucket = len(normalized) // 4
+                        possible = []
+                        for length_bucket in range(bucket - 1, bucket + 2):
+                            possible.extend(fuzzy_index.get((normalized[0], length_bucket), []))
+                        if len(possible) <= 1000:
+                            fuzzy_comparisons += len(possible)
+                            if fuzzy_comparisons > 250_000:
+                                raise ValueError(
+                                    "ITA CSL matching exceeded the configured comparison limit."
+                                )
+                            for entity, supplier_name in possible:
+                                if abs(len(supplier_name) - len(normalized)) > max(
+                                    2, int(max(len(supplier_name), len(normalized)) * 0.1)
+                                ):
+                                    continue
+                                score = SequenceMatcher(
+                                    None, supplier_name, normalized, autojunk=False
+                                ).ratio()
+                                if score >= 0.9:
+                                    candidates.append((entity, score, "heuristic_name_similarity"))
+                    for entity, score, method in candidates:
+                        previous = candidates_by_entity.get(entity.id)
+                        if previous is None or score > previous[2]:
+                            candidates_by_entity[entity.id] = (entity, listed_name, score, method)
+                for entity, listed_name, score, method in candidates_by_entity.values():
+                    match_id = f"{entity.id}|{uid}"
+                    matches[match_id] = {
+                        "entity": entity,
+                        "uid": uid,
+                        "listed_name": listed_name,
+                        "aliases": aliases,
+                        "source": (row.get("source") or "unspecified")[:1000],
+                        "programs": (row.get("programs") or "")[:2000],
+                        "source_url": (row.get("source_information_url") or "")[:2048],
+                        "score": score,
+                        "method": method,
+                        "observed_at": observed_at,
+                    }
+        except csv.Error:
+            raise ValueError("ITA CSL CSV is invalid.") from None
+        if entry_count == 0:
+            raise ValueError("ITA CSL returned an empty screening list.")
+        return sorted(matches.values(), key=lambda item: (item["entity"].id, item["uid"]))
+
+
+def configured_feeds(tenant_id: str) -> list[dict]:
+    path = os.environ.get("SUBSTRATA_EVENT_FEEDS_FILE")
+    if not path:
+        return []
+    try:
+        values = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise ValueError("Configured event feed file is invalid.") from None
+    if not isinstance(values, list) or len(values) > 10:
+        raise ValueError("Event feed configuration must be a list of at most 10 feeds.")
+    return [
+        item for item in values if isinstance(item, dict) and item.get("tenant_id") == tenant_id
+    ]
+
+
+def subscription(store, actor, rule: EventRule, name: str = "default"):
+    actor.require("admin")
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", name):
+        raise ValueError("Subscription name is invalid.")
+    tenant = actor.tenant_id
+    id = f"subscription-{name}"
+    with tenant_transaction(store.engine, tenant) as session:
+        org = store.organisation(session, tenant)
+        record = session.get(WorkRecord, (tenant, id))
+        if record is None:
+            record = add(
+                session,
+                tenant,
+                "event_subscription",
+                "active" if rule.enabled else "disabled",
+                rule.model_dump(mode="json"),
+                id,
+            )
+        else:
+            record.payload = rule.model_dump(mode="json")
+            record.status = "active" if rule.enabled else "disabled"
+        store.append(
+            session,
+            org,
+            "event.subscription.updated",
+            actor.subject,
+            {
+                "id": id,
+                "categories": sorted(rule.categories),
+                "minimum_severity": rule.minimum_severity,
+            },
+        )
+        return encode(record)
+
+
+def classify(title: str, description: str):
+    text = f"{title} {description}".casefold()
+    rules = (
+        ("sanctions", ("sanction", "export control", "restricted party", "embargo")),
+        (
+            "weather",
+            ("weather alert", "flood", "storm", "earthquake", "wildfire", "hurricane", "typhoon"),
+        ),
+        ("transport", ("port closure", "congestion", "canal", "shipping delay", "strike")),
+        (
+            "supply_disruption",
+            ("factory closure", "production halt", "recall", "shortage", "outage", "disruption"),
+        ),
+    )
+    category, terms = next(
+        ((kind, terms) for kind, terms in rules if any(term in text for term in terms)),
+        ("other", ()),
+    )
+    severity = min(1.0, 0.3 + 0.2 * sum(term in text for term in terms)) if terms else 0.2
+    return category, round(severity, 2), "keyword_rules-v1"
+
+
+def match_entities(store, tenant_id, title: str, description: str):
+    from substrata.platform.models import Organisation
+
+    with tenant_transaction(store.engine, tenant_id) as session:
+        org = session.get(Organisation, tenant_id)
+        if org is None:
+            raise ValueError("Organisation is unavailable.")
+        if org.version == 0:
+            return []
+    snapshot = store.snapshot(tenant_id)
+    haystack = f" {re.sub(r'[^\w]+', ' ', f'{title} {description}'.casefold()).strip()} "
+    candidates = []
+    for entity in snapshot.data.entities:
+        name = f" {re.sub(r'[^\w]+', ' ', entity.name.casefold()).strip()} "
+        score = (
+            1.0
+            if name.strip() and name in haystack
+            else SequenceMatcher(None, name.strip(), haystack.strip()).ratio()
+        )
+        if score >= 0.35:
+            candidates.append(
+                {
+                    "entity_id": entity.id,
+                    "name": entity.name,
+                    "confidence": round(score, 3),
+                    "provenance": entity.provenance.model_dump(mode="json"),
+                }
+            )
+    return sorted(candidates, key=lambda item: (-item["confidence"], item["entity_id"]))[:5]
+
+
+def _has_confident_match(matches):
+    return bool(
+        matches
+        and matches[0]["confidence"] >= 0.85
+        and (len(matches) == 1 or matches[0]["confidence"] - matches[1]["confidence"] >= 0.15)
+    )
+
+
+def ingest(store, tenant_id: str, submitted: EventSubmission):
+    category, severity, classifier = classify(submitted.title, submitted.description)
+    canonical_id = hashlib.sha256(
+        f"{submitted.provenance.uri}|{submitted.source_id}".encode()
+    ).hexdigest()
+    event_id = f"event-{canonical_id}"
+    matches = match_entities(store, tenant_id, submitted.title, submitted.description)
+    event = {
+        **submitted.model_dump(mode="json"),
+        "category": category,
+        "severity": {
+            "value": severity,
+            "unit": "fraction",
+            "provenance": {
+                "uri": submitted.provenance.uri,
+                "observed_at": submitted.provenance.observed_at.isoformat(),
+                "kind": "assumption",
+                "note": f"Deterministic {classifier}; heuristic severity, not a probability.",
+            },
+        },
+        "classification": {
+            "value": category,
+            "confidence": {
+                "value": 0.8 if category != "other" else 0.4,
+                "unit": "fraction",
+                "provenance": {
+                    "uri": "rules://event-classification-v1",
+                    "observed_at": submitted.observed_at.isoformat(),
+                    "kind": "assumption",
+                    "note": "Heuristic classification confidence; not a calibrated probability.",
+                },
+            },
+        },
+        "matches": matches,
+    }
+    with tenant_transaction(store.engine, tenant_id) as session:
+        org = store.organisation(session, tenant_id)
+        existing = session.get(WorkRecord, (tenant_id, event_id))
+        if existing:
+            return encode(existing)
+        record = add(
+            session,
+            tenant_id,
+            "event",
+            "matched"
+            if category != "sanctions" and _has_confident_match(matches)
+            else "needs_review",
+            event,
+            event_id,
+        )
+        for rule_record in session.scalars(select_event_subscriptions(tenant_id)):
+            rule = EventRule.model_validate(rule_record.payload)
+            if rule.enabled and category in rule.categories and severity >= rule.minimum_severity:
+                alert_id = (
+                    f"alert-{hashlib.sha256(f'{event_id}|{rule_record.id}'.encode()).hexdigest()}"
+                )
+                if session.get(WorkRecord, (tenant_id, alert_id)) is None:
+                    add(
+                        session,
+                        tenant_id,
+                        "alert",
+                        "open",
+                        {
+                            "event_id": event_id,
+                            "subscription_id": rule_record.id,
+                            "category": category,
+                            "severity": event["severity"],
+                            "matches": matches,
+                        },
+                        alert_id,
+                    )
+        store.append(
+            session,
+            org,
+            "event.ingested",
+            "feed",
+            {
+                "id": event_id,
+                "source": submitted.provenance.uri,
+                "category": category,
+                "severity": severity,
+                "match_count": len(matches),
+            },
+        )
+        return encode(record)
+
+
+def select_event_subscriptions(tenant_id):
+    from sqlalchemy import select
+
+    return select(WorkRecord).where(
+        WorkRecord.tenant_id == tenant_id, WorkRecord.kind == "event_subscription"
+    )
+
+
+def submit(store, actor, body: EventSubmission):
+    actor.require("analyst")
+    return ingest(store, actor.tenant_id, body)
+
+
+def poll(store, tenant_id: str):
+    allowed = {
+        host.strip().casefold()
+        for host in os.environ.get("SUBSTRATA_EVENT_ALLOWED_HOSTS", "").split(",")
+        if host.strip()
+    }
+    feed_configs = configured_feeds(tenant_id)
+    results = []
+    for config in feed_configs:
+        if (
+            not isinstance(config.get("name"), str)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,48}", config["name"])
+            or not isinstance(config.get("license"), str)
+            or not config["license"].strip()
+        ):
+            raise ValueError("Every public feed requires a name and licensing note.")
+        feed_type = config.get("type", "rss")
+        if feed_type == "rss":
+            feed = RSSFeed(config.get("url", ""), allowed)
+        elif feed_type == "gdelt":
+            feed = GDELTFeed(
+                config.get("query", ""),
+                allowed,
+                timespan=config.get("timespan", "24h"),
+                max_records=config.get("max_records", 50),
+            )
+        elif feed_type == "nws_weather":
+            feed = NWSWeatherFeed(
+                config.get("area", ""),
+                allowed,
+                os.environ.get("SUBSTRATA_NWS_USER_AGENT", ""),
+            )
+        elif feed_type == "meteoalarm":
+            feed = MeteoAlarmFeed(config.get("country", ""), allowed)
+        elif feed_type == "json_api":
+            feed = JSONAPIEventFeed(
+                config.get("url", ""),
+                allowed,
+                records_path=config.get("records_path", ""),
+                id_field=config.get("id_field", ""),
+                title_field=config.get("title_field", ""),
+                observed_at_field=config.get("observed_at_field", ""),
+                description_field=config.get("description_field", ""),
+                category_hint=config.get("category_hint", ""),
+                api_key_file=config.get("api_key_file", ""),
+            )
+        elif feed_type == "ita_csl":
+            feed = ITACSLFeed(allowed)
+            with tenant_transaction(store.engine, tenant_id) as session:
+                org = store.organisation(session, tenant_id)
+                if org.version == 0:
+                    continue
+            snapshot = store.snapshot(tenant_id)
+            for match in feed.screen(snapshot.data.entities):
+                entity = match["entity"]
+                description = (
+                    "Potential name-only candidate from the International Trade "
+                    "Administration (ITA) Consolidated Screening List (CSL), a U.S. "
+                    "government screening aid. This local similarity score is not ITA's "
+                    "fuzzy-search score. A candidate is not a legal determination, "
+                    "export license decision, clearance, or instruction to block. "
+                    f"Listed name: {match['listed_name']}; record ID: {match['uid']}; "
+                    f"source list: {match['source']}; programs: "
+                    f"{match['programs'] or 'unspecified'}; name method: {match['method']}; "
+                    f"local similarity: {match['score']:.3f}; "
+                    f"aliases: {', '.join(match['aliases'])[:2000] or 'none'}; "
+                    f"source details: {match['source_url'] or 'see official CSL source'}. "
+                    "Check the originating official list and Federal Register, perform "
+                    "additional due diligence, and have a qualified analyst review. "
+                    "This product uses the International Trade Administration's Data "
+                    "API but is not endorsed or certified by the International Trade "
+                    "Administration."
+                )[:9500]
+                provenance = Provenance(
+                    uri=f"{ITACSLFeed.URL}#id={match['uid']}",
+                    observed_at=match["observed_at"],
+                    kind="public",
+                    note=(
+                        f"ITA consolidated screening list; {config['name']}; source row "
+                        "is a screening aid and not a legal determination; "
+                        f"license/attribution: {config['license']}"
+                    ),
+                )
+                results.append(
+                    ingest(
+                        store,
+                        tenant_id,
+                        EventSubmission(
+                            source_id="csl:"
+                            + hashlib.sha256(
+                                f"{config['name']}|{match['uid']}|{entity.id}".encode()
+                            ).hexdigest(),
+                            title=(
+                                f"Potential export/sanctions screening match: {entity.name[:200]}"
+                            ),
+                            description=description,
+                            observed_at=match["observed_at"],
+                            provenance=provenance,
+                        ),
+                    )
+                )
+            continue
+        elif feed_type == "ofac_sdn":
+            user_agent = os.environ.get("SUBSTRATA_OFAC_USER_AGENT", "")
+            feed = OFACSDNFeed(allowed, user_agent)
+            with tenant_transaction(store.engine, tenant_id) as session:
+                org = store.organisation(session, tenant_id)
+                if org.version == 0:
+                    continue
+            snapshot = store.snapshot(tenant_id)
+            for match in feed.screen(snapshot.data.entities):
+                entity = match["entity"]
+                description = (
+                    "Potential name-only candidate from the OFAC SDN list. "
+                    "This heuristic is not OFAC's matching score and is not a legal "
+                    "determination, clearance, or instruction to block a supplier. "
+                    f"Listed name: {match['listed_name']}; list UID: {match['uid']}; "
+                    f"listed type: {match['sdn_type'] or 'unspecified'}; "
+                    f"programs: {', '.join(match['programs']) or 'unspecified'}; "
+                    f"name method: {match['method']}; local similarity: {match['score']:.3f}; "
+                    f"aliases: {', '.join(match['aliases'])[:2000] or 'none'}. "
+                    "Analyst review of the complete source entry is required."
+                )[:9500]
+                provenance = Provenance(
+                    uri=f"{OFACSDNFeed.URL}#uid={match['uid']}",
+                    observed_at=match["observed_at"],
+                    kind="public",
+                    note=(
+                        f"OFAC SLS SDN list; {config['name']}; list entries are source data, "
+                        f"not a legal determination; license/attribution: {config['license']}"
+                    ),
+                )
+                results.append(
+                    ingest(
+                        store,
+                        tenant_id,
+                        EventSubmission(
+                            source_id="ofac:"
+                            + hashlib.sha256(
+                                f"{config['name']}|{match['uid']}|{entity.id}".encode()
+                            ).hexdigest(),
+                            title=f"Potential sanctions-list name match: {entity.name[:200]}",
+                            description=description,
+                            observed_at=match["observed_at"],
+                            provenance=provenance,
+                        ),
+                    )
+                )
+            continue
+        else:
+            raise ValueError("Configured event feed type is not supported.")
+        for item in feed.read():
+            provenance = Provenance(
+                uri=item.id,
+                observed_at=item.observed_at,
+                kind="public",
+                note=f"{config['name']}; licence: {config['license']}",
+            )
+            results.append(
+                ingest(
+                    store,
+                    tenant_id,
+                    EventSubmission(
+                        source_id="feed:"
+                        + hashlib.sha256(f"{config['name']}|{item.id}".encode()).hexdigest(),
+                        title=item.title,
+                        description=item.description,
+                        observed_at=item.observed_at,
+                        provenance=provenance,
+                    ),
+                )
+            )
+    return results

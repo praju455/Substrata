@@ -6,6 +6,7 @@
     "node": ">=24.0.0 <25"
   },
   "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "typecheck": "next typegen && tsc --noEmit",
@@ -25,6 +26,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.0",
     "postcss": "8.5.29",
+    "prettier": "3.9.10",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3"
   }
