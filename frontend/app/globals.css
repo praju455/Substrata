@@ -1,8 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;700;800&display=swap');
 @import "tailwindcss";
 @theme {
-  --font-sans: "Sora", sans-serif;
-  --font-disp: "Syne", sans-serif;
+  --font-sans: var(--font-jetbrains-mono), monospace;
+  --font-disp: var(--font-archivo-black), sans-serif;
   --color-ink: #EDE7DC;
   --color-muted: #9EA5A8;
   --color-graph: #2E6B72;
@@ -1034,8 +1033,8 @@ footer {
 /* BRUTALIST OVERRIDES */
 
 :root {
-  --font-disp: 'Archivo Black', sans-serif !important;
-  --font-sans: 'JetBrains Mono', monospace !important;
+  --font-disp: var(--font-archivo-black), sans-serif !important;
+  --font-sans: var(--font-jetbrains-mono), monospace !important;
 }
 
 * {

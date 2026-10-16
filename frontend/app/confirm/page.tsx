@@ -99,8 +99,7 @@ export default function SupplierPortal() {
   return (
     <main className="shell main-content platform-workspace">
       <section
-        className="panel"
-        style={{ padding: 28, maxWidth: 720, margin: "auto" }}
+        className="panel supplier-portal-panel"
       >
         <p className="eyebrow purple">
           {t("SUBSTRATA · SUPPLIER CONFIRMATION")}

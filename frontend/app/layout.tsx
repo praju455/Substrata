@@ -1,6 +1,18 @@
 import type { Metadata } from "next";
+import { Archivo_Black, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
+
+const displayFont = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-archivo-black",
+});
+
+const monoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+});
 
 export const metadata: Metadata = {
   title: "Substrata | Supply chain workspace",
@@ -9,12 +21,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600&family=Syne:wght@600;800&display=swap" rel="stylesheet" />
-      </head>
+    <html
+      lang="en"
+      className={`${displayFont.variable} ${monoFont.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
