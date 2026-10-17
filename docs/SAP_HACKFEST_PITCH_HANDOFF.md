@@ -35,6 +35,13 @@ This handoff maps Substrata to every slide in the official 11-slide regional-rou
 
 **Action:** Keep the official event cover unchanged. Do not place product content over sponsor or partner marks.
 
+**Optional addition, only if the template allows it:** Add a small line below “Idea Pitch” without moving the official logos:
+
+> **Theme: Resilient Supply Chains**<br>
+> **Idea: Hidden Tier-N Supplier Dependency AI**
+
+This slide should remain visually light. The audience only needs the event, theme, and project context before the project title appears on slide 2.
+
 **Presenter opening:**
 
 > Good morning. We are presenting Substrata under the Resilient Supply Chains theme. Substrata helps a manufacturer see when apparently independent suppliers share the same hidden upstream dependency, calculate how long remains before production is exposed, and prepare a governed response.
@@ -66,6 +73,16 @@ This handoff maps Substrata to every slide in the official 11-slide regional-rou
 
 > Agentic early warning for hidden Tier-N supply dependencies.
 
+**Expanded project description for the slide or speaker notes**
+
+> Substrata helps manufacturers discover when apparently independent suppliers share the same hidden upstream dependency. It combines cited relationship evidence with a versioned supply graph, calculates how long production remains protected after a disruption, and prepares simulated mitigation options under human approval.
+
+**Suggested team capability line**
+
+> Supply-chain research | Knowledge graphs | Agentic AI | Deterministic simulation | Governed decision workflow
+
+Replace the capability line with four or five real responsibilities if the template has enough space. It should show why the team can take the idea from business research to a working prototype.
+
 **Presenter note:** Do not spend time listing technologies here. Give each person a responsibility such as research and business design, data and graph, backend and AI, frontend and experience, or testing and presentation.
 
 ### Slide 3: Problem and theme
@@ -80,6 +97,12 @@ This handoff maps Substrata to every slide in the official 11-slide regional-rou
 
 > Manufacturers can see their direct Tier-1 suppliers, yet several of those suppliers may rely on the same deeper supplier, site, material, owner, region, or route. A disruption at that hidden Tier-N node can disable multiple supposedly independent supply paths at once. Evidence is fragmented, so planners may discover the concentration only after stock is already running out.
 
+**Expanded problem statement, use this while building the slide and shorten later if required**
+
+> Enterprise procurement data gives manufacturers a strong view of the suppliers with whom they contract directly. It does not always reveal the deeper facilities, component makers, parent organisations, raw materials, regions, or transport routes shared by those suppliers. As a result, several Tier-1 suppliers can look diversified while their upstream paths converge on one Tier-N source.
+>
+> When that shared source is disrupted, multiple direct suppliers can fail together. The supply-risk analyst must then verify whether the relationship is credible, identify which components and plants are affected, calculate how long current inventory will last, compare recovery options, and escalate the decision to the correct approver. Those inputs often sit across different systems, documents, and teams.
+
 **Who experiences the problem?**
 
 > Supply-risk analysts, procurement teams, plant planners, and the managers who approve mitigation decisions.
@@ -91,6 +114,24 @@ This handoff maps Substrata to every slide in the official 11-slide regional-rou
 **Concrete example**
 
 > In our synthetic automotive scenario, three Tier-1 supplier groups appear independent but share one deeper semiconductor source. A replayed disruption exposes the common point of failure.
+
+**Why the problem occurs**
+
+- Direct contracts reveal the Tier-1 relationship but may not reveal the complete sub-tier path.
+- Supplier names, subsidiaries, facilities, and parent organisations can appear differently across sources.
+- Relationship evidence, BOM data, inventory, lead time, and disruption signals live in separate records.
+- Supplier networks change, so an old relationship map can create false confidence.
+- A generic risk score does not show which plant is affected first or how much decision time remains.
+
+**Failure modes to mention during the pitch**
+
+| Failure | Consequence |
+|---|---|
+| Shared Tier-N source remains hidden | Several supplier paths fail at the same time. |
+| Weak evidence is treated as fact | The team investigates or mitigates the wrong dependency. |
+| Event is detected without a where-used path | The affected component, product, or plant remains unclear. |
+| Stock cover is not compared with recovery time | The team knows there is risk but cannot judge urgency. |
+| Recommendation lacks an approval boundary | A draft may exceed authority, budget, or policy. |
 
 **Visual placement**
 
@@ -117,13 +158,39 @@ Use the hidden-dependency diagram on the right half or across the lower 40% of t
 > **Participant:** supplier contact<br>
 > Confirms or rejects an uncertain relationship through a bounded request.
 
+**Expanded user needs**
+
+| User | Main decision | Information required | Current pain hypothesis |
+|---|---|---|---|
+| Supply-risk analyst | Is this hidden dependency credible and material? | Evidence passage, relationship status, path, confidence, affected scope | Reconciles fragmented records and must explain uncertain links |
+| Supply planner | When will production become exposed? | Inventory, incoming supply, consumption, qualification time, affected plant | Risk alerts do not always translate into a decision deadline |
+| Procurement approver | Which response is justified and within authority? | Options, cost and timing assumptions, policy reason, requested action | Context is split across analysis, meetings, and approval tools |
+| Supplier contact | Is the proposed relationship correct? | Narrow claim, source context, response deadline, permitted use | Broad questionnaires create effort and confidentiality concerns |
+
 #### Current approach
 
 > Teams often reconcile direct-supplier records, spreadsheets, documents, alerts, and calls manually. A conventional Tier-1 view can show who has a contract without revealing the upstream dependency shared by multiple contracts. Analysis and approval are separated, so the reason for a decision may be difficult to reconstruct later.
 
+**Expanded current workflow hypothesis**
+
+1. An analyst receives an alert, report, news item, or supplier message.
+2. The analyst searches vendor records and spreadsheets for matching names.
+3. Procurement asks internal owners or suppliers to validate the relationship.
+4. Planning gathers inventory and consumption information.
+5. Engineering or sourcing estimates the time required for an alternative.
+6. The team compares options in meetings or separate files.
+7. A manager approves an action through an existing process.
+8. The evidence, assumptions, and approval reason may remain distributed across systems.
+
+This workflow must be validated through stakeholder interviews. Present it as the team’s current understanding, not as a universal description of every manufacturer.
+
 #### Opportunity
 
 > Join evidence and supply relationships in a versioned knowledge graph, keep uncertain links visibly inferred, ask humans or suppliers to confirm them, and calculate decision runway before recommending a response. The result is earlier attention with less false certainty.
+
+**Expanded opportunity statement**
+
+> Substrata can create one traceable decision chain. A relationship starts as a cited proposal, moves through confirmation or rejection, enters a versioned impact calculation, produces a clear runway, and results in a governed action draft. The analyst spends less time assembling context and more time judging the evidence and response.
 
 **Concrete scenario to place under the three boxes**
 
@@ -132,6 +199,16 @@ Use the hidden-dependency diagram on the right half or across the lower 40% of t
 **Business model sentence for this slide**
 
 > Proposed buyer: a manufacturer or supply-risk function. Proposed value: evidence-backed hidden-dependency discovery, decision runway, and governed response. Subscription and implementation pricing remain unvalidated assumptions.
+
+**Expanded business model hypothesis**
+
+- **Primary user:** supply-risk analyst or supply planner.
+- **Economic buyer:** procurement, supply-chain, or enterprise-risk leadership. This must be validated.
+- **Value proposition:** reveal shared upstream concentration, quantify the decision window, and preserve accountability.
+- **Delivery model:** enterprise web application integrated with approved planning and supplier data.
+- **Potential revenue:** subscription plus implementation and support. No price or willingness-to-pay claim has been validated.
+- **Key adoption risk:** analysts may distrust inferred relationships or receive too many low-quality review requests.
+- **Validation priority:** confirm whether the runway view changes a real sourcing, inventory, or escalation decision.
 
 **Optional Q&A visual:** The full empathy map is a draft, not interview evidence. Use it only as a backup slide or when the judges ask about design thinking.
 
@@ -163,6 +240,26 @@ Use the four template boxes exactly as follows:
 | **Analyse / Decide** | Mapper proposes cited links; supplier/analyst verifies; Sensor matches event; deterministic Cascade traces impact and runway |
 | **Action** | Compare buffer, expedite, transfer, or alternate-qualification drafts; policy chooses allow, review, or block |
 | **Outcome** | Earlier warning, explicit uncertainty, named approval, simulated SAP-shaped payload, verifiable audit trail |
+
+**Expanded five-stage operating model**
+
+1. **Map:** Load supplier, purchasing, BOM, plant, inventory, lead-time, declared-relationship, and evidence records. Keep legal entities, supplier sites, components, products, and plants distinct.
+2. **Infer and verify:** The Mapper extracts relationship claims into a strict schema and attaches exact evidence. The graph stores the result as `inferred`. A supplier or analyst can confirm, reject, or allow the claim to expire.
+3. **Sense:** The Sensor receives a sourced disruption event, classifies it, and proposes affected graph entities. Ambiguous matches wait for analyst review.
+4. **Simulate:** Deterministic Python services traverse a pinned graph, find affected paths, calculate stock cover, compare it with qualification time, and return complete, incomplete, or truncated results.
+5. **Act safely:** The Action role prepares dry-run mitigation options. Policy checks the action, actor, threshold, graph version, and expiry. High-impact options pause for a named human, and the final decision enters the audit chain.
+
+**Detailed flow for building the slide**
+
+| Stage | Data or request | System output | Human responsibility |
+|---|---|---|---|
+| Discover | Supplier records and documents | Cited inferred relationship | Review ambiguity and unsupported claims |
+| Confirm | Inferred relationship | Confirmed, rejected, or expired status | Supplier or analyst responds |
+| Detect | Sourced event | Matched entity or review candidates | Resolve unclear matches |
+| Calculate | Pinned graph, BOM, stock, consumption, lead time | Affected paths, cover, exposure, uncertainty | Inspect assumptions and missing data |
+| Compare | Impact report and sourced option inputs | Ranked simulated mitigation drafts | Judge business feasibility |
+| Govern | Draft, actor, policy, versions | Allow, review, block, approve, or reject | Named approver records a reason |
+| Audit | Frozen decision context | Verifiable history and report | Reviewer verifies integrity |
 
 **Architecture sentence beneath the flow**
 
@@ -198,6 +295,19 @@ exposure_window = qualification_days - cover_days
 - **Action:** prepares and compares mitigation drafts.
 - **Compliance/Audit:** applies policy and records provenance.
 - **Human gate:** approves or rejects high-impact actions with a reason.
+
+**Why this approach is different**
+
+- An AI-generated relationship remains a proposal with evidence and status.
+- Supplier or analyst confirmation becomes part of the graph rather than a separate email outcome.
+- Urgency is expressed through stock cover versus recovery time rather than only a risk category.
+- Graph paths and arithmetic remain reproducible because deterministic services own them.
+- The system prepares actions but does not remove human authority for consequential decisions.
+- Every approval keeps the exact graph, data, formula, policy, actor, and reason used at that time.
+
+**Longer solution summary if the template allows more text**
+
+> Substrata builds a versioned supplier knowledge graph from enterprise records, declared relationships, and cited evidence. Pretrained AI helps extract possible hidden links, but the system stores them as inferred until a supplier or analyst verifies them. When a disruption is matched, deterministic services trace the affected components and plants, calculate decision runway, and prepare mitigation drafts. Policy blocks unsafe actions and routes high-impact decisions to a named human approver, while a hash-chained audit record preserves the decision context.
 
 ### Slide 6: SAP technology and learning
 
@@ -239,6 +349,43 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 - **Where AI adds value:** extracting relationship claims from text, suggesting entity matches, classifying events, and drafting explanations.
 - **Where deterministic logic remains:** graph paths, impact ranges, stock cover, policy checks, approval validity, and audit hashing.
 
+**Expanded SAP process mapping**
+
+| Substrata requirement | Relevant SAP process or concept | Proposed role in the solution | Current status |
+|---|---|---|---|
+| Supplier and purchasing context | SAP S/4HANA procurement | Read approved vendor, purchasing, material, and plant fields | Synthetic local records and read-only adapter contracts |
+| Component where-used analysis | BOM and production-planning concepts | Trace disrupted material to products and consuming plants | Implemented on the synthetic graph |
+| Stock and recovery planning | Inventory and SAP IBP concepts | Compare stock cover, eligible arrivals, and recovery time | Deterministic local calculation |
+| Multi-tier supplier context | SAP Business Network / Ariba concepts | Add declared supplier relationships and support confirmation | Local stand-in and explicit adapter stub |
+| Extension and integration | SAP BTP | Host or integrate Substrata without replacing the system of record | Future deployment target |
+| Graph and semantic retrieval | SAP HANA Cloud graph/vector concepts | Replace local adapters if the service is available and suitable | Entitlement-dependent stretch |
+| Governed pretrained AI | SAP AI Core generative AI hub | Supply a managed model-access adapter for structured extraction | Current demo uses Gemini, Groq, or mock |
+| Enterprise assistant interoperability | Joule and A2A concepts | Invoke a bounded assessment or retrieve a result | Local A2A-style endpoint; Joule not verified |
+
+**Current implementation versus future SAP integration**
+
+| Concern | Current prototype | SAP-aligned future path |
+|---|---|---|
+| Data | Synthetic fixtures, file imports, local connector mock | Customer-authorized read-only SAP interfaces |
+| Graph | Versioned relational records and NetworkX | SAP HANA graph adapter if available |
+| AI | Gemini primary, Groq fallback, explicit offline mock | SAP generative AI hub adapter if entitled |
+| Deployment | Local Python and Next.js; Docker/PostgreSQL platform path | SAP BTP after account and service verification |
+| Action | Simulated SAP-shaped draft | Controlled external adapter after approval and production safeguards |
+
+**Learning Hub content to complete before submission**
+
+| Team member | Exact completed resource | Concept applied in Substrata |
+|---|---|---|
+| [NAME] | [EXACT COURSE OR JOURNEY] | [EXAMPLE: procurement data or planning process] |
+| [NAME] | [EXACT COURSE OR JOURNEY] | [EXAMPLE: BTP extension or integration] |
+| [NAME] | [EXACT COURSE OR JOURNEY] | [EXAMPLE: responsible AI or agents] |
+| [NAME] | [EXACT COURSE OR JOURNEY] | [EXAMPLE: graph, analytics, or business process] |
+| [NAME, IF APPLICABLE] | [EXACT COURSE OR JOURNEY] | [CONCEPT APPLIED] |
+
+**Expanded Learning Hub explanation**
+
+> The team should connect learning to a design decision. Supply-chain process learning explains which records and approvals matter. BTP and clean-core concepts support a read-only extension boundary. Responsible-AI learning supports evidence citations, uncertainty labels, human oversight, and auditability. The slide should name only the courses or learning journeys the team actually completed.
+
 **Visual placement:** If space permits, place the technology map as a narrow lower band. Add a caption: “Current local stack plus entitlement-dependent SAP adapters.” The existing image says “proposed”; keep that word visible.
 
 ![Substrata technology map](diagrams/12-tech-stack.png)
@@ -260,6 +407,18 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 > Reduce false certainty by separating inferred, confirmed, rejected, and expired links.<br>
 > Make every proposed action reviewable through evidence, versions, approver, reason, and audit history.
 
+**Expanded expected-benefit chain**
+
+| Capability | Immediate result | Expected benefit | Important limitation |
+|---|---|---|---|
+| Hidden-link discovery | Cited relationship proposal | Earlier investigation of shared concentration | Proposal may be wrong until verified |
+| Confirmation workflow | Confirmed or rejected link state | Less false certainty in the graph | Requires supplier or analyst participation |
+| Cascade analysis | Affected paths, components, products, and plants | Faster impact scoping | Depends on graph completeness and correct units |
+| Runway calculation | Cover, qualification time, and exposure | Clearer urgency and escalation timing | Inputs may be assumptions or ranges |
+| Mitigation comparison | Dry-run options with time, cost, and risk context | Faster preparation for a decision | Does not prove an option can be executed |
+| Policy and approval | Allow, review, block, approve, or reject | Reduced risk of unauthorized action | Policy must match the organisation’s authority model |
+| Audit chain | Frozen decision context | Better traceability and post-event review | Integrity does not prove the original source was true |
+
 #### Success measures
 
 > **Link quality:** held-out synthetic precision and recall, with false positives and review volume.<br>
@@ -267,6 +426,17 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 > **Calculation safety:** exact results on hand-calculated cascade fixtures.<br>
 > **Governance:** prohibited actions blocked and stale approvals rejected.<br>
 > **Human factors:** analyst completion time, errors, and confidence in the explanation.
+
+**Expanded measurement plan**
+
+- Hide selected true relationships from a complete synthetic graph.
+- Prevent their direct declarations from entering the observable graph.
+- Run the discovery and confirmation workflow on the remaining evidence.
+- Measure true positives, false positives, false negatives, precision, recall, and review volume.
+- Compare warning time under the Tier-1-only graph and the hidden-dependency graph using the same event and inventory snapshot.
+- Compare every cascade result against a hand-calculated fixture.
+- Test missing units, missing stock, conflicting evidence, ambiguous entities, stale approvals, policy violations, and audit tampering.
+- Run short usability tasks that ask a new user to find the evidence, explain the runway, and identify the required approver.
 
 **Targets, not current claims**
 
@@ -282,6 +452,10 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 
 > The frozen mock fixture produced precision 1.00, recall 0.50, three reviewed claims, and 18 days of warning over the Tier-1-only view. This demonstrates the fixture pipeline, not generalisation or real-world accuracy.
 
+**Required limitation statement**
+
+> Synthetic evaluation can show that the workflow behaves correctly on a constructed, versioned scenario. It cannot show that Substrata will achieve the same link quality, warning time, analyst utility, or financial value on a real manufacturer’s network. Real validation requires authorized enterprise data, domain review, security controls, and prospective workflow testing.
+
 #### Assumptions and risks
 
 | Risk | Mitigation |
@@ -292,6 +466,17 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 | False urgency from assumptions | Show units, source, observation time, range, and incomplete status instead of guessing. |
 | Unsafe automation | Keep real procurement changes prohibited; use named approval and dry-run execution. |
 | SAP service unavailable at the finale | Keep the offline synthetic replay as the core path; connect only verified entitlements. |
+
+**Additional adoption and delivery risks**
+
+| Risk | Why it matters | Response |
+|---|---|---|
+| Excessive review volume | Analysts may ignore the queue | Measure review load and raise the proposal threshold |
+| Supplier reluctance | A supplier may not disclose upstream relationships | Ask narrow questions, define purpose, and retain uncertainty when unanswered |
+| Entity-resolution error | Similar names can merge unrelated organisations | Show candidates separately and require an explicit reason before merging |
+| Stale graph or inventory | A correct calculation on old inputs can still mislead | Pin observation times and expire decisions after input changes |
+| Overreliance on explanation quality | A fluent rationale can hide weak evidence | Show sources, formulas, missing data, and rule outcomes before narrative |
+| User distrust | Analysts may reject black-box recommendations | Make evidence and deterministic calculation provenance available from the result |
 
 **Optional backup visual:**
 
@@ -307,17 +492,59 @@ The repository already contains a working local synthetic vertical slice. Frame 
 
 > Interview 2-3 supply-risk or procurement practitioners. Confirm the user decision, required inputs, acceptable uncertainty, and SAP services available to finalists.
 
+**Plan deliverables**
+
+- corrected empathy map and ranked user pain points;
+- one validated decision scenario and primary persona;
+- minimum required data, units, and evidence list;
+- SAP account, service, quota, and practice-system checklist;
+- updated Business Model Canvas with assumptions clearly marked.
+
+**Plan exit condition:** At least one practitioner confirms that the selected workflow and runway view address a real decision problem.
+
 #### 2. Design
 
 > Freeze the minimum data contract and user journey. Keep the system boundary clear: cited inference, deterministic impact, policy, human approval, and audit.
+
+**Design deliverables**
+
+- final user journey and agent-human interaction;
+- entity, relationship, evidence, event, scenario, action, and approval contracts;
+- clear model-versus-deterministic responsibility table;
+- failure behavior for ambiguous, incomplete, stale, and prohibited cases;
+- frozen synthetic scenario and evaluation manifest.
+
+**Design exit condition:** The team can explain every input, output, assumption, authority boundary, and failure state used by the demonstration.
 
 #### 3. Build
 
 > Harden Mapper, Cascade, approval, and audit on synthetic data. Add one read-only SAP adapter only if entitlement and test data are available. Preserve an offline replay fallback.
 
+**Build deliverables**
+
+- reproducible local setup and deterministic seed;
+- evidence discovery and verification workflow;
+- event replay, graph impact, and runway result;
+- mitigation comparison, named approval, and audit verification;
+- one verified read-only SAP integration if available;
+- offline mock and recovery path for the presentation machine.
+
+**Build exit condition:** A fresh environment can run the core scenario without editing code or repairing data during the demo.
+
 #### 4. Test
 
 > Run hidden-edge evaluation, exact cascade fixtures, failure cases, stale approval tests, usability sessions, and repeated judge rehearsals. Report targets and measured results separately.
+
+**Test deliverables**
+
+- versioned evaluation report with raw counts and failure examples;
+- exact cascade and unit-validation results;
+- policy, stale-input, and audit-mutation test results;
+- provider-failure and offline-fallback rehearsal;
+- timed team presentation and recovery checklist;
+- final claim table separating measured, expected, and future items.
+
+**Test exit condition:** The team can repeat the demo, explain every number, recover from common failures, and defend every statement in the pitch.
 
 #### Feasibility check
 
@@ -326,6 +553,21 @@ The repository already contains a working local synthetic vertical slice. Frame 
 - **Needed skills:** Python service development, TypeScript/React UI, graph modelling, testing, SAP process learning, and stakeholder interviewing.
 - **Needed support:** a confirmed SAP practice environment, a supply-chain mentor, legally usable test data, and feedback from real target users.
 - **Deliberate exclusions:** autonomous purchasing, production SAP writes, unbounded web crawling, customer-accuracy claims, and a custom GNN.
+
+**Resources and support required**
+
+| Area | Requirement |
+|---|---|
+| Domain knowledge | Supply-chain practitioner interviews and mentor feedback |
+| SAP learning | Individual Learning Hub registration and completed relevant learning items |
+| SAP environment | Confirmed finale entitlements, sample data, documentation, and access dates |
+| Engineering | Python, TypeScript, graph modelling, API integration, testing, and deployment skills |
+| Data | Versioned synthetic fixture plus any legally usable sample data |
+| Presentation | Stable laptop, offline fallback, recorded backup, and repeated rehearsal |
+
+**Why the plan is feasible**
+
+> The minimum proof is intentionally narrow. It requires one hidden dependency, one confirmation, one event, one deterministic calculation, one governed mitigation draft, and one verifiable decision record. The current repository already demonstrates this synthetic vertical slice, so finale work can focus on validation, reliability, and one honest SAP integration rather than building every possible feature.
 
 **Do not paste a 30-day schedule here.** Use capability gates. The supply-chain values 18, 90, and 72 days are unrelated to project delivery.
 
@@ -345,6 +587,24 @@ The repository already contains a working local synthetic vertical slice. Frame 
 
 > The idea is focused enough to test, relevant to SAP's supply-chain domain, and safe by design. It combines agentic assistance where interpretation is useful with deterministic services where correctness and accountability matter. The regional round can validate the user and business assumptions; the finale can demonstrate one end-to-end, SAP-aligned scenario without pretending to be a production procurement system.
 
+**Expanded closing argument**
+
+> Substrata addresses a specific supply-chain weakness: apparent diversification can hide real upstream concentration. The proposal goes beyond drawing a network. It asks whether the hidden relationship is supported, gives a supplier or analyst a way to verify it, traces the disruption through a versioned graph, converts operational inputs into decision runway, and keeps consequential action under named human authority.
+>
+> The project is feasible because the smallest useful prototype has a clear boundary. It needs one scenario, one hidden dependency, one disruption, one deterministic calculation, one approval, and one audit trail. The working synthetic prototype already establishes this flow. The next stage should validate the user, harden the evaluation, and connect one SAP boundary that the team can access and explain.
+
+**Alternative one-sentence pitches**
+
+| Tone | One-sentence pitch |
+|---|---|
+| Recommended | Substrata reveals hidden shared supplier dependencies, calculates how long production remains protected, and places every high-impact response under evidence-backed human approval. |
+| Business-focused | Substrata helps manufacturers detect false supplier diversification early enough to protect production through a traceable and governed response. |
+| Technical | Substrata combines cited relationship inference, a versioned supply graph, deterministic cascade analysis, and policy-controlled approval for Tier-N disruption response. |
+
+**Final request to the judges**
+
+> Advance Substrata so the team can validate the workflow with practitioners, connect one verified SAP boundary, and demonstrate the complete evidence-to-decision flow at the finale.
+
 **References / sources for the slide**
 
 Use shortened titles on the slide and keep full URLs in speaker notes:
@@ -355,6 +615,10 @@ Use shortened titles on the slide and keep full URLs in speaker notes:
 4. [SAP Supply Chain Orchestration announcement](https://news.sap.com/2025/10/sap-connect-innovative-updates-supply-chain-management/)
 5. [Cambridge Supply Chain AI Lab: link prediction](https://www.ifm.eng.cam.ac.uk/research/supply-chain-ai-lab/current-themes/supply-chain-link-prediction/)
 6. [Nexperia disruption timeline used as public replay context](https://blog.findchips.com/nexperia-supply-disruption/)
+
+**Source disclosure to place in speaker notes**
+
+> Public reporting supplies disruption context only. All supplier relationships, inventory quantities, lead times, costs, actions, and financial assumptions in the demonstration are synthetic.
 
 **Draft business model, for Q&A rather than the crowded closing slide**
 
@@ -376,6 +640,15 @@ Optionally add one small footer:
 
 > We can show the hidden-link evidence, the deterministic 18/90/72 calculation, or the human approval and audit boundary in more detail.
 
+**Prepare these four Q&A routes**
+
+1. **Problem and user:** visibility-gap diagram, empathy map, current workflow, and Business Model Canvas.
+2. **Architecture and AI:** system context, graph schema, link-inference pipeline, deterministic boundary, and technology stack.
+3. **Safety and governance:** autonomy matrix, approval rules, stale-input handling, simulated execution, and audit limitation.
+4. **Evidence and validation:** runway calculation, synthetic results, targets, failure examples, and real-world validation plan.
+
+Assign a team member to lead each route. The first response should answer the question directly in one or two sentences. Open the relevant backup visual only when the judge asks for deeper detail.
+
 ### Slide 11: Presenter checklist
 
 This is an internal submission-control slide. Complete it honestly and hide it during the live pitch if the organiser permits hidden slides.
@@ -390,6 +663,19 @@ This is an internal submission-control slide. Complete it honestly and hide it d
 | 10-minute pitch plus 5-minute Q&A | Rehearse to 9:30 so there is recovery time. |
 | Problem, users, solution, SAP relevance, impact, feasibility | Covered by slides 3-8. |
 | Team details shared with coordinator | Complete before submission. |
+
+**Additional final checks**
+
+- The title and team details match the official registration.
+- Each Learning Hub resource listed on slide 6 has actually been completed or used.
+- Every number has a unit, source, and synthetic or target label.
+- No SAP product appears on the slide unless the presenter can explain its role and current status.
+- The deck does not describe Gemini, Groq, NetworkX, or the scorer as the source of deterministic business arithmetic.
+- The team can distinguish a supplier, supplier site, component, product, and plant.
+- The presenter can explain why `inferred` and `confirmed` are separate states.
+- The laptop can run the full offline path without provider access.
+- A PDF and recorded demo are available as presentation backups.
+- The team has rehearsed within 10 minutes and assigned Q&A ownership.
 
 ## 4. Architecture and technology summary for the main deck
 
@@ -472,464 +758,3 @@ It tackles a specific failure mode, has a working and safe synthetic proof, defi
 - The presenter can explain who approves a high-impact action and what is recorded.
 - The presenter can name the primary user, buyer hypothesis, and unvalidated assumptions.
 - The final deck contains team names, exact completed Learning Hub resources, and the required registration details.
-
-## 8. Expanded content bank for building the PPT
-
-The earlier sections contain the recommended concise copy. This section gives you more material than will fit on the slides. Use it while designing the deck, move explanations into speaker notes, and shorten only after the full story is clear.
-
-### Slide 2 expanded content: project identity and team credibility
-
-#### Longer project description
-
-> Substrata is an agentic supply-chain resilience layer that helps manufacturers discover hidden dependencies beyond their direct suppliers. It connects relationship evidence to a versioned supply graph, verifies uncertain links, calculates the time remaining before production is exposed, and prepares mitigation drafts under human control.
-
-#### Why the name fits
-
-“Substrata” refers to the layers beneath the visible supplier network. Tier-1 contracts form the surface. Deeper suppliers, facilities, ownership links, materials, regions, and routes form the hidden structure underneath. The name supports the message “see beneath the surface” without tying the product to one industry.
-
-#### Team role wording
-
-Use roles that show complete ownership of the idea rather than generic labels such as “member.” Suggested role descriptions are:
-
-- problem research, stakeholder validation, and business model;
-- supply-chain data model and graph design;
-- backend, deterministic cascade, and governance;
-- AI extraction, evidence, and evaluation;
-- frontend experience, demo, and presentation.
-
-Only use roles that reflect the team’s real contribution.
-
-#### Longer speaker script
-
-> We chose the name Substrata because the risk we care about sits underneath the visible supplier list. A company may sign with several Tier-1 suppliers and believe it has diversified. If those suppliers depend on the same deeper source, the real network remains concentrated. Our team is combining supply-chain process research, graph modelling, evidence extraction, deterministic simulation, and a human approval workflow to make that concentration visible before production is affected.
-
-#### Cut first when shortening
-
-Remove the longer description and keep only the name, tagline, team details, and one-line purpose.
-
-### Slide 3 expanded content: problem mechanics
-
-#### Full problem explanation
-
-> Enterprise procurement systems usually provide the clearest view of direct suppliers because those are the organisations with contracts, purchase orders, deliveries, and invoices. The picture becomes less complete deeper in the network. A Tier-1 supplier may buy a component from a Tier-2 manufacturer, which may depend on a Tier-3 facility, specialised material, parent company, region, or route that also serves other Tier-1 suppliers.
->
-> This creates false diversification. The buyer sees several direct contracts, but the upstream paths converge. When the shared node experiences an export restriction, factory shutdown, financial failure, cyber incident, port closure, or material shortage, multiple direct suppliers can fail together.
->
-> The decision problem becomes harder because the company must determine whether the hidden link is credible, which products and plants depend on it, how long existing stock will last, how long a recovery option will take, and which person has authority to act. These questions often span separate tools and teams.
-
-#### Root causes to choose from
-
-Use two or three of these in speaker notes:
-
-- Direct supplier records do not automatically expose sub-tier relationships.
-- Names and identifiers differ across documents, subsidiaries, sites, and languages.
-- Ownership evidence, supply evidence, inventory, and event signals come from different sources.
-- Suppliers may be unable or unwilling to disclose their complete upstream network.
-- A relationship can change over time, so an old map can create false confidence.
-- A high risk score does not tell the planner when stock ends or when an alternative becomes usable.
-
-#### Failure modes
-
-| Failure mode | Operational consequence |
-|---|---|
-| Shared source remains hidden | Several supplier paths fail at the same time. |
-| Weak evidence becomes accepted as fact | Teams waste time or take the wrong mitigation. |
-| Disruption is detected without a where-used view | Analysts cannot identify the affected component, product, or plant. |
-| Stock and qualification time are not compared | The team knows there is risk but not how urgently it must decide. |
-| Recommendation lacks an approval boundary | The system may suggest an action that exceeds authority or creates new risk. |
-| Decision inputs are not frozen | The team cannot reproduce why an action was approved. |
-
-#### Example narrative
-
-> Imagine that Supplier A, Supplier B, and Supplier C each provide different assemblies. Procurement treats them as independent. Evidence suggests that all three depend on the same semiconductor source two or three tiers upstream. A restriction affects that source. The manufacturer now has three contracts but only one real upstream option. The hidden dependency has turned apparent diversification into a single point of failure.
-
-#### Strong problem statement alternatives
-
-**Business-focused version**
-
-> Manufacturers can diversify their direct suppliers and still remain dependent on one hidden upstream source. When that shared source is disrupted, fragmented evidence and disconnected planning data delay the answer to two urgent questions: what production is exposed, and how long remains to act?
-
-**Human-focused version**
-
-> Supply-risk analysts must make urgent decisions using incomplete sub-tier information, scattered evidence, and uncertain assumptions. They need a way to verify hidden relationships, trace their production impact, and escalate the right action without trusting a black box.
-
-**Technical version**
-
-> Direct supplier records show contracts, not the complete dependency graph. Substrata addresses missing Tier-N edges, uncertain evidence, deterministic cascade analysis, and controlled decision handoff.
-
-#### Cut first when shortening
-
-Keep the business-focused problem statement, the target users, and the single synthetic example. Move root causes and failure modes into speaker notes.
-
-### Slide 4 expanded content: users, current workflow, and opportunity
-
-#### Primary persona: supply-risk analyst
-
-**Job to be done**
-
-> When a new relationship or disruption signal appears, determine whether it is credible, identify the affected supply paths, and prepare a recommendation before stock cover ends.
-
-**Information needed**
-
-- exact evidence and source date;
-- relationship status and confidence;
-- supplier, component, product, and plant path;
-- inventory and eligible incoming supply;
-- alternate qualification or recovery time;
-- assumptions, missing data, and truncation;
-- approval rule and responsible decision-maker.
-
-**Pain points to validate**
-
-- repeated manual reconciliation across documents and systems;
-- uncertainty about whether two names refer to the same entity;
-- difficulty explaining a model-generated relationship to procurement;
-- limited time to compare recovery options;
-- accountability for escalation without complete evidence.
-
-#### Secondary persona: procurement or planning approver
-
-The approver does not need every model detail. The approver needs the exact affected scope, source evidence, remaining runway, available options, cost and operational assumptions, policy reason, and a clear record of the final decision.
-
-#### Supplier participant
-
-A supplier should receive a narrow confirmation question rather than broad access to the buyer’s network. The request should identify the relationship being checked, explain how the response will be used, expire after a defined period, and prevent reuse after a reply.
-
-#### Current workflow hypothesis
-
-1. A planner or analyst receives an alert, email, report, or news item.
-2. The analyst searches supplier records and spreadsheets for matching names.
-3. Procurement contacts internal owners or suppliers for clarification.
-4. Planning gathers stock and consumption data.
-5. Engineering estimates alternate qualification time.
-6. The team compares options through meetings and spreadsheets.
-7. A manager approves an action through an existing workflow.
-8. Evidence for the final decision may remain split across messages and files.
-
-This workflow is a design hypothesis. Stakeholder interviews must confirm which steps occur, who owns them, and where the largest delay actually exists.
-
-#### Opportunity statement
-
-> Substrata can reduce the time spent assembling decision context. It creates one traceable chain from relationship evidence to verification, graph impact, operational runway, mitigation comparison, approval, and audit. The intended benefit is a faster and more explainable decision, not fully autonomous procurement.
-
-#### Expanded business model hypothesis
-
-| Business-model element | Current hypothesis | What must be validated |
-|---|---|---|
-| User | Supply-risk analyst or supply planner | Frequency and severity of the workflow |
-| Buyer | Manufacturer’s procurement, supply-chain, or risk leadership | Budget owner and buying process |
-| Value | Earlier hidden-risk visibility and clearer decision runway | Whether it changes a real decision |
-| Delivery | Enterprise web application connected to planning and supplier data | Integration effort and data permissions |
-| Revenue | Subscription plus implementation/support | Willingness to pay and pricing basis |
-| Cost | Data integration, hosting, inference, supplier participation, and validation | Customer-specific cost structure |
-| Adoption risk | Users may distrust inferred links or face alert overload | Required explanation and review-volume threshold |
-
-#### Cut first when shortening
-
-Keep one primary user, the current gap, the opportunity, and the 18/90/72 example. Keep supplier participation and the business-model table for questions.
-
-### Slide 5 expanded content: complete solution flow
-
-#### Stage 1: Map the visible network
-
-Substrata begins with supplier, purchasing, BOM, plant, stock, lead-time, and declared-relationship records. Each entity and relationship has an identifier, source, observation time, and version. The system does not assume that a supplier’s legal entity, production site, and parent company are the same thing.
-
-#### Stage 2: Propose hidden relationships
-
-The Mapper searches supplied evidence and returns structured relationship claims with exact citations. Entity resolution connects a claim to known graph entities. The result becomes an `inferred` edge with provenance. The model cannot directly create a `confirmed` edge.
-
-#### Stage 3: Verify uncertain claims
-
-An analyst can review the evidence, or the system can prepare a narrow supplier-confirmation request. A confirmation, rejection, or expiry remains part of history. Rejected claims are not deleted because they help explain later decisions and evaluate the discovery method.
-
-#### Stage 4: Sense and simulate a disruption
-
-The Sensor matches an event to candidate entities. Ambiguous matches pause for review. Once the event is resolved, deterministic code traverses a pinned graph snapshot, finds affected supply paths, checks inventory and incoming supply, and compares cover against recovery time.
-
-#### Stage 5: Prepare and govern a response
-
-The Action role compares simulated options such as a buffer purchase, expedite, plant reallocation, safety-stock adjustment, or alternate-supplier qualification. Policy decides whether the draft may be recorded, requires review, or must be blocked. High-impact options pause for a named approver. The prototype records a dry-run payload and does not change a real purchasing system.
-
-#### Detailed input-to-outcome chain
-
-| Step | Input | Processing | Output | Human role |
-|---|---|---|---|---|
-| Discover | Supplier records and evidence | Structured extraction and entity resolution | Cited inferred links | Review ambiguous claims |
-| Confirm | Inferred link and bounded request | Signed confirmation workflow | Confirmed, rejected, or expired status | Supplier or analyst responds |
-| Detect | Sourced disruption event | Classification, deduplication, entity matching | Resolved affected node | Analyst resolves ambiguity |
-| Calculate | Pinned graph, stock, consumption, lead time | Deterministic traversal and formulas | Impact report and exposure range | Inspect assumptions and missing inputs |
-| Plan | Impact report and sourced options | Rules compare time, cost, and risk | Ranked simulated drafts | Select or reject the proposal |
-| Govern | Draft, actor, policy, versions | Role, threshold, staleness, and expiry checks | Allow, review, or block | Named approver records reason |
-| Audit | Final decision and frozen context | Hash-chained append | Verifiable decision history | Reviewer verifies the chain |
-
-#### Why the architecture is safe for this problem
-
-- AI assists where language and ambiguity matter.
-- Deterministic services own calculations that must be reproducible.
-- Status prevents inferred relationships from silently becoming truth.
-- Frozen versions make the result reproducible.
-- The approval gate keeps authority with a person.
-- Dry-run execution prevents a prototype from changing real operations.
-
-#### Longer speaker script
-
-> The workflow begins with records the organisation already understands, plus documents that may contain missing relationship evidence. A pretrained model extracts a claim into a strict schema and cites the exact passage. The graph stores it as inferred. A supplier or analyst can confirm or reject it. When an event arrives, deterministic services trace the affected paths and calculate runway from inventory, consumption, and qualification inputs. The system then prepares options, but policy and a named person control any high-impact choice. Every result retains its graph, data, formula, policy, and actor context.
-
-#### Cut first when shortening
-
-Use the five stage names and the four template flow boxes. Move the detailed table into speaker notes or a technical appendix.
-
-### Slide 6 expanded content: SAP relevance and learning
-
-#### SAP business-process mapping
-
-| Substrata need | Relevant SAP process or concept | Proposed use |
-|---|---|---|
-| Supplier and purchasing records | SAP S/4HANA procurement data | Read vendor, purchasing, material, and plant context through approved interfaces |
-| Product and component use | BOM and where-used processes | Trace a disrupted material to products and plants |
-| Inventory and planning | Inventory, supply planning, and SAP IBP concepts | Calculate available cover and compare recovery scenarios |
-| Declared supplier relationships | SAP Business Network / Ariba concepts | Add known supplier-network context and support collaboration |
-| Extension and integration | SAP BTP concepts | Host or integrate the application without changing the core system of record |
-| Graph and retrieval | SAP HANA Cloud graph/vector concepts | Replace local graph or retrieval adapters if services are available and suitable |
-| Pretrained AI access | SAP AI Core generative AI hub concepts | Route structured extraction through a governed provider layer |
-| Enterprise assistant access | Joule and A2A concepts | Invoke a bounded Substrata assessment as a future integration |
-
-Every row above describes a proposed fit. The team must confirm service access, exact APIs, data fields, and permitted operations before calling any integration implemented.
-
-#### Current implementation versus SAP-aligned target
-
-| Concern | Current implementation | SAP-aligned target |
-|---|---|---|
-| Source data | Synthetic fixtures, files, and local adapters | Customer-authorized SAP data through verified read-only interfaces |
-| Graph | NetworkX plus versioned relational records | HANA graph adapter if entitlement and performance justify it |
-| Database | SQLite locally, PostgreSQL/pgvector for platform | PostgreSQL on BTP or HANA after deployment validation |
-| AI | Gemini primary, Groq fallback, explicit offline mock | Generative AI hub adapter if available |
-| User identity | Development identity and platform OIDC support | Customer identity provider integrated through an approved BTP pattern |
-| Action | Simulated SAP-shaped payload | Controlled adapter after human approval and production safeguards |
-
-#### Learning Hub connection worksheet
-
-Complete this before creating the final slide:
-
-| Team member | Exact learning item completed | One concept applied to Substrata | Evidence available |
-|---|---|---|---|
-| [NAME] | [EXACT TITLE] | [CONCEPT AND WHERE USED] | [ACCOUNT / COMPLETION RECORD] |
-| [NAME] | [EXACT TITLE] | [CONCEPT AND WHERE USED] | [ACCOUNT / COMPLETION RECORD] |
-| [NAME] | [EXACT TITLE] | [CONCEPT AND WHERE USED] | [ACCOUNT / COMPLETION RECORD] |
-| [NAME] | [EXACT TITLE] | [CONCEPT AND WHERE USED] | [ACCOUNT / COMPLETION RECORD] |
-| [NAME, IF APPLICABLE] | [EXACT TITLE] | [CONCEPT AND WHERE USED] | [ACCOUNT / COMPLETION RECORD] |
-
-#### Strong learning explanation
-
-> The Learning Hub connection is not a list of SAP product names. We apply process thinking from procurement, planning, supplier collaboration, extension, and responsible AI. Those concepts shaped our data model, read-only integration boundary, approval workflow, and decision to keep uncertain model output separate from deterministic business logic.
-
-#### Cut first when shortening
-
-Keep the current stack, two or three SAP integration targets, and one exact completed Learning Hub item. Move the mapping table into notes.
-
-### Slide 7 expanded content: impact logic and validation plan
-
-#### Impact chain
-
-| Capability | Immediate output | Expected operational benefit | Validation method |
-|---|---|---|---|
-| Hidden-link discovery | Cited inferred relationship | Analysts can investigate shared concentration earlier | Precision, recall, review volume, and error analysis |
-| Confirmation workflow | Confirmed or rejected relationship | Less false certainty in the graph | Confirmation rate, rejection rate, response time, and stale requests |
-| Cascade analysis | Affected components, plants, and products | Faster impact scoping | Exact comparison with hand-calculated fixtures |
-| Runway calculation | Cover, qualification time, and exposure | Clearer urgency and decision deadline | Unit tests plus user comprehension task |
-| Mitigation comparison | Sourced dry-run options | Faster preparation for an approval meeting | Task time, option completeness, and missing-data rate |
-| Policy and approval | Allow, review, block, approve, or reject | Fewer unauthorized or stale decisions | Adversarial policy tests |
-| Audit chain | Frozen decision record | Better traceability and post-event review | Injected mutation detection and independent verification |
-
-#### What success would look like in the regional stage
-
-- Judges understand the hidden-dependency problem without requiring a technical explanation.
-- The team can identify the user, decision, evidence, and business hypothesis clearly.
-- The architecture explains where AI is useful and where it has no authority.
-- Every claim about SAP, accuracy, or impact has an explicit current or future status.
-
-#### What success would look like in the finale prototype
-
-- One end-to-end scenario runs repeatedly on the presentation machine.
-- The graph shows a planted hidden dependency with cited evidence.
-- A confirmation changes the relationship state through the governed workflow.
-- The deterministic result matches the hand calculation.
-- A high-impact draft cannot proceed without a valid named approval.
-- A stale approval or modified audit chain fails visibly.
-- The SAP-aligned adapter uses only services and access that the team has verified.
-
-#### Evaluation data design
-
-The synthetic generator keeps a complete truth graph, hides selected edges from the observable graph, and creates evidence that includes supported, unsupported, and conflicting claims. Evaluation compares recovered links with the hidden truth. The team should split by relationship or supplier group so aliases of the same hidden link do not appear across training, tuning, and test data.
-
-#### Important limitation paragraph
-
-> Synthetic evaluation can show whether the workflow behaves correctly on a constructed and versioned scenario. It cannot show that Substrata will achieve the same link quality, warning time, analyst utility, or financial value on a real manufacturer’s network. Real validation requires authorized enterprise data, domain review, security controls, and prospective workflow testing.
-
-#### Cut first when shortening
-
-Keep three expected impacts, three success measures, and three principal risks. Keep the limitation in speaker notes and place “targets, not results” on the slide.
-
-### Slide 8 expanded content: feasibility plan and deliverables
-
-#### Plan gate: validate the decision
-
-**Activities**
-
-- Interview supply-risk, procurement, or planning practitioners.
-- Confirm the exact decision Substrata should improve.
-- Identify minimum data, evidence, units, and update frequency.
-- Confirm SAP finale access and mentor support.
-
-**Deliverables**
-
-- corrected empathy map;
-- ranked user problems;
-- minimum scenario definition;
-- approved data and SAP access checklist;
-- updated Business Model Canvas.
-
-**Exit condition**
-
-> At least one practitioner confirms that the selected workflow and runway view address a real decision problem.
-
-#### Design gate: freeze the safe architecture
-
-**Activities**
-
-- Define entity, relationship, evidence, scenario, action, and approval contracts.
-- Identify what the model may propose and what deterministic services must control.
-- Set review, approval, expiry, and incomplete-data behavior.
-- Select the one integration that best demonstrates SAP relevance.
-
-**Deliverables**
-
-- final user journey;
-- frozen demo data contract;
-- architecture and agent-human interaction;
-- threat and failure checklist;
-- evaluation manifest.
-
-**Exit condition**
-
-> The team can explain every input, output, assumption, authority boundary, and failure state in the demo.
-
-#### Build gate: complete the vertical slice
-
-**Activities**
-
-- Harden evidence discovery and confirmation.
-- Confirm deterministic graph and runway services.
-- Improve mitigation comparison and approval explanation.
-- Add one verified read-only SAP integration if available.
-- Keep the offline fixture fully functional.
-
-**Deliverables**
-
-- reproducible local build;
-- seeded scenario;
-- optional SAP adapter;
-- judge-ready UI;
-- recovery instructions.
-
-**Exit condition**
-
-> A fresh machine can run the complete flow without manually repairing data or changing code.
-
-#### Test gate: prove the claims made in the demo
-
-**Activities**
-
-- Run hidden-edge, cascade, policy, audit, and replay tests.
-- Test provider failure and offline fallback.
-- Rehearse with users unfamiliar with the project.
-- Record confusion, timing, and failure recovery.
-
-**Deliverables**
-
-- versioned evaluation report;
-- failed-case examples;
-- demo checklist;
-- final claim table;
-- timed presentation recording.
-
-**Exit condition**
-
-> The team can repeat the demo, explain every number, recover from common failures, and defend every claim.
-
-#### Resource requirements
-
-| Area | Need |
-|---|---|
-| Domain | One or more supply-chain practitioners and a faculty/industry mentor |
-| SAP | Student Learning Hub accounts, confirmed practice system or finale services, and documentation |
-| Engineering | Python, TypeScript, graph/data modelling, API integration, testing, and deployment skills |
-| Data | Versioned synthetic fixture plus any legally usable sample data |
-| Evaluation | Frozen ground truth, scripted measurements, usability tasks, and failure cases |
-| Presentation | One stable laptop, offline fallback, recorded backup, and repeated rehearsal |
-
-#### Cut first when shortening
-
-Use one sentence per Plan, Design, Build, and Test box. Keep exit conditions in speaker notes.
-
-### Slide 9 expanded content: closing argument
-
-#### Full closing case
-
-> Substrata should move forward because it addresses a narrow but serious supply-chain failure: the difference between apparent supplier diversity and real upstream concentration. The project does not stop at drawing a network. It asks whether a hidden relationship is supported, gives people a way to confirm or reject it, traces the disruption through a versioned graph, converts operational data into decision runway, and keeps high-impact action under named human authority.
->
-> The idea is feasible because the smallest useful prototype needs one scenario, one hidden dependency, one disruption, one deterministic calculation, one approval, and one audit trail. The team already has a working synthetic vertical slice and a wider tenant-platform foundation. The next step is validation, not uncontrolled feature growth.
->
-> The SAP connection is based on real business-process fit. Procurement, BOM, inventory, planning, supplier collaboration, extension, and governed AI are the exact boundaries the solution must address. The team will only claim the integrations it can access and explain.
-
-#### Alternative one-sentence pitches
-
-**Recommended**
-
-> Substrata reveals hidden shared supplier dependencies, calculates how long production remains protected, and places every high-impact response under evidence-backed human approval.
-
-**More business-focused**
-
-> Substrata helps manufacturers detect false supplier diversification early enough to protect production through a traceable and governed response.
-
-**More technical**
-
-> Substrata combines cited relationship inference, a versioned supply graph, deterministic cascade analysis, and policy-controlled approval for Tier-N disruption response.
-
-#### Final ask to the judges
-
-> Advance Substrata so the team can validate the user assumptions with practitioners, connect one verified SAP boundary, and demonstrate the complete evidence-to-decision workflow at the finale.
-
-#### Source-note wording
-
-> Public event reporting provides disruption context only. All supplier relationships, inventory values, lead times, actions, and financial assumptions in the demonstration are synthetic.
-
-#### Cut first when shortening
-
-Keep the recommended one-sentence pitch, one short paragraph, and three to five source titles.
-
-### Slide 10 expanded content: Q&A navigation
-
-Prepare four backup routes rather than answering every question verbally:
-
-1. **Problem route:** visibility-gap diagram, empathy map, and Business Model Canvas.
-2. **Technical route:** system context, layered architecture, graph schema, and technology map.
-3. **Safety route:** agent collaboration, autonomy matrix, approval rule, and audit limitation.
-4. **Proof route:** runway calculation, synthetic evaluation, demo replay, and known limitations.
-
-Assign one team member as the first responder for each route. The first answer should be short. Use the backup visual only if the judge asks for detail.
-
-## 9. Recommended shortening order later
-
-When the team is ready to make the deck shorter, cut in this order:
-
-1. Remove repeated definitions that appear on more than one slide.
-2. Move formulas, process tables, and implementation details into speaker notes.
-3. Keep only one example on slides 3-5.
-4. Keep one primary user on slide 4 and describe secondary users aloud.
-5. Keep current technology and two or three SAP targets on slide 6.
-6. Keep only the most important targets and risks on slide 7.
-7. Keep one deliverable in each roadmap phase on slide 8.
-8. Keep the one-sentence pitch and strongest sources on slide 9.
-
-Do not cut the synthetic-data disclosure, the SAP integration caveat, the distinction between inferred and confirmed links, the deterministic-math boundary, or the human approval requirement.
