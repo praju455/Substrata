@@ -57,8 +57,8 @@ The scorer panel lists model versions, holdout metrics, calibration and artifact
 hashes. Administrators can train candidates from supplier response labels and
 explicitly activate eligible versions; synthetic training remains labelled and
 restricted to development. Local Docker API and workers share the model registry.
-Evidence retrieval supports pgvector and exact passage citations; configurable
-OpenAI/Anthropic/local extraction is isolated from deterministic exposure arithmetic.
+Evidence retrieval supports pgvector and exact passage citations; provider-neutral
+pretrained-model extraction is isolated from deterministic exposure arithmetic.
 Supplier portal replies use signed, expiring tokens and preserve historical link
 states while producing confirm/reject training labels. SMTP-over-TLS supplier
 email and tenant-configured approval notices are optional in production and
@@ -76,10 +76,10 @@ Manual event-poll requests create fresh work so updated feeds can be checked
 again within a day; source-item deduplication still prevents duplicate events.
 Public sign-in and supplier portal routes have bounded request budgets before
 credential/provider work, separate from authenticated tenant request budgets.
-Authenticated MCP tools and an A2A task endpoint call the same deterministic cascade
-engine, with named Mapper, Sensor, Cascade-caller, Action and Compliance/Audit
-skills. Tenant-scoped durable jobs persist typed agent-task inputs, retries and
-results. The fixed risk-review plan checkpoints a pinned cascade assessment and
+Authenticated MCP tools and an A2A task endpoint call the same deterministic impact
+engine, with named Mapper, Sensor, Action and Compliance/Audit skills around that
+service boundary. Tenant-scoped durable jobs persist typed agent-task inputs,
+retries and results. The fixed risk-review plan checkpoints a pinned cascade assessment and
 audit verification across retries. A2A clients can enqueue that plan and poll its
 tenant-scoped task; clients cannot delegate exposure arithmetic to an LLM.
 Run a synthetic graph traversal load check with
@@ -135,7 +135,7 @@ an isolated database container that is removed afterward.
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Retained prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Its Gemini/Groq extraction needs provider keys; mock mode works offline. The separate platform now includes a small link scorer training/registry pipeline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
+> **Retained prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Pretrained-model access remains behind a provider-neutral `LLMClient`; Gemini is primary, Groq is the fallback and mock mode works offline. The separate platform includes a small classical link-scorer training/registry pipeline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
 
 See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
 
@@ -279,11 +279,13 @@ The proposed demo replays public Nexperia events over an invented automotive net
 | Layer | Proposed implementation |
 |---|---|
 | Data | Synthetic procurement, BOM, stock and lead-time records; declared links; replayed public events; simulated confirmations. <sup>[Design]</sup> |
-| Persistence | SQLAlchemy with SQLite WAL locally; PostgreSQL as an alternative. <sup>[Design]</sup> |
-| Graph | `GraphStore` with NetworkX; SAP HANA graph adapter only if event access is available. <sup>[Design]</sup> <sup>[TBD]</sup> |
-| Agents | Mapper, Sensor, Cascade, Action and Compliance/Audit coordinated through bounded tools. <sup>[Design]</sup> |
-| Experience | FastAPI with a TypeScript web client, graph view, approval queue and replay controls. <sup>[Design]</sup> |
-| Execution | Alerts and SAP-shaped action previews marked `simulated_only`. <sup>[Design]</sup> |
+| Persistence | SQLAlchemy and Alembic with PostgreSQL for the platform and SQLite WAL for the local demo. <sup>[Design]</sup> |
+| Graph and impact | `GraphStore` with NetworkX and PostgreSQL traversal; deterministic services calculate exposure, runway and policy outcomes. SAP HANA Graph remains an entitlement-dependent stretch adapter. <sup>[Design]</sup> <sup>[TBD]</sup> |
+| Orchestration | Typed Python workflows today; LangGraph is the selected next-step orchestrator. MCP and A2A expose bounded task/tool contracts. <sup>[Design]</sup> |
+| Grounded assistance | A planned LangChain retrieval layer supports path-specific questions, exact citations and explicit known/inferred/unknown labels. <sup>[Design]</sup> |
+| Pretrained AI gateway | Provider-neutral `LLMClient`; Google Gen AI SDK is the planned Gemini adapter, with Groq fallback and an offline mock. No custom LLM training or fine-tuning. <sup>[Design]</sup> |
+| Experience | Next.js and TypeScript with Cytoscape.js; MapLibre is planned for geographic concentration views. FastAPI/Pydantic and SSE serve the current interface; WebSocket transport is planned. <sup>[Design]</sup> |
+| Governed execution | Relationship confirmation, deterministic policy checks, named approval, SHA-256 audit history and SAP-shaped actions marked `simulated_only`. <sup>[Design]</sup> |
 
 Detailed contracts and failure handling: [Architecture](docs/ARCHITECTURE.md).
 
@@ -293,22 +295,37 @@ Detailed contracts and failure handling: [Architecture](docs/ARCHITECTURE.md).
 
 *Figure 5 — Language models may extract or explain; graph mathematics, policies and approval validity remain deterministic. <sup>[Design]</sup>*
 
-| Agent | Responsibility | Escalation boundary |
+| Agent or service | Responsibility | Escalation boundary |
 |---|---|---|
 | **Mapper** | Propose evidence-backed hidden links. | Low confidence, conflicting evidence or confirmation |
 | **Sensor** | Classify events and resolve affected entities. | Ambiguous or conflicting event matches |
-| **Cascade** | Traverse the graph and calculate impact. | Does not decide; reports complete, incomplete or invalid calculations |
-| **Action** | Compare tool-returned mitigation options. | Spend, supplier switch, route risk or missing source data |
+| **Relationship confirmation** | Keep inferred links as candidates until an analyst or supplier confirms or rejects them. | Missing evidence, conflicting responses or expired requests |
+| **Domain assistant** <sup>[Planned]</sup> | Investigate one supply-chain path and return cited, evidence-grounded answers. | Clearly labels known, inferred and unknown information; cannot confirm links |
+| **Deterministic impact engine** | Traverse the graph and calculate exposure, runway and policy outcomes. | Reports complete, incomplete or invalid calculations; does not improvise numbers |
+| **Action** | Prepare and compare tool-returned mitigation drafts. | Spend, supplier switch, route risk or missing source data |
 | **Compliance/Audit** | Apply rules and append provenance, decisions and approvals. | Policy conflict, missing approver or audit-chain failure |
+| **Human gate** | Approve or reject high-impact actions with a recorded reason. | Rejection returns the proposal for review; approval creates only a dry-run action |
 
 The prototype will not issue purchase orders, onboard suppliers or move real shipments. <sup>[Design]</sup>
 
 ## Models and training
 
-The platform trains a small gradient-boosted link scorer from reviewed supplier
-labels, with grouped holdouts, calibration and explicit model activation. It does
-not fine-tune an LLM. Synthetic evaluation establishes pipeline behavior, not
-customer accuracy. See the platform migration guide for the implemented scope.
+Substrata does not train or fine-tune a generative model. Pretrained models are
+accessed through a provider-neutral gateway for evidence extraction, explanation
+and, in the planned grounded assistant, cited supply-path investigation. Typed
+Python workflows coordinate the current platform; LangGraph is the selected
+orchestration upgrade and LangChain is planned for grounded retrieval. Neither
+framework performs exposure arithmetic or automatically turns an inferred link
+into a confirmed fact.
+
+Separately, administrators can train a small classical gradient-boosted link
+scorer from reviewed supplier labels, with grouped holdouts, calibration and
+explicit model activation. This scorer is not an LLM. Synthetic evaluation
+establishes pipeline behavior, not customer accuracy.
+
+![Substrata proposed technology map](docs/diagrams/12-tech-stack.png)
+
+*Technology map — current components, selected next steps and optional adapters. Bracketed labels prevent planned technology from being presented as implemented. <sup>[Design]</sup>*
 
 | Pretrained AI may assist with | Deterministic code remains responsible for |
 |---|---|
@@ -416,9 +433,12 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Database connection, transactions and migration history | Implemented and checked (M1.1) |
 | Graph entities, relationships and evidence provenance | Implemented with typed/versioned records, evidence citations and GraphStore API |
 | Synthetic dataset and workflow | Implemented: fixed seed 42, separate truth/declared graphs, 32 nodes, seven evidence snippets and six events |
-| Mapper and supplier replies | Gemini primary / Groq backup with validated ownership extraction; explicit offline mock baseline. Provider transport/failover tested with simulated responses; live keys pending |
+| Mapper and supplier replies | Provider-neutral `LLMClient` with Gemini primary, Groq fallback and an explicit offline mock. Google Gen AI SDK and Groq SDK adapters are planned; provider transport/failover is tested with simulated responses and live keys remain pending |
+| Grounded domain assistant | Planned LangChain retrieval for path-specific questions with exact source citations and known/inferred/unknown labels |
+| Agent orchestration | Typed Python workflows implemented; LangGraph selected but not yet presented as implemented |
 | Action, approval and audit | Implemented simulated templates, stale-input checks and hash-chain verification; self-declared local roles |
-| Model training | Not planned <sup>[Design]</sup> |
+| Generative-model training | No custom LLM training or fine-tuning; pretrained models remain behind the provider-neutral gateway <sup>[Design]</sup> |
+| Classical link scorer | Implemented training/registry path from reviewed labels; reported separately from generative AI |
 | SAP access and integration | Not confirmed <sup>[TBD]</sup> |
 | Evaluation results | Generated by the evaluation script; frozen synthetic fixture only, not held-out generalisation or real business value |
 
