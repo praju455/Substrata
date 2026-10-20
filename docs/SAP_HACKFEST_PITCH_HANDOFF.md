@@ -237,7 +237,7 @@ Use the four template boxes exactly as follows:
 | Template box | Paste this content |
 |---|---|
 | **Input** | ERP-shaped supplier, BOM, inventory and lead-time records; documents; declared links; disruption event |
-| **Analyse / Decide** | Mapper proposes cited links; supplier/analyst verifies; Sensor matches event; deterministic Cascade traces impact and runway |
+| **Analyse / Decide** | Mapper proposes cited links; supplier/analyst verifies; Sensor matches the event; the deterministic impact engine traces exposure and runway |
 | **Action** | Compare buffer, expedite, transfer, or alternate-qualification drafts; policy chooses allow, review, or block |
 | **Outcome** | Earlier warning, explicit uncertainty, named approval, simulated SAP-shaped payload, verifiable audit trail |
 
@@ -291,7 +291,7 @@ exposure_window = qualification_days - cover_days
 
 - **Mapper:** proposes evidence-backed hidden links.
 - **Sensor:** classifies a disruption and resolves affected entities.
-- **Cascade:** calls deterministic graph and runway services; it does not improvise numbers.
+- **Deterministic impact engine:** performs graph traversal, exposure, runway, and policy calculations without improvising numbers.
 - **Action:** prepares and compares mitigation drafts.
 - **Compliance/Audit:** applies policy and records provenance.
 - **Human gate:** approves or rejects high-impact actions with a reason.
@@ -322,7 +322,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 > FastAPI + Pydantic service layer<br>
 > NetworkX deterministic graph analysis<br>
 > SQLAlchemy + Alembic with SQLite/PostgreSQL<br>
-> Gemini primary, Groq fallback, and offline mock for structured extraction<br>
+> Provider-neutral pretrained AI gateway; Google Gen AI SDK planned for Gemini, with Groq fallback and an offline mock<br>
 > SSE updates, human approval, and SHA-256 audit chain
 
 > **SAP-aligned integration path, subject to access**<br>
@@ -368,7 +368,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 |---|---|---|
 | Data | Synthetic fixtures, file imports, local connector mock | Customer-authorized read-only SAP interfaces |
 | Graph | Versioned relational records and NetworkX | SAP HANA graph adapter if available |
-| AI | Gemini primary, Groq fallback, explicit offline mock | SAP generative AI hub adapter if entitled |
+| AI | Provider-neutral `LLMClient`; Google Gen AI SDK planned for Gemini, with Groq fallback and an offline mock | SAP generative AI hub adapter if entitled |
 | Deployment | Local Python and Next.js; Docker/PostgreSQL platform path | SAP BTP after account and service verification |
 | Action | Simulated SAP-shaped draft | Controlled external adapter after approval and production safeguards |
 
@@ -390,7 +390,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 
 ![Substrata technology map](diagrams/12-tech-stack.png)
 
-**Important correction to the diagram:** LangGraph, MapLibre, SAP HANA graph, and SAP generative AI hub are proposed or optional. They are not dependencies in the current working build. The implemented orchestration uses typed Python services and state machines, and the current UI manifest includes Cytoscape.js but not MapLibre.
+**Important correction to the diagram:** typed Python workflows are implemented today. LangGraph is the selected next orchestration step, LangChain is planned for the cited domain assistant, and Google Gen AI SDK is the planned Gemini adapter. MapLibre, SAP HANA graph, and SAP generative AI hub remain planned or entitlement-dependent; none should be presented as implemented.
 
 **What to say**
 
@@ -413,7 +413,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 |---|---|---|---|
 | Hidden-link discovery | Cited relationship proposal | Earlier investigation of shared concentration | Proposal may be wrong until verified |
 | Confirmation workflow | Confirmed or rejected link state | Less false certainty in the graph | Requires supplier or analyst participation |
-| Cascade analysis | Affected paths, components, products, and plants | Faster impact scoping | Depends on graph completeness and correct units |
+| Deterministic impact analysis | Affected paths, components, products, and plants | Faster impact scoping | Depends on graph completeness and correct units |
 | Runway calculation | Cover, qualification time, and exposure | Clearer urgency and escalation timing | Inputs may be assumptions or ranges |
 | Mitigation comparison | Dry-run options with time, cost, and risk context | Faster preparation for a decision | Does not prove an option can be executed |
 | Policy and approval | Allow, review, block, approve, or reject | Reduced risk of unauthorized action | Policy must match the organisation’s authority model |
@@ -518,7 +518,7 @@ The repository already contains a working local synthetic vertical slice. Frame 
 
 #### 3. Build
 
-> Harden Mapper, Cascade, approval, and audit on synthetic data. Add one read-only SAP adapter only if entitlement and test data are available. Preserve an offline replay fallback.
+> Harden agent orchestration, evidence mapping, the cited domain assistant, deterministic impact services, approval, and audit on synthetic data. Add one read-only SAP adapter only if entitlement and test data are available. Preserve an offline replay fallback.
 
 **Build deliverables**
 
@@ -533,12 +533,12 @@ The repository already contains a working local synthetic vertical slice. Frame 
 
 #### 4. Test
 
-> Run hidden-edge evaluation, exact cascade fixtures, failure cases, stale approval tests, usability sessions, and repeated judge rehearsals. Report targets and measured results separately.
+> Run hidden-edge evaluation, cited-answer checks, exact impact fixtures, failure cases, stale approval tests, usability sessions, and repeated judge rehearsals. Report targets and measured results separately.
 
 **Test deliverables**
 
 - versioned evaluation report with raw counts and failure examples;
-- exact cascade and unit-validation results;
+- exact impact and unit-validation results;
 - policy, stale-input, and audit-mutation test results;
 - provider-failure and offline-fallback rehearsal;
 - timed team presentation and recovery checklist;
@@ -603,7 +603,7 @@ The repository already contains a working local synthetic vertical slice. Frame 
 
 **Final request to the judges**
 
-> Advance Substrata so the team can validate the workflow with practitioners, connect one verified SAP boundary, and demonstrate the complete evidence-to-decision flow at the finale.
+> [Advance Substrata so the team can validate the workflow with practitioners, connect one verified SAP boundary, and demonstrate the complete evidence-to-decision flow at the finale.](https://news.sap.com/2025/10/sap-connect-innovative-updates-supply-chain-management/)
 
 **References / sources for the slide**
 
@@ -614,7 +614,12 @@ Use shortened titles on the slide and keep full URLs in speaker notes:
 3. [SAP guidance for building AI agents](https://architecture.learning.sap.com/docs/golden-path/ai-golden-path/build-and-deliver/build-ai-agents)
 4. [SAP Supply Chain Orchestration announcement](https://news.sap.com/2025/10/sap-connect-innovative-updates-supply-chain-management/)
 5. [Cambridge Supply Chain AI Lab: link prediction](https://www.ifm.eng.cam.ac.uk/research/supply-chain-ai-lab/current-themes/supply-chain-link-prediction/)
-6. [Nexperia disruption timeline used as public replay context](https://blog.findchips.com/nexperia-supply-disruption/)
+6. [ACEA: critical Nexperia chip supply shortage](https://www.acea.auto/press-release/acea-calls-for-quick-resolution-to-critical-chip-supply-shortage/)
+7. [UNCTAD Review of Maritime Transport 2022](https://unctad.org/system/files/official-document/rmt2022_en.pdf)
+8. [SAP Business Network: Multitier Order Collaboration](https://help.sap.com/docs/business-network-for-supply-chain/business-network-for-supply-chain-integration-and-configuration/multitier-order-collaboration-0d01b6d20b9042f4ac46c2ad2839d0ad)
+9. [SAP HANA Cloud Property Graph Engine](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-property-graph-engine-reference/sap-hana-graph-data-model-030-000-000-sap_hana_graph_data_model)
+10. [SAP Clean Core Extensibility](https://help.sap.com/docs/erp-transformation-with-itc/buildable-map/clean-core-extensibility-for-sap-cloud-erp)
+11. [NIST Generative AI Risk Management Profile](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)
 
 **Source disclosure to place in speaker notes**
 
@@ -684,7 +689,7 @@ If a judge asks for the architecture, answer in six layers:
 1. **Inputs:** synthetic ERP-shaped supplier, purchasing, BOM, inventory, lead-time, document, event, and supplier-response data.
 2. **Persistence:** SQLAlchemy and Alembic with SQLite for the offline demo and PostgreSQL/pgvector for the tenant platform.
 3. **Knowledge graph:** versioned entities and relationships projected into NetworkX for transparent traversal.
-4. **Agent workflow:** Mapper and Sensor interpret evidence; Cascade calls deterministic calculations; Action prepares options; Compliance/Audit enforces controls.
+4. **Agent workflow:** Mapper and Sensor interpret evidence; LangGraph is the selected orchestration step; deterministic services perform graph and runway calculations; the domain assistant returns cited path answers; Action prepares options; Compliance/Audit enforces controls.
 5. **Application:** FastAPI/Pydantic owns domain logic; Next.js/TypeScript/Cytoscape.js renders the workspace and receives updates through SSE.
 6. **Governance and execution:** named approval, separation of duties, dry-run SAP-shaped payloads, and a hash-chained audit record. No real procurement mutation is enabled.
 

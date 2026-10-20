@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Hidden shared trade-route dependency</title>
+  <desc id="desc">Three apparently independent suppliers converge on one shared port or trade route. A disruption at that chokepoint affects the manufacturing plant.</desc>
+  <defs>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11 Z" fill="#E34D4D"/>
+    </marker>
+    <marker id="arrow-navy" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11 Z" fill="#172B4D"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" rx="32" fill="#F8FAFC"/>
+
+  <text x="80" y="86" fill="#172B4D" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700">Different suppliers. One hidden route.</text>
+  <text x="80" y="128" fill="#627089" font-family="Arial, Helvetica, sans-serif" font-size="21">An upstream chokepoint can interrupt several supply paths at the same time.</text>
+
+  <text x="80" y="200" fill="#627089" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="2.5">VISIBLE TIER-1 SUPPLIERS</text>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="80" y="230" width="330" height="124" rx="16" fill="#FFFFFF" stroke="#0B9A9A" stroke-width="4"/>
+    <rect x="80" y="230" width="12" height="124" rx="6" fill="#0B9A9A"/>
+    <g transform="translate(116 265)" fill="none" stroke="#0B9A9A" stroke-width="4" stroke-linejoin="round">
+      <path d="M0 52V18l20 12V18l20 12V8h17v44z"/>
+      <path d="M10 42h8m10 0h8m10 0h8"/>
+    </g>
+    <text x="196" y="278" fill="#172B4D" font-size="22" font-weight="700">SUPPLIER A</text>
+    <text x="196" y="311" fill="#627089" font-size="18">Independent contract</text>
+
+    <rect x="80" y="390" width="330" height="124" rx="16" fill="#FFFFFF" stroke="#7C56D9" stroke-width="4"/>
+    <rect x="80" y="390" width="12" height="124" rx="6" fill="#7C56D9"/>
+    <g transform="translate(116 425)" fill="none" stroke="#7C56D9" stroke-width="4" stroke-linejoin="round">
+      <path d="M0 52V18l20 12V18l20 12V8h17v44z"/>
+      <path d="M10 42h8m10 0h8m10 0h8"/>
+    </g>
+    <text x="196" y="438" fill="#172B4D" font-size="22" font-weight="700">SUPPLIER B</text>
+    <text x="196" y="471" fill="#627089" font-size="18">Independent contract</text>
+
+    <rect x="80" y="550" width="330" height="124" rx="16" fill="#FFFFFF" stroke="#EBAF2D" stroke-width="4"/>
+    <rect x="80" y="550" width="12" height="124" rx="6" fill="#EBAF2D"/>
+    <g transform="translate(116 585)" fill="none" stroke="#EBAF2D" stroke-width="4" stroke-linejoin="round">
+      <path d="M0 52V18l20 12V18l20 12V8h17v44z"/>
+      <path d="M10 42h8m10 0h8m10 0h8"/>
+    </g>
+    <text x="196" y="598" fill="#172B4D" font-size="22" font-weight="700">SUPPLIER C</text>
+    <text x="196" y="631" fill="#627089" font-size="18">Independent contract</text>
+  </g>
+
+  <text x="650" y="200" fill="#7C56D9" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing="2.5">HIDDEN SHARED DEPENDENCY</text>
+
+  <path d="M410 292 C545 292 535 372 700 410" fill="none" stroke="#0B9A9A" stroke-width="7" stroke-linecap="round"/>
+  <path d="M410 452 C545 452 570 452 700 452" fill="none" stroke="#7C56D9" stroke-width="7" stroke-linecap="round"/>
+  <path d="M410 612 C545 612 535 532 700 494" fill="none" stroke="#EBAF2D" stroke-width="7" stroke-linecap="round"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="700" y="342" width="370" height="220" rx="22" fill="#FFFFFF" stroke="#172B4D" stroke-width="4"/>
+    <text x="885" y="390" fill="#172B4D" font-size="18" font-weight="700" letter-spacing="1.5" text-anchor="middle">SHARED PORT / ROUTE</text>
+    <g transform="translate(742 410)" fill="none" stroke="#172B4D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 72h92l-15 24H22z"/>
+      <path d="M27 72V26h40v46M47 26V6m0 0 34 20H47"/>
+      <path d="M0 105c15 9 30 9 45 0 15 9 30 9 45 0"/>
+    </g>
+    <text x="870" y="459" fill="#172B4D" font-size="23" font-weight="700">Single chokepoint</text>
+    <text x="870" y="495" fill="#627089" font-size="16">used by all three suppliers</text>
+  </g>
+
+  <g transform="translate(1015 314)">
+    <circle cx="0" cy="0" r="39" fill="#E34D4D" stroke="#FFFFFF" stroke-width="7"/>
+    <path d="M0 -19V7" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="0" cy="20" r="4.5" fill="#FFFFFF"/>
+  </g>
+  <text x="1015" y="258" fill="#E34D4D" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" text-anchor="middle" letter-spacing="1.2">DISRUPTION</text>
+
+  <path d="M1070 452H1260" fill="none" stroke="#E34D4D" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1280 452l-26-16v32z" fill="#E34D4D"/>
+  <text x="1170" y="415" fill="#E34D4D" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" text-anchor="middle">CASCADE IMPACT</text>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="1300" y="342" width="220" height="220" rx="22" fill="#FFFFFF" stroke="#172B4D" stroke-width="4"/>
+    <g transform="translate(1359 385)" fill="none" stroke="#172B4D" stroke-width="5" stroke-linejoin="round">
+      <path d="M0 94V35l32 20V35l32 20V12h28v82z"/>
+      <path d="M16 78h12m18 0h12m18 0h12"/>
+    </g>
+    <text x="1410" y="519" fill="#172B4D" font-size="19" font-weight="700" text-anchor="middle">MANUFACTURING</text>
+    <text x="1410" y="545" fill="#172B4D" font-size="19" font-weight="700" text-anchor="middle">PLANT</text>
+  </g>
+
+  <line x1="80" y1="750" x2="1520" y2="750" stroke="#D8DEE8" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="80" y="782" width="22" height="22" rx="5" fill="#0B9A9A"/>
+    <text x="116" y="800" fill="#627089" font-size="17">Visible supplier relationship</text>
+    <rect x="385" y="782" width="22" height="22" rx="5" fill="#7C56D9"/>
+    <text x="421" y="800" fill="#627089" font-size="17">Hidden dependency</text>
+    <rect x="632" y="782" width="22" height="22" rx="11" fill="#E34D4D"/>
+    <text x="668" y="800" fill="#627089" font-size="17">Geopolitical or logistics disruption</text>
+    <text x="1520" y="800" fill="#172B4D" font-size="18" font-weight="700" text-anchor="end">ONE CHOKEPOINT • SYSTEM-WIDE EXPOSURE</text>
+  </g>
+</svg>

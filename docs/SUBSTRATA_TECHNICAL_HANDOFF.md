@@ -118,7 +118,9 @@ The platform path also contains provider-neutral structured extractors and optio
 ![Substrata technology map](diagrams/12-tech-stack.png)
 
 - The diagram is a design map, not a literal dependency inventory.
-- **LangGraph is not in the current Python manifest.** Current orchestration uses typed Python workflow/state-machine services, durable jobs, and tool contracts.
+- **LangGraph is the selected next-step orchestrator but is not yet in the current Python manifest.** Current orchestration uses typed Python workflow/state-machine services, durable jobs, and tool contracts; it remains the offline fallback.
+- **LangChain is planned for the grounded domain assistant.** It will retrieve path-specific evidence and return citations with known/inferred/unknown labels; it will not calculate impact or confirm relationships.
+- **Google Gen AI SDK is the planned Gemini adapter.** The current provider-neutral `LLMClient`, Groq fallback, and offline mock remain the resilience boundary.
 - **MapLibre is not in the current frontend manifest.** The implemented core visualization is Cytoscape.js.
 - SAP HANA graph/vector and SAP generative AI hub are entitlement-dependent integration targets, not current connections.
 - NetworkX, FastAPI, Next.js, TypeScript, SQLAlchemy, Alembic, SQLite/PostgreSQL, pytest, and OpenTelemetry support are grounded in the current codebase.
@@ -254,14 +256,14 @@ The LLM may not:
 |---|---|---|---|---|---|
 | Mapper | Documents, declared links, entity candidates | Cited inferred-edge proposals | Structured extraction and optional similarity | Schema, entity constraints, evidence requirement, status transition | Ambiguous name, conflicting evidence, or low support |
 | Sensor | Sourced event and candidate entities | Classified event and affected-node candidates | Classification or explanation may use a model | Deduplication, thresholds, source fields, scenario trigger | Ambiguous entity or severity |
-| Cascade / Cascade-caller | Pinned graph, inventory, BOM, lead times, event | Affected paths, products/plants, cover, exposure, support range | None for arithmetic | Graph traversal, units, formulas, bounds, truncation | Reports incomplete or truncated; does not make a business decision |
+| Deterministic impact engine (legacy internal `cascade` name) | Pinned graph, inventory, BOM, lead times, event | Affected paths, products/plants, cover, exposure, support range | None for arithmetic | Graph traversal, units, formulas, bounds, truncation | Reports incomplete or truncated; does not make a business decision |
 | Action | Impact report, quotes, constraints, policy | Ranked simulated mitigation drafts | Rationale drafting may use a model | Feasibility, values, spend/risk thresholds, payload shape | Supplier switch, elevated risk, spend, missing source |
 | Compliance/Audit | Proposed action, actor, roles, policy, snapshots | Allow/review/block result and audit event | None required | Role checks, separation of duties, staleness, expiry, hashes | Missing authority, policy conflict, stale snapshot, invalid chain |
 | Human gate | Exact option, evidence, uncertainty, policy reason | Approve or reject with actor and reason | None | Server validates identity, assignment, role, versions, and expiry | Fresh analysis required when inputs change |
 
 ### Implemented orchestration detail
 
-The current system does not depend on LangGraph. It uses typed Python services and state transitions. The platform adds durable jobs with leases, retries, ownership fencing, and checkpoints. Authenticated MCP tools and an A2A task endpoint call the same deterministic services. The fixed risk-review plan pins the graph and checkpoints cascade assessment plus audit verification across retries.
+The current system does not yet depend on LangGraph. It uses typed Python services and state transitions. LangGraph is the selected orchestration upgrade, while the current workflow remains the offline fallback. The platform adds durable jobs with leases, retries, ownership fencing, and checkpoints. Authenticated MCP tools and an A2A task endpoint call the same deterministic services. The fixed risk-review plan pins the graph and checkpoints deterministic impact assessment plus audit verification across retries.
 
 ### Autonomy policy
 
@@ -329,7 +331,7 @@ The platform assessment is more conservative. It composes source-to-material and
 4. Inspect an inferred edge, exact source quote, source URI, score, and content hash.
 5. Select **Simulate supplier replies** to confirm supported links and reject a planted rumor.
 6. Replay one event.
-7. The Sensor matches the event, Cascade calculates impact, and Action prepares options.
+7. The Sensor matches the event, the deterministic impact engine calculates exposure and runway, and Action prepares options.
 8. Inspect the 18-day cover, 90-day assumed qualification time, and 72-day exposure.
 9. Enter an approver name and decision reason.
 10. Approve one simulated draft.
@@ -631,8 +633,8 @@ Do not claim willingness to pay, pricing, buyer ownership, or sales-cycle length
 | Can it execute procurement? | No. Actions are dry-run/simulated. |
 | Is the audit chain proof of truth? | No. It detects later record changes; it does not establish that the original claim was true. |
 | Is accuracy validated? | No. Only constructed fixture behavior is measured. |
-| Is LangGraph implemented? | No. Current workflows are typed Python services/state machines with MCP/A2A boundaries. |
-| Is a GNN implemented? | No. It is an optional research baseline only. |
+| Is LangGraph implemented? | Not yet. It is the selected next-step orchestrator; current typed Python workflows remain the offline fallback. |
+| Is a custom GNN required? | No. It is deliberately excluded from the finale scope. |
 | Is any model trained? | The core LLM/graph flow is not trained. The platform has a separate optional gradient-boosted link scorer trained from reviewed labels under gates. |
 
 ## 20. Diagram catalog and recommended use

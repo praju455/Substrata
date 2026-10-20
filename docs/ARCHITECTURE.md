@@ -212,7 +212,7 @@ SQLAlchemy is the proposed data-access boundary. SQLite in WAL mode is the local
 
 ### Layer 4 — Agents and tools
 
-LangGraph is the proposed orchestration layer; a plain typed state machine is the fallback. **[Design]** Three MCP boundaries keep capabilities narrow:
+Typed Python workflows are implemented today; LangGraph is the selected next-step orchestration layer for explicit state, pause/resume and human gates. The current typed workflow remains the offline fallback. **[Design]** Three MCP boundaries keep capabilities narrow:
 
 | Proposed MCP server | Example tools | Permitted effects |
 |---|---|---|
@@ -223,10 +223,12 @@ LangGraph is the proposed orchestration layer; a plain typed state machine is th
 Authenticated MCP and A2A endpoints expose typed tenant tools; broad external
 client interoperability has not been verified, and no SAP affiliation is claimed.
 
-The current offline slice exposes typed Mapper, Sensor, Cascade-caller, Action and
-Compliance/Audit skills over the shared tool registry. Tenant jobs persist typed
+The current offline slice exposes typed Mapper, Sensor, deterministic-impact, Action and
+Compliance/Audit skills over the shared tool registry. The code retains `cascade`
+in some internal API names, but the pitch-facing responsibility is the deterministic
+impact engine, not an LLM agent. Tenant jobs persist typed
 inputs, retries and results and cap active work. A fixed, version-pinned risk-review
-plan coordinates Cascade-caller assessment with Compliance/Audit verification and
+plan coordinates deterministic impact assessment with Compliance/Audit verification and
 stores a checkpoint after each role step. The flow creates an assessment only; it
 does not propose or execute a mitigation. Adaptive plan authoring, cross-role flows
 beyond this path, push notifications and hosted agent interoperability remain
@@ -257,14 +259,14 @@ sequenceDiagram
     participant Feed as Event replay
     participant Sensor
     participant Graph as GraphStore
-    participant Cascade
+    participant Impact as Deterministic impact engine
     participant Action
     participant Policy as Policy/Audit
     participant Human as Named approver
     Feed->>Sensor: timestamped event + evidence
     Sensor->>Graph: resolve affected nodes
-    Graph->>Cascade: versioned graph snapshot
-    Cascade->>Action: deterministic impact report
+    Graph->>Impact: versioned graph snapshot
+    Impact->>Action: deterministic impact report
     Action->>Policy: ranked simulated proposals
     Policy-->>Action: allow / review / block
     Policy->>Human: context + exact payload

@@ -1,6 +1,6 @@
 # Diagram manifest
 
-All diagrams are design artifacts for the Substrata proposal. Each is stored as editable Excalidraw JSON plus SVG and PNG. **[Design]** The repository exports were created locally with `mcp-excalidraw-server`; no share upload was used. Its optional `share` command uploads diagram data to a third-party Excalidraw service, so it must not be used for confidential content without approval. **[Design]**
+All diagrams are design artifacts for the Substrata proposal. Core diagrams 01-16 are stored as editable Excalidraw JSON plus SVG and PNG; later presentation experiments retain the export formats that were produced. **[Design]** The repository exports were created locally; no share upload was used. Any optional share command uploads diagram data to a third-party service, so it must not be used for confidential content without approval. **[Design]**
 
 ## Visual language
 
@@ -34,6 +34,9 @@ Every diagram uses a light background, title inside the scene and short labels i
 | 14 | Evaluation gates + roadmap | What must be measured before each phase can support a claim? | 15–16 | [`excalidraw`](14-evaluation-roadmap.excalidraw) · [`svg`](14-evaluation-roadmap.svg) · [`png`](14-evaluation-roadmap.png) | Not used | Reviewed |
 | 15 | Empathy map | What does the unvalidated analyst persona say, think, do and feel? | 5 | [`excalidraw`](15-empathy-map.excalidraw) · [`svg`](15-empathy-map.svg) · [`png`](15-empathy-map.png) | Not used | Reviewed after overlap fix |
 | 16 | Business Model Canvas | Which business hypotheses must the team validate? | 5 | [`excalidraw`](16-business-model-canvas.excalidraw) · [`svg`](16-business-model-canvas.svg) · [`png`](16-business-model-canvas.png) | Not used | Reviewed |
+| 17 | Shared route chokepoint | How can apparently separate suppliers converge on one logistics dependency? | Problem backup | [`svg`](17-shared-route-chokepoint.svg) · [`png`](17-shared-route-chokepoint.png) | Not used | Reviewed export |
+| 18 | Hidden Tier-N concentration | How can multiple visible paths share a deeper concentration? | Problem backup | [`png`](18-hidden-tier-n-concentration.png) | Not used | Reviewed raster export |
+| 19 | World-map Tier-N concentration | How can shared suppliers, facilities, materials, owners, regions, ports and routes create multi-plant impact? | Problem / study guide | [`png`](19-world-map-tier-n-concentration.png) | Not used | Reviewed raster export |
 
 ## Why no additional diagrams
 

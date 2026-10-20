@@ -20,7 +20,7 @@ The design never equates `inferred` with `confirmed`. **[Design]** The edge reta
 
 ## 5. Why agents instead of a dashboard?
 
-The proposed work crosses evidence extraction, event sensing, deterministic simulation, option drafting and governance, each with different tools and escalation rules. **[Design]** Agent boundaries make those responsibilities inspectable. **[Design]** If LangGraph/A2A does not improve pause/resume, tool control or auditability over a plain state machine, we should remove it. **[Design]**
+The work crosses evidence extraction, event sensing, relationship confirmation, deterministic impact, option drafting and governance. **[Design]** Agent boundaries make those responsibilities inspectable. LangGraph is the selected next-step orchestrator for pause/resume, tool control and human gates; the existing typed workflow remains the reliable offline path. **[Design]**
 
 ## 6. What is real today and what is simulated?
 
@@ -28,7 +28,7 @@ Implemented today: the local graph/evidence dashboard, mock Mapper, confirmation
 
 ## 7. Did you train a model?
 
-No. This is deliberate: the core hypothesis can be tested with pretrained LLMs/embeddings for retrieval and structured extraction, while graph math and policy remain deterministic. **[Design]** Training a bespoke model before establishing a legitimate dataset and baseline would add risk without proving user value. **[Design]** A GNN is optional, trained on synthetic data only and reported as a separate baseline. **[Design]**
+No custom LLM is trained or fine-tuned. The core hypothesis uses pretrained models for retrieval, cited extraction and explanation, while graph math and policy remain deterministic. **[Design]** A separate small classical link scorer can learn from reviewed labels under activation gates, but it is not the core generative model and synthetic results are not customer accuracy.
 
 ## 8. Is the accuracy proven on real data?
 
@@ -40,7 +40,7 @@ The implemented ownership workflow score is `0.8 × fixture reliability + 0.2`, 
 
 ## 10. Why use the Nexperia crisis?
 
-The public October 2025 chronology gives judges a dated, understandable disruption sequence and illustrates the reported time mismatch between [limited stocks and alternative homologation](https://www.european-rubber-journal.com/article/2098231/acea-calls-for-immediate-resolution-to-critical-chip-supply-shortage). **[Sourced]** It does not reveal a real confidential graph. **[Design]** Substrata overlays that chronology on a synthetic network and states that limitation on-screen. **[Design]**
+The public October 2025 chronology gives judges a dated, understandable disruption sequence and illustrates the reported time mismatch between [limited stocks and alternative homologation](https://www.acea.auto/press-release/acea-calls-for-quick-resolution-to-critical-chip-supply-shortage/). **[Sourced]** It does not reveal a real confidential graph. **[Design]** Substrata overlays that chronology on a synthetic network and states that limitation on-screen. **[Design]**
 
 ## 11. Can the system act automatically?
 

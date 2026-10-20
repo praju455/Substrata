@@ -36,7 +36,7 @@ The October 2025 Nexperia chronology supplies replay context only. **[Design]** 
 5. Tune prompts/rules on development data only; no core model training is performed. **[Design]**
 6. Run once on the held-out test set and publish errors, not only aggregate scores. **[Design]**
 
-Exact split proportions are **[TBD]**. If the optional GNN baseline is attempted, it receives only synthetic training data, uses the same held-out test edges and is reported separately. **[Design]**
+Exact split proportions are **[TBD]**. A custom GNN is deliberately excluded from the finale scope; the evaluation focuses on cited candidate links, reviewer burden, deterministic impact and governance. **[Design]**
 
 ## 4. Metrics and targets
 
@@ -47,7 +47,7 @@ Exact split proportions are **[TBD]**. If the optional GNN baseline is attempted
 | Link inference | Recall at review threshold | ≥ 0.70 **[Design]** |
 | Structured extraction | First-pass schema-valid JSON | ≥ 0.98 **[Design]** |
 | Event classification | Macro-F1 | ≥ 0.80 **[Design]** |
-| Cascade | Exact curated calculations | 100% **[Design]** |
+| Deterministic impact | Exact curated calculations | 100% **[Design]** |
 | Policy | Prohibited actions blocked | 100% **[Design]** |
 | Audit | Injected mutations detected | 100% **[Design]** |
 | Replay | Identical canonical output | 10/10 runs **[Design]** |

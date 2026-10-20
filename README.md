@@ -1,129 +1,5 @@
 # Substrata
 
-The approved industry-neutral platform migration is tracked in
-[Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
-remains available during the migration; new tenant features use a separate schema.
-The [local platform completion audit](docs/PLATFORM_REMAINING.md) records the
-implemented local gaps separately from deployment and customer configuration gates.
-For manual Python installs, use `python -m pip install -e ".[dev,platform]"`;
-the setup runner installs these extras for the complete test suite.
-Platform API access requires verified tokens; see the migration guide for setup.
-The platform includes automotive, pharma and food fixtures and a deterministic
-assessment endpoint with sourced inputs and inferred-dependency exposure ranges.
-Exposure support follows the complete route through the material to the plant;
-product revenue also requires product-route support. Inferred downstream usage
-therefore widens ranges instead of appearing certain.
-CSV/Excel imports are staged with column mapping, validation and identity review;
-optional semantic embeddings add scored, review-only entity candidates when a
-provider and tenant cost budget are configured. History and safe rollback preserve
-graph revisions.
-Tenant policies enforce named approval, separation of duties, delegation, SLA
-expiry and dry-run execution of sourced mitigation drafts.
-Read-only OData, authenticated REST and signed webhook adapters are available,
-with a synthetic local mock and an explicit Business Network/Ariba stub.
-Open `/platform/` for onboarding, imports, graph history, scenarios, policies,
-approval review, notifications and audit/CSV/PDF report exports. The platform
-workspace, printable report and supplier confirmation portal support English and
-Hindi with a browser-persisted language choice; broader locale and accessibility
-QA remains open.
-The workspace now connects the existing evidence and job APIs: save sourced
-documents, index/search passages, discover cited links, request a signed supplier
-preview and queue/run a graph-pinned risk review. Development previews send no
-supplier email. Completed reviews refresh the runway, assessment and audit views.
-Saved assessment reports retain their original graph revision after later replies.
-The event intake panel submits sourced events and lets administrators configure,
-edit or disable tenant alert rules; resulting events feed the existing review and
-alert centre rather than requiring separate API calls.
-Pending approvals can be delegated to a named reviewer from the inbox, with a
-required reason and visible assignment. Existing role and separation-of-duties
-checks still decide whether that reviewer may approve.
-Delegation itself also enforces the tenant's configured approver roles. Changed
-inputs or an elapsed approval deadline expire the action before reassignment.
-The policy editor retains configured approver roles, action kinds, approval
-deadlines and inference budgets when spending limits change. Administrators can
-edit deadlines and USD inference budgets explicitly, with a reason recorded as
-provenance for changed values; unchanged values keep their original sources.
-Read-only connector previews feed the same column-mapping, staged review,
-idempotent apply and rollback workflow as CSV/Excel uploads. Nested fields and
-source provenance are preserved; reading a preview never changes the source ERP.
-Ambiguous imports show each incoming identity and candidate similarity scores;
-analysts explicitly choose an existing match or a separate entity and record a
-reason before the import can be applied.
-Identity review includes similar names within the same upload. Matching an alias
-or updating the same identifier preserves existing optional facts and their
-provenance unless incoming mapped facts replace them. Conflicting scalar/nested
-column mappings are rejected before row processing.
-The scorer panel lists model versions, holdout metrics, calibration and artifact
-hashes. Administrators can train candidates from supplier response labels and
-explicitly activate eligible versions; synthetic training remains labelled and
-restricted to development. Local Docker API and workers share the model registry.
-Evidence retrieval supports pgvector and exact passage citations; provider-neutral
-pretrained-model extraction is isolated from deterministic exposure arithmetic.
-Supplier portal replies use signed, expiring tokens and preserve historical link
-states while producing confirm/reject training labels. SMTP-over-TLS supplier
-email and tenant-configured approval notices are optional in production and
-disabled in development.
-The scorer training script calibrates a small gradient-boosted model on supplier
-labels with grouped holdouts and a versioned registry; it never fine-tunes an LLM.
-Tenant event feeds use HTTPS host allowlists and explicit license notes; RSS, GDELT
-DOC, U.S. NWS alerts, European MeteoAlarm weather warnings, review-only OFAC SDN
-and ITA consolidated screening candidates, and field-mapped JSON APIs run through
-the same tenant event pipeline.
-Event polls and graph assessments can run as durable, retryable jobs via `scripts/platform_worker.py`.
-Worker claims carry unique ownership markers. Expired attempts cannot overwrite
-a reclaimed job's result or publish later workflow checkpoints.
-Manual event-poll requests create fresh work so updated feeds can be checked
-again within a day; source-item deduplication still prevents duplicate events.
-Public sign-in and supplier portal routes have bounded request budgets before
-credential/provider work, separate from authenticated tenant request budgets.
-Authenticated MCP tools and an A2A task endpoint call the same deterministic impact
-engine, with named Mapper, Sensor, Action and Compliance/Audit skills around that
-service boundary. Tenant-scoped durable jobs persist typed agent-task inputs,
-retries and results. The fixed risk-review plan checkpoints a pinned cascade assessment and
-audit verification across retries. A2A clients can enqueue that plan and poll its
-tenant-scoped task; clients cannot delegate exposure arithmetic to an LLM.
-Run a synthetic graph traversal load check with
-`python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
-Pass `--database-url` (or `SUBSTRATA_GRAPH_LOAD_DATABASE_URL`) to exercise the
-tenant-scoped PostgreSQL recursive traversal instead of the offline NetworkX path.
-All generated graphs and performance measurements are synthetic and are not a
-production service-level claim.
-
-Run `python -m scripts.evaluate_platform_extraction` to replay the versioned,
-labelled extraction fixture and regenerate
-`data/platform_extraction_evaluation.json`. Its measurements are regression
-evidence on recorded synthetic responses, not learned or real-world accuracy.
-The graph harness's local timings are not production service-level objectives.
-For the local PostgreSQL/API/worker scaffold and production operations gates, see
-[Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
-Backup primitives encrypt custom PostgreSQL archives and their manifests with
-AES-256-GCM and authenticate the complete artifact before exposing restore input.
-Plaintext dumps are streamed; only ciphertext is staged temporarily for recovery.
-
-Run `python scripts/verify_recovery.py` with Docker running to verify encrypted
-backup/restore using two disposable PostgreSQL/pgvector databases and clearly
-synthetic automotive/food fixtures. The drill checks a consistent snapshot during
-concurrent writes, graph history, audit heads, forced tenant isolation, vector
-retrieval and durable job resumption. It writes a safe local JSON report under
-ignored `data/recovery-drills/` and removes its own containers. Operational commands
-are available through `python scripts/platform_backup.py --help`; see the
-[backup/recovery runbook](docs/OPERATIONS.md#database-backup-and-restore).
-HTTP observability includes route-template latency/status metrics and W3C trace
-context correlation. Optional OTLP/HTTP export uses a bounded queue and local
-sampling; credentials, query strings, path parameters and business inputs are
-excluded from span attributes and request logs.
-Durable jobs store their producer traceparent and worker attempts resume the same
-trace. Provider/connector HTTP calls create child spans and propagate traceparent
-without vendor state or baggage. Worker logs contain execution summaries rather
-than graph or mitigation payloads; queued assessment dates are restored to aware
-datetimes before deterministic calculation.
-PostgreSQL integration checks exercise forced tenant policies on every business
-table, pgvector retrieval/model versions, import history and rollback, concurrent
-graph/audit writes, and resumed risk-review jobs followed by named approval.
-With Docker running, `python scripts/verify_postgres.py --full-suite` runs all
-Python tests against synthetic fixtures with PostgreSQL integration enabled in
-an isolated database container that is removed afterward.
-
 > **See what your suppliers secretly share.** <sup>[Design]</sup>
 
 ![Stage](https://img.shields.io/badge/stage-working%20prototype-6f42c1)
@@ -131,13 +7,13 @@ an isolated database container that is removed afterward.
 ![Data](https://img.shields.io/badge/demo%20data-synthetic-f59e0b)
 ![Event](https://img.shields.io/badge/SAP%20Hackfest-Bengaluru%202026-0a6ed1)
 
-**Project:** Substrata <sup>[Design]</sup> · **Team:** `{{TEAM}}` <sup>[TBD]</sup>
+**Project:** Substrata <sup>[Design]</sup> · **Team:** V-Max
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Retained prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Pretrained-model access remains behind a provider-neutral `LLMClient`; Gemini is primary, Groq is the fallback and mock mode works offline. The separate platform includes a small classical link-scorer training/registry pipeline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
+> **Current prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. Pretrained-model access remains behind a provider-neutral `LLMClient`; Gemini is primary, Groq is the fallback and mock mode works offline. LangGraph orchestration, the grounded domain assistant and the Google Gen AI SDK adapter remain selected next steps. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
 
-See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md). The latest working agreement is to complete the pass and push every five meaningful commits.
+See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
 
 ## Getting started
 
@@ -334,7 +210,7 @@ establishes pipeline behavior, not customer accuracy.
 | Event classification | Inventory, cover and exposure arithmetic |
 | Rationale and message drafting | Policy, approval and audit rules |
 
-LLM outputs must be structured JSON, validated against a schema and include evidence references for proposed links. <sup>[Design]</sup> An optional GNN is a stretch baseline trained only on synthetic data and reported separately. <sup>[Design]</sup> No accuracy figure will be claimed until it is measured; synthetic results will not be presented as real-world accuracy. <sup>[Design]</sup>
+LLM outputs must be structured JSON, validated against a schema and include evidence references for proposed links. <sup>[Design]</sup> A custom GNN is deliberately excluded from the finale scope. No accuracy figure will be claimed until it is measured; synthetic results will not be presented as real-world accuracy. <sup>[Design]</sup>
 
 ## Demo plan
 
@@ -359,7 +235,7 @@ The [evaluation report](docs/EVALUATION.md#measured-synthetic-fixture-results) c
 |---|---:|
 | Entity retrieval | Recall@5 ≥ 0.90 <sup>[Design]</sup> |
 | Hidden-link inference | Precision ≥ 0.80 and recall ≥ 0.70 on held-out synthetic edges <sup>[Design]</sup> |
-| Cascade mathematics | 100% on hand-calculated unit tests <sup>[Design]</sup> |
+| Deterministic impact calculations | 100% exact on hand-calculated fixtures <sup>[Design]</sup> |
 | Policy safety | 100% of prohibited test actions blocked <sup>[Design]</sup> |
 | Offline replay | 10/10 identical seeded runs <sup>[Design]</sup> |
 
@@ -367,17 +243,16 @@ These are targets, not results. Synthetic evaluation would show only that the me
 
 Full protocol: [Evaluation plan](docs/EVALUATION.md).
 
-## Round 1 and 30-day preparation plan
+## Finale preparation gates
 
 The regional round evaluates structured ideas, and a working prototype is not mandatory. <sup>[[Sourced]](https://events.sap.com/in-hackfest-bangalore-2026/en_us/home.html)</sup>
 
-| Period | Priority | Intended output |
+| Gate | Priority | Intended output |
 |---|---|---|
-| **Days 1–7** | Validate the problem and user | Two or three stakeholder conversations; corrected empathy map and Business Model Canvas <sup>[Design]</sup> |
-| **Days 8–14** | Learn the SAP process context | Relevant SAP Learning Hub study notes and a verified SAP service-access checklist <sup>[Design]</sup> |
-| **Days 15–21** | Strengthen the proposal | Final architecture, agent-human boundaries, Nexperia story and evaluation plan <sup>[Design]</sup> |
-| **Days 22–27** | Optional lightweight proof | Clickable mock-up or small deterministic cascade notebook, only if the presentation is already strong <sup>[Design]</sup> |
-| **Days 28–30** | Presentation readiness | Slides, six-minute narrative, judge Q&A and repeated team rehearsal <sup>[Design]</sup> |
+| **Plan** | Validate the decision and user | Two or three practitioner conversations; corrected empathy map, scenario and Business Model Canvas <sup>[Design]</sup> |
+| **Design** | Freeze boundaries and contracts | Cited inference, confirmation, deterministic impact, policy, approval, audit and failure behavior <sup>[Design]</sup> |
+| **Build** | Harden the smallest proof | Reproducible synthetic workflow, grounded assistant, optional read-only SAP adapter and offline fallback <sup>[Design]</sup> |
+| **Test** | Validate quality and safety | Hidden-link evaluation, cited answers, exact calculations, policy controls, failure cases and rehearsals <sup>[Design]</sup> |
 
 ### How to use SAP Learning Hub
 
@@ -418,6 +293,7 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | [LLM setup](docs/LLM_SETUP.md) | Gemini/Groq credentials, failover and offline mode |
 | [Decisions](docs/DECISIONS.md) | Implementation choices, assumptions and deferred work |
 | [Judge Q&A](docs/JUDGE_QA.md) | Twelve candid answers for expected judge questions |
+| [A-Z revision guide](output/pdf/substrata-a-to-z-revision-guide.pdf) | Fifteen-page project study guide, case study and judge question bank |
 | [Diagram manifest](docs/diagrams/README.md) | Questions answered, editable sources and export notes |
 
 ## What is real versus planned?
@@ -449,10 +325,15 @@ Key unresolved items include stakeholder validation, real data availability, sou
 - [SAP Supply Chain Orchestration announcement](https://news.sap.com/2025/10/sap-connect-innovative-updates-supply-chain-management/)
 - [SAP guidance for building AI agents](https://architecture.learning.sap.com/docs/golden-path/ai-golden-path/build-and-deliver/build-ai-agents)
 - [Cambridge Supply Chain AI Lab: link prediction](https://www.ifm.eng.cam.ac.uk/research/supply-chain-ai-lab/current-themes/supply-chain-link-prediction/)
-- [Nexperia disruption timeline](https://blog.findchips.com/nexperia-supply-disruption/)
+- [ACEA: critical Nexperia chip supply shortage](https://www.acea.auto/press-release/acea-calls-for-quick-resolution-to-critical-chip-supply-shortage/)
+- [UNCTAD Review of Maritime Transport 2022](https://unctad.org/system/files/official-document/rmt2022_en.pdf)
+- [SAP Business Network: Multitier Order Collaboration](https://help.sap.com/docs/business-network-for-supply-chain/business-network-for-supply-chain-integration-and-configuration/multitier-order-collaboration-0d01b6d20b9042f4ac46c2ad2839d0ad)
+- [SAP HANA Cloud Property Graph Engine](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-property-graph-engine-reference/sap-hana-graph-data-model-030-000-000-sap_hana_graph_data_model)
+- [SAP Clean Core Extensibility](https://help.sap.com/docs/erp-transformation-with-itc/buildable-map/clean-core-extensibility-for-sap-cloud-erp)
+- [NIST Generative AI Risk Management Profile](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf)
 
 See the [research register](docs/RESEARCH.md) for the complete approved source list and limitations.
 
 ---
 
-**Name:** Substrata <sup>[Design]</sup> · **Tagline:** See what your suppliers secretly share. <sup>[Design]</sup> · **Team:** `{{TEAM}}` <sup>[TBD]</sup>
+**Name:** Substrata <sup>[Design]</sup> · **Tagline:** See what your suppliers secretly share. <sup>[Design]</sup> · **Team:** V-Max

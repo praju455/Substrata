@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Current implementation:** Implemented locally: Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, Gemini primary/Groq backup extraction plus an explicit offline mock, Next.js/TypeScript/Tailwind/Cytoscape and direct SSE. Exact pins are in project manifests and lockfiles. SAP, live retrieval, authentication and cloud deployment remain unimplemented design targets.
+> **Current implementation:** Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, a provider-neutral `LLMClient` with Gemini/Groq transports and an explicit offline mock, Next.js/TypeScript/Tailwind/Cytoscape, and direct SSE. **Selected next steps:** LangGraph orchestration, a LangChain-grounded domain assistant, and a Google Gen AI SDK Gemini adapter. SAP services and cloud deployment remain access- and entitlement-dependent targets.
 
 ## Decision principles
 
@@ -22,14 +22,15 @@
 | Web | Next.js App Router | Static export option and familiar React ecosystem **[Design]** | Vite + React if team experience favors it |
 | Graph UI | Cytoscape.js | Interactive path and evidence views **[Design]** | Performance tested against planned graph size **[TBD]** |
 | Map UI | MapLibre | Region/facility view without coupling to a proprietary map API **[Design]** | Map can be omitted from minimum demo |
-| Orchestration | LangGraph | Explicit state and pause/resume points **[Design]** | Plain state machine if simpler |
+| Orchestration | Typed Python workflows now; LangGraph selected next | Explicit state, pause/resume, tool calls and human gates **[Design]** | Existing typed workflow remains the offline fallback |
+| Grounded assistant | LangChain retrieval layer **[Planned]** | Path-specific questions, exact citations and known/inferred/unknown labels **[Design]** | Direct evidence search remains available without the assistant |
 | Tool protocol | MCP | Narrow, typed agent capabilities **[Design]** | In-process adapters retain same contracts in tests |
 | Agent interoperability | A2A wrapper | SAP-aligned stretch integration **[Design]** | Excluded from core scope |
 | Graph engine | NetworkX through `GraphStore` | Transparent deterministic prototype algorithms **[Design]** | HANA Cloud adapter only if entitled **[TBD]** |
 | ORM and migrations | SQLAlchemy + Alembic | SQLite/PostgreSQL portability **[Design]** | Schema migration discipline begins in Phase 1 |
 | Local database | SQLite WAL | Resettable, offline and zero-service demo **[Design]** | PostgreSQL in Compose for concurrency/shared preview |
 | Vector retrieval | Stored embeddings + NumPy | Sufficient first baseline **[Design]** | pgvector/HANA vector only if measured need exists |
-| AI access | `LLMClient`: Gemini primary, Groq backup; explicit offline mock | Keeps provider/model details out of domain logic **[Design]** | SAP generative AI hub adapter preferred if supplied; permitted fallback otherwise **[TBD]** |
+| AI access | Provider-neutral `LLMClient`; Google Gen AI SDK planned for Gemini, Groq fallback, explicit offline mock | Keeps provider/model details out of domain logic; no custom LLM training **[Design]** | SAP generative AI hub adapter only if supplied and entitled **[TBD]** |
 | Tests | pytest + schema/contract fixtures | Exact graph math and policy behavior **[Design]** | Browser tests selected with UI scaffold **[TBD]** |
 | Observability | Structured JSON logs + correlation IDs | Inspectable agent/tool trail **[Design]** | OpenTelemetry optional after core flow works |
 
