@@ -6,6 +6,8 @@ export type PolicyDraft = {
   automatic: string;
   sla: string;
   dailyBudget: string;
+  jobHourlyLimit: string;
+  jobTimeoutSeconds: string;
 };
 
 export function policyDraft(policy: Record<string, unknown>): PolicyDraft {
@@ -17,6 +19,8 @@ export function policyDraft(policy: Record<string, unknown>): PolicyDraft {
     automatic: value("auto_approve_limit", 0),
     sla: value("approval_sla", 24),
     dailyBudget: policy.llm_daily_budget ? value("llm_daily_budget", 0) : "",
+    jobHourlyLimit: String(policy.job_hourly_limit ?? 100),
+    jobTimeoutSeconds: String(policy.job_timeout_seconds ?? 120),
   };
 }
 
@@ -34,6 +38,8 @@ export function editedPolicy(
   const spend = numeric(draft.spend);
   const automatic = numeric(draft.automatic);
   const sla = numeric(draft.sla);
+  const jobHourlyLimit = numeric(draft.jobHourlyLimit);
+  const jobTimeoutSeconds = numeric(draft.jobTimeoutSeconds);
   if (!/^[A-Z]{3}$/.test(draft.currency))
     throw new Error("Policy currency must contain three uppercase letters.");
   if (automatic > spend)
@@ -42,6 +48,10 @@ export function editedPolicy(
     );
   if (sla <= 0 || sla > 168)
     throw new Error("Approval SLA must be between zero and 168 hours.");
+  if (!Number.isInteger(jobHourlyLimit) || jobHourlyLimit < 1 || jobHourlyLimit > 10000)
+    throw new Error("Hourly job limit must be a whole number from 1 to 10000.");
+  if (!Number.isInteger(jobTimeoutSeconds) || jobTimeoutSeconds < 5 || jobTimeoutSeconds > 3600)
+    throw new Error("Job deadline must be a whole number from 5 to 3600 seconds.");
   if (!provenance.note.trim())
     throw new Error("A policy change reason is required.");
   const measure = (field: string, value: number, unit: string): Measure => {
@@ -64,5 +74,7 @@ export function editedPolicy(
     llm_daily_budget: draft.dailyBudget.trim()
       ? measure("llm_daily_budget", numeric(draft.dailyBudget), "USD")
       : null,
+    job_hourly_limit: jobHourlyLimit,
+    job_timeout_seconds: jobTimeoutSeconds,
   };
 }

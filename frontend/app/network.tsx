@@ -9,16 +9,30 @@ export default function Network({
   graph,
   sharedIds,
   onSelect,
+  labels,
 }: {
   graph: GraphData;
   sharedIds: string[];
   onSelect: (kind: "node" | "edge", id: string) => void;
+  labels?: {
+    scope: string;
+    allEntities: string;
+    fitGraph: string;
+    ariaLabel: string;
+  };
 }) {
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<Core | null>(null);
   const [all, setAll] = useState(false);
   const signature = JSON.stringify(graph);
   const shared = JSON.stringify(sharedIds);
+  const copy = labels || {
+    scope: "Supplier sites → materials → products and plants",
+    allEntities: "All entities",
+    fitGraph: "Fit graph",
+    ariaLabel:
+      "Interactive supplier network. Use the relationship list below for keyboard access.",
+  };
 
   useEffect(() => {
     if (!container.current) return;
@@ -176,7 +190,7 @@ export default function Network({
   return (
     <>
       <div className="graph-toolbar">
-        <span>Supplier sites → materials → products and plants</span>
+        <span>{copy.scope}</span>
         <div>
           <label>
             <input
@@ -184,13 +198,14 @@ export default function Network({
               checked={all}
               onChange={(e) => setAll(e.target.checked)}
             />{" "}
-            All entities
+            {copy.allEntities}
           </label>
           <button
             className="quiet"
+            type="button"
             onClick={() => instance.current?.fit(undefined, 35)}
           >
-            Fit graph
+            {copy.fitGraph}
           </button>
         </div>
       </div>
@@ -198,7 +213,7 @@ export default function Network({
         ref={container}
         className="graph-canvas network-grid"
         role="img"
-        aria-label="Interactive supplier network. Use the relationship list below for keyboard access."
+        aria-label={copy.ariaLabel}
       />
     </>
   );

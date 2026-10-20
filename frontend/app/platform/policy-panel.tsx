@@ -111,6 +111,30 @@ export default function PolicyPanel({
                 onChange={(event) => update("dailyBudget", event.target.value)}
               />
             </label>
+            <label>
+              {t("Background jobs per hour")}
+              <input
+                required
+                type="number"
+                min="1"
+                max="10000"
+                step="1"
+                value={draft.jobHourlyLimit}
+                onChange={(event) => update("jobHourlyLimit", event.target.value)}
+              />
+            </label>
+            <label>
+              {t("Whole-job deadline in seconds")}
+              <input
+                required
+                type="number"
+                min="5"
+                max="3600"
+                step="1"
+                value={draft.jobTimeoutSeconds}
+                onChange={(event) => update("jobTimeoutSeconds", event.target.value)}
+              />
+            </label>
           </div>
           <p className="muted" id="policy-budget-help">
             {t(

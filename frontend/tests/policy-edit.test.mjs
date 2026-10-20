@@ -24,6 +24,8 @@ const policy = {
   approver_roles: ["approver"],
   require_separate_approver: true,
   allowed_kinds: ["buffer_buy"],
+  job_hourly_limit: 75,
+  job_timeout_seconds: 240,
 };
 
 test("spending edits retain custom policy controls and unchanged provenance", () => {
@@ -42,6 +44,8 @@ test("spending edits retain custom policy controls and unchanged provenance", ()
     "approver_roles",
     "require_separate_approver",
     "allowed_kinds",
+    "job_hourly_limit",
+    "job_timeout_seconds",
   ])
     assert.deepEqual(updated[key], policy[key]);
   assert.deepEqual(policy, original);
@@ -81,6 +85,10 @@ test("incomplete or invalid policy values cannot be submitted as zero", () => {
     { sla: "169" },
     { dailyBudget: "NaN" },
     { currency: "US" },
+    { jobHourlyLimit: "0" },
+    { jobHourlyLimit: "1.5" },
+    { jobTimeoutSeconds: "4" },
+    { jobTimeoutSeconds: "3601" },
   ])
     assert.throws(() =>
       editedPolicy(policy, { ...policyDraft(policy), ...patch }, changed),

@@ -5,6 +5,23 @@ export const locales = ["en", "hi"] as const;
 export type Locale = (typeof locales)[number];
 
 const hindi = {
+  "Missing inventory rows": "गुम इन्वेंटरी पंक्तियाँ",
+  "rows have missing values": "पंक्तियों में मान गुम हैं",
+  "Complete inventory rows": "पूर्ण इन्वेंटरी पंक्तियाँ",
+  Unit: "इकाई",
+  "Supplier sites → materials → products and plants": "आपूर्तिकर्ता स्थान → सामग्री → उत्पाद और संयंत्र",
+  "All entities": "सभी इकाइयाँ",
+  "Fit graph": "ग्राफ़ को दृश्य में समायोजित करें",
+  "Interactive supplier network. Use the relationship list below for keyboard access.": "इंटरैक्टिव आपूर्तिकर्ता नेटवर्क। कीबोर्ड से उपयोग के लिए नीचे संबंध सूची का उपयोग करें।",
+  "calibrated scorer": "कैलिब्रेटेड स्कोरर",
+  "rule-supported, uncalibrated": "नियम-समर्थित, कैलिब्रेट नहीं",
+  "Scorer version": "स्कोरर संस्करण",
+  "Synthetic evaluation; not a real-world accuracy claim.": "काल्पनिक मूल्यांकन; यह वास्तविक दुनिया की सटीकता का दावा नहीं है।",
+  "Background jobs per hour": "प्रति घंटे पृष्ठभूमि कार्य",
+  "Whole-job deadline in seconds": "पूरे कार्य की समय-सीमा (सेकंड)",
+  "Workflow history": "कार्यप्रवाह इतिहास",
+  "Record type": "रिकॉर्ड प्रकार",
+  "Load older records": "पुराने रिकॉर्ड लोड करें",
   "Link scorer models": "संबंध स्कोरिंग मॉडल",
   "Train only from supplier confirm/reject labels. At least 50 labels across 10 independent supplier groups are required, with both classes in each split. This does not train an LLM.": "केवल आपूर्तिकर्ता के पुष्टि/अस्वीकृति लेबल से प्रशिक्षण दें। कम से कम 10 स्वतंत्र आपूर्तिकर्ता समूहों के 50 लेबल और प्रत्येक विभाजन में दोनों वर्ग आवश्यक हैं। इससे LLM का प्रशिक्षण नहीं होता।",
   "Train scorer candidate": "स्कोरिंग मॉडल प्रत्याशी प्रशिक्षित करें",

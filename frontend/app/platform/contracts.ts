@@ -9,6 +9,7 @@ export type Entity = {
   id: string;
   kind: string;
   name: string;
+  identifiers: Record<string, string>;
   attributes: Record<string, string>;
   measures: Record<string, Measure>;
   provenance: Provenance;
@@ -24,6 +25,16 @@ export type Link = {
   valid_from: string;
   valid_to: string | null;
   provenance: Provenance;
+  confidence_provenance: {
+    method: "rule" | "calibrated_scorer";
+    scorer_version: string;
+    calibrated: boolean;
+    feature_version: string;
+    prompt_version: string | null;
+    evaluation_scope: string | null;
+    evaluation_metrics: Record<string, number>;
+    synthetic_evaluation: boolean | null;
+  } | null;
 };
 export type Graph = {
   entities: Entity[];
@@ -63,7 +74,18 @@ export type Workspace = {
   models?: RecordItem[];
   documents: { id: string; provenance: Provenance }[];
   audit: { valid: boolean; count: number; head: string } | null;
+  quality: {
+    inventory: {
+      expected_rows: number;
+      present_rows: number;
+      complete_rows: number;
+      missing_row_count: number;
+      missing_value_row_count: number;
+      truncated_details: boolean;
+    } | null;
+  };
 };
+export type RecordPage = { items: RecordItem[]; next_cursor: string | null };
 export type Impact = {
   material_name: string;
   plant_name: string;

@@ -132,6 +132,19 @@
   min-width: 180px;
 }
 
+.mapping-field {
+  flex: 1 1 280px;
+  min-width: 240px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: #15191e;
+}
+
+.mapping-field label {
+  min-width: 0;
+  margin: 0 0 12px;
+}
+
 .platform-workspace details {
   margin: 18px 0;
   border-left: 4px solid var(--platform-yellow);
@@ -148,10 +161,30 @@
 
 .quality-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   border: 0 !important;
   background: transparent !important;
+}
+
+.history-browser {
+  margin: 24px 0;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: #15191e;
+}
+
+.history-browser > label {
+  max-width: 360px;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
 }
 
 .quality-grid > div {
@@ -409,6 +442,16 @@
   .mapping-grid label {
     width: 100%;
     min-width: 0;
+  }
+
+  .mapping-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .history-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .supplier-portal-panel {

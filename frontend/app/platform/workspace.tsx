@@ -10,6 +10,7 @@ import type {
   Impact,
   Measure,
   Provenance,
+  RecordPage,
   RecordItem,
   Report,
   Workspace,
@@ -39,8 +40,21 @@ import ConnectorPanel from "./connector-panel";
 import ScorerPanel from "./scorer-panel";
 import IdentityReview from "./identity-review";
 import PolicyPanel from "./policy-panel";
+import { defaultUnits, importFields } from "./import-fields";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
+
+const recordKinds = [
+  "assessment",
+  "import",
+  "mitigation",
+  "event_subscription",
+  "event",
+  "alert",
+  "notification",
+  "confirmation",
+  "agent_run",
+] as const;
 
 const format = (value: number | null | undefined, locale: Locale) =>
   value == null
@@ -157,11 +171,15 @@ export default function PlatformWorkspace() {
 
   const [target, setTarget] = useState("entities");
 
-  const [importUnit, setImportUnit] = useState("piece");
-
   const [columns, setColumns] = useState<string[]>([]);
 
   const [mapping, setMapping] = useState<Record<string, string>>({});
+
+  const [units, setUnits] = useState<Record<string, string>>(() => defaultUnits("entities"));
+
+  const [recordCursors, setRecordCursors] = useState<Record<string, string | null>>({});
+
+  const [historyKind, setHistoryKind] = useState<string>("import");
 
   const [uploadBody, setUploadBody] = useState<Record<string, unknown> | null>(
     null,
@@ -181,12 +199,31 @@ export default function PlatformWorkspace() {
 
   const refresh = useCallback(
     async (accessToken = token) => {
-      const [workspace, jobRecords, models]: [Workspace, RecordItem[], RecordItem[]] = await Promise.all([
-        call("/state", accessToken), call("/jobs", accessToken),
-        call("/records?kind=model_registry", accessToken),
+      const [workspace, jobPage, modelPage, ...pages]: [
+        Workspace,
+        RecordPage,
+        RecordPage,
+        ...RecordPage[],
+      ] = await Promise.all([
+        call("/state", accessToken),
+        call("/records/page?kind=job&limit=50", accessToken),
+        call("/records/page?kind=model_registry&limit=50", accessToken),
+        ...recordKinds.map((kind) =>
+          call(`/records/page?kind=${encodeURIComponent(kind)}&limit=50`, accessToken),
+        ),
       ]);
-      workspace.jobs = jobRecords;
-      workspace.models = models;
+      workspace.records = pages.flatMap((page) => page.items).sort((left, right) =>
+        right.created_at.localeCompare(left.created_at) || right.id.localeCompare(left.id),
+      );
+      workspace.jobs = jobPage.items;
+      workspace.models = modelPage.items;
+      setRecordCursors({
+        ...Object.fromEntries(
+          recordKinds.map((kind, index) => [kind, pages[index].next_cursor]),
+        ),
+        job: jobPage.next_cursor,
+        model_registry: modelPage.next_cursor,
+      });
 
       setState(workspace);
       const latest = workspace.records.find((r) => r.kind === "assessment");
@@ -199,6 +236,35 @@ export default function PlatformWorkspace() {
     },
     [token],
   );
+
+  const loadOlderRecords = async (kind: string) => {
+    const cursor = recordCursors[kind];
+    if (!cursor) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const page: RecordPage = await call(
+        `/records/page?kind=${encodeURIComponent(kind)}&limit=50&cursor=${encodeURIComponent(cursor)}`,
+        token,
+      );
+      setState((current) => {
+        if (!current) return current;
+        const known = new Set(current.records.map((record) => record.id));
+        return {
+          ...current,
+          records: [...current.records, ...page.items.filter((record) => !known.has(record.id))].sort(
+            (left, right) =>
+              right.created_at.localeCompare(left.created_at) || right.id.localeCompare(left.id),
+          ),
+        };
+      });
+      setRecordCursors((current) => ({ ...current, [kind]: page.next_cursor }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t("The operation failed."));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const run = async (operation: () => Promise<unknown>) => {
     setBusy(true);
@@ -332,38 +398,7 @@ export default function PlatformWorkspace() {
 
   const link = snapshot?.data.links.find((e) => e.id === selectedLink);
 
-  const fields =
-    target === "entities"
-      ? [
-          "id",
-          "kind",
-          "name",
-          "attributes.unit",
-          "measures.requalification_days",
-        ]
-      : target === "inventory"
-        ? ["material_id", "plant_id", "as_of", "on_hand", "daily_consumption"]
-        : target === "links"
-          ? [
-              "id",
-              "source",
-              "target",
-              "type",
-              "status",
-              "confidence",
-              "valid_from",
-            ]
-          : target === "purchase_orders"
-            ? [
-                "id",
-                "supplier_id",
-                "material_id",
-                "plant_id",
-                "quantity",
-                "expected_at",
-                "status",
-              ]
-            : ["material_id", "product_id", "quantity"];
+  const fields = importFields[target] || [];
 
   const records = state?.records || [];
 
@@ -650,11 +685,18 @@ export default function PlatformWorkspace() {
                     <strong>{snapshot?.version || 0}</strong>
                   </div>
                   <div>
-                    <span>{t("Missing inventory inputs")}</span>
+                    <span>{t("Missing inventory rows")}</span>
                     <strong>
-                      {snapshot?.data.inventory.filter(
-                        (i) => !i.on_hand || !i.daily_consumption,
-                      ).length || 0}
+                      {state.quality.inventory?.missing_row_count || 0}
+                    </strong>
+                    <small className="muted">
+                      {state.quality.inventory?.missing_value_row_count || 0} {t("rows have missing values")}
+                    </small>
+                  </div>
+                  <div>
+                    <span>{t("Complete inventory rows")}</span>
+                    <strong>
+                      {state.quality.inventory?.complete_rows || 0}
                     </strong>
                   </div>
                   <div>
@@ -685,7 +727,7 @@ export default function PlatformWorkspace() {
                       const body = { filename: preview.filename, content_base64: preview.content_base64,
                         provenance: preview.provenance, target, mapping: {}, expected_version: state.organisation!.version };
                       const staged = await call("/imports/stage", token, body);
-                      setFile(null); setMapping({}); setColumns(staged.columns);
+                      setFile(null); setMapping({}); setUnits(defaultUnits(target)); setColumns(staged.columns);
                       setUploadBody({ ...body, schema_sha256: staged.schema_sha256 });
                     }} />
                   <p className="muted">
@@ -699,6 +741,7 @@ export default function PlatformWorkspace() {
                         onChange={(e) => {
                           setTarget(e.target.value);
                           setMapping({});
+                          setUnits(defaultUnits(e.target.value));
                         }}
                       >
                         <option value="entities">{t("Entities")}</option>
@@ -707,13 +750,6 @@ export default function PlatformWorkspace() {
                         <option value="purchase_orders">{t("Purchase orders")}</option>
                         <option value="boms">{t("BOM items")}</option>
                       </select>
-                    </label>
-                    <label>
-                      {t("Quantity unit")}
-                      <input
-                        value={importUnit}
-                        onChange={(e) => setImportUnit(e.target.value)}
-                      />
                     </label>
                     <label>
                       {t("File")}
@@ -774,14 +810,16 @@ export default function PlatformWorkspace() {
                     <>
                       <div className="mapping-grid">
                         {fields.map((field) => (
-                          <label key={field}>
-                            {field}
+                          <div className="mapping-field" key={field.path}>
+                          <label>
+                            {field.label}
+                            <span className="muted small">{field.path}</span>
                             <select
-                              value={mapping[field] || ""}
+                              value={mapping[field.path] || ""}
                               onChange={(e) =>
                                 setMapping({
                                   ...mapping,
-                                  [field]: e.target.value,
+                                  [field.path]: e.target.value,
                                 })
                               }
                             >
@@ -791,6 +829,19 @@ export default function PlatformWorkspace() {
                               ))}
                             </select>
                           </label>
+                          {field.defaultUnit && (
+                            <label>
+                              {t("Unit")}
+                              <input
+                                required={Boolean(mapping[field.path])}
+                                value={units[field.path] || ""}
+                                onChange={(event) =>
+                                  setUnits({ ...units, [field.path]: event.target.value })
+                                }
+                              />
+                            </label>
+                          )}
+                          </div>
                         ))}
                       </div>
                       <button
@@ -805,15 +856,11 @@ export default function PlatformWorkspace() {
                               mapping: Object.fromEntries(
                                 Object.entries(mapping).filter(([, v]) => v),
                               ),
-                              units:
-                                target === "entities"
-                                  ? { "measures.requalification_days": "day" }
-                                  : target === "inventory"
-                                    ? {
-                                        on_hand: importUnit,
-                                        daily_consumption: `${importUnit}/day`,
-                                      }
-                                    : { quantity: importUnit },
+                              units: Object.fromEntries(
+                                Object.entries(units).filter(
+                                  ([field, unit]) => mapping[field] && unit.trim(),
+                                ),
+                              ),
                             }),
                           )
                         }
@@ -972,6 +1019,14 @@ export default function PlatformWorkspace() {
                         onSelect={(kind, id) => {
                           if (kind === "edge") setSelectedLink(id);
                         }}
+                        labels={{
+                          scope: t("Supplier sites → materials → products and plants"),
+                          allEntities: t("All entities"),
+                          fitGraph: t("Fit graph"),
+                          ariaLabel: t(
+                            "Interactive supplier network. Use the relationship list below for keyboard access.",
+                          ),
+                        }}
                       />
                     )}
                     <div className="entity-list">
@@ -1002,8 +1057,23 @@ export default function PlatformWorkspace() {
                         </strong>
                         <p>
                           {t("Evidence support")} {format(link.confidence * 100, locale)}% ·
-                          {t("uncalibrated")}
+                          {link.confidence_provenance?.calibrated
+                            ? t("calibrated scorer")
+                            : t("rule-supported, uncalibrated")}
                         </p>
+                        {link.confidence_provenance && (
+                          <div className="muted small">
+                            <p>
+                              {t("Scorer version")}: {link.confidence_provenance.scorer_version} · {t("Feature version")}: {link.confidence_provenance.feature_version}
+                            </p>
+                            {link.confidence_provenance.evaluation_scope && (
+                              <p>{link.confidence_provenance.evaluation_scope}</p>
+                            )}
+                            {link.confidence_provenance.synthetic_evaluation && (
+                              <p>{t("Synthetic evaluation; not a real-world accuracy claim.")}</p>
+                            )}
+                          </div>
+                        )}
                         <p className="muted">
                           {link.provenance.kind} · {link.provenance.uri}
                         </p>
@@ -1466,6 +1536,40 @@ export default function PlatformWorkspace() {
                       : t("Audit verification requires attention")}{" "}
                     · {state.audit?.count || 0} {t("records")}
                   </p>
+                  <div className="history-browser">
+                    <h3>{t("Workflow history")}</h3>
+                    <label>
+                      {t("Record type")}
+                      <select
+                        value={historyKind}
+                        onChange={(event) => setHistoryKind(event.target.value)}
+                      >
+                        {recordKinds.map((kind) => (
+                          <option key={kind} value={kind}>{tStatus(kind)}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div aria-live="polite">
+                      {records.filter((record) => record.kind === historyKind).map((record) => (
+                        <p className="history-row" key={record.id}>
+                          <span className="mono">{record.id}</span>
+                          <span>{tStatus(record.status)}</span>
+                          <time dateTime={record.created_at}>
+                            {new Date(record.created_at).toLocaleString(localeTag(locale))}
+                          </time>
+                        </p>
+                      ))}
+                    </div>
+                    {recordCursors[historyKind] && (
+                      <button
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() => void loadOlderRecords(historyKind)}
+                      >
+                        {t("Load older records")}
+                      </button>
+                    )}
+                  </div>
                   <div className="button-row">
                     <button
                       className="secondary"
