@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from substrata.platform import agent_protocols
 from substrata.platform.auth import Principal
 from substrata.platform.database import tenant_transaction
-from substrata.platform.domain import Entity, Provenance
+from substrata.platform.domain import Entity, Measure, Provenance
 from substrata.platform.events import (
     EventRule,
     EventSubmission,
@@ -27,6 +27,7 @@ from substrata.platform.events import (
     poll,
     subscription,
 )
+from substrata.platform.governance import Policy, configure_policy
 from substrata.platform.jobs import MAX_ACTIVE_JOBS_PER_TENANT, JobInput, enqueue, jobs, run_next
 from substrata.platform.models import WorkRecord
 from substrata.platform.records import list_records
@@ -788,6 +789,54 @@ def test_tenant_job_queue_enforces_active_work_limit(platform):
         MAX_ACTIVE_JOBS_PER_TENANT
     )
     assert jobs(platform, "beta") == []
+
+
+def test_durable_hourly_execution_budget_and_whole_job_deadline(platform, monkeypatch):
+    provenance = source("synthetic://job-policy")
+
+    def measure(value, unit):
+        return Measure(value=value, unit=unit, provenance=provenance)
+
+    configure_policy(
+        platform,
+        actor(),
+        Policy(
+            currency="USD",
+            spend_limit=measure(1000, "USD"),
+            auto_approve_limit=measure(100, "USD"),
+            approval_sla=measure(24, "hour"),
+            job_hourly_limit=1,
+            job_timeout_seconds=30,
+        ),
+    )
+    first = enqueue(platform, actor(), JobInput(kind="event_poll", idempotency_key="budget-1"))
+    second = enqueue(platform, actor(), JobInput(kind="event_poll", idempotency_key="budget-2"))
+    monkeypatch.setattr("substrata.platform.events.poll", lambda store, tenant: [])
+    assert run_next(platform, actor())["id"] == first["id"]
+    assert run_next(platform, actor()) is None
+    assert (
+        next(row for row in jobs(platform, "alpha") if row["id"] == second["id"])["status"]
+        == "pending"
+    )
+    budget = list_records(platform, "alpha", kind="execution_budget")[0]
+    assert budget["payload"]["used"] == 1
+    assert budget["payload"]["limit"] == 1
+
+    expired = enqueue(
+        platform,
+        actor("beta"),
+        JobInput(kind="event_poll", idempotency_key="expired-before-claim"),
+    )
+    with tenant_transaction(platform.engine, "beta") as session:
+        record = session.get(WorkRecord, ("beta", expired["id"]))
+        record.payload = {
+            **record.payload,
+            "deadline_at": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+        }
+    assert run_next(platform, actor("beta")) is None
+    persisted = jobs(platform, "beta")[0]
+    assert persisted["status"] == "failed"
+    assert persisted["payload"]["error"] == "JobDeadlineExceeded"
 
 
 def test_failed_jobs_preserve_retry_state_and_retry_after_lease(monkeypatch, platform):

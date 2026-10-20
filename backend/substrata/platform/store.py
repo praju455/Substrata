@@ -7,6 +7,7 @@ from typing import Protocol
 from sqlalchemy import Engine, select, text, update
 
 from substrata.audit import digest, verify_chain
+from substrata.graph import EvidencePath, PathResult, dependency_paths
 from substrata.platform.database import tenant_transaction
 from substrata.platform.domain import GraphData, Provenance, Snapshot
 from substrata.platform.models import AuditRecord, Document, GraphRevision, Organisation, WorkRecord
@@ -17,6 +18,19 @@ class GraphStore(Protocol):
     def snapshot(
         self, tenant_id: str, *, version: int | None = None, as_of: datetime | None = None
     ) -> Snapshot: ...
+
+    def paths(
+        self,
+        tenant_id: str,
+        source: str,
+        target: str,
+        *,
+        version: int,
+        traversal_as_of: datetime,
+        max_depth: int = 8,
+        max_paths: int = 128,
+        budget: int = 10000,
+    ) -> PathResult: ...
 
 
 class Conflict(ValueError):
@@ -114,6 +128,144 @@ class PlatformStore:
                 sha256=row.sha256,
                 data=GraphData.model_validate(row.payload),
             )
+
+    def paths(
+        self,
+        tenant_id: str,
+        source: str,
+        target: str,
+        *,
+        version: int,
+        traversal_as_of: datetime,
+        max_depth: int = 8,
+        max_paths: int = 128,
+        budget: int = 10000,
+    ) -> PathResult:
+        """Return bounded simple paths from the selected immutable revision.
+
+        PostgreSQL performs the traversal in a tenant-scoped recursive CTE over
+        the stored JSON revision. SQLite retains the deterministic NetworkX
+        implementation used by offline development and parity tests.
+        """
+        if traversal_as_of.tzinfo is None or traversal_as_of.utcoffset() is None:
+            raise ValueError("Traversal time must include a timezone.")
+        if not 1 <= max_depth <= 32 or not 1 <= max_paths <= 512 or not 1 <= budget <= 100000:
+            raise ValueError("Traversal limits exceed the supported bounds.")
+        if self.engine.dialect.name != "postgresql":
+            from substrata.platform.cascade import projection
+
+            snapshot = self.snapshot(tenant_id, version=version)
+            return dependency_paths(
+                projection(snapshot.data, traversal_as_of),
+                source,
+                target,
+                max_depth,
+                max_paths,
+                budget,
+            )
+
+        statement = text(
+            """
+            WITH RECURSIVE selected AS (
+                SELECT payload
+                FROM graph_revisions
+                WHERE tenant_id = :tenant AND version = :version
+            ),
+            nodes AS (
+                SELECT entity->>'id' AS id
+                FROM selected, json_array_elements(payload->'entities') AS entity
+            ),
+            edges AS (
+                SELECT
+                    edge->>'id' AS id,
+                    CASE WHEN edge->>'type' IN ('DEPENDS_ON', 'OWNED_BY', 'LOCATED_IN')
+                         THEN edge->>'target' ELSE edge->>'source' END AS source,
+                    CASE WHEN edge->>'type' IN ('DEPENDS_ON', 'OWNED_BY', 'LOCATED_IN')
+                         THEN edge->>'source' ELSE edge->>'target' END AS target,
+                    (edge->>'confidence')::double precision AS confidence
+                FROM selected, json_array_elements(payload->'links') AS edge
+                WHERE edge->>'status' NOT IN ('rejected', 'expired')
+                  AND (edge->>'valid_from')::timestamptz <= :traversal_as_of
+                  AND (
+                    (edge->>'valid_to') IS NULL
+                    OR (edge->>'valid_to')::timestamptz > :traversal_as_of
+                  )
+            ),
+            walks(current, node_ids, edge_ids, confidence, depth) AS (
+                SELECT CAST(:source AS text), ARRAY[CAST(:source AS text)],
+                       ARRAY[]::text[], 1.0::double precision, 0
+                WHERE EXISTS (SELECT 1 FROM nodes WHERE id = :source)
+                  AND EXISTS (SELECT 1 FROM nodes WHERE id = :target)
+                UNION ALL
+                SELECT e.target,
+                       w.node_ids || e.target,
+                       w.edge_ids || e.id,
+                       w.confidence * e.confidence,
+                       w.depth + 1
+                FROM walks w
+                JOIN edges e ON e.source = w.current
+                WHERE w.current <> :target
+                  AND w.depth < :max_depth
+                  AND NOT e.target = ANY(w.node_ids)
+            ),
+            bounded AS (
+                SELECT current, node_ids, edge_ids, confidence, depth
+                FROM walks
+                LIMIT :row_limit
+            )
+            SELECT current, node_ids, edge_ids, confidence, depth,
+                   EXISTS (
+                       SELECT 1 FROM edges e
+                       WHERE e.source = bounded.current
+                         AND NOT e.target = ANY(bounded.node_ids)
+                   ) AS has_more
+            FROM bounded
+            """
+        )
+        with tenant_transaction(self.engine, tenant_id) as session:
+            rows = list(
+                session.execute(
+                    statement,
+                    {
+                        "tenant": tenant_id,
+                        "version": version,
+                        "traversal_as_of": traversal_as_of,
+                        "source": source,
+                        "target": target,
+                        "max_depth": max_depth,
+                        "row_limit": budget + 1,
+                    },
+                ).mappings()
+            )
+        budget_truncated = len(rows) > budget
+        rows = rows[:budget]
+        matches = sorted(
+            (row for row in rows if row["current"] == target),
+            key=lambda row: (list(row["node_ids"]), list(row["edge_ids"])),
+        )
+        path_truncated = len(matches) > max_paths
+        selected_paths = matches[:max_paths]
+        depth_truncated = any(
+            row["depth"] >= max_depth and row["current"] != target and row["has_more"]
+            for row in rows
+        )
+        paths = [
+            EvidencePath(
+                nodes=list(row["node_ids"]),
+                edge_ids=list(row["edge_ids"]),
+                confidence=row["confidence"],
+            )
+            for row in selected_paths
+        ]
+        result = PathResult(
+            paths=paths,
+            truncated=budget_truncated or path_truncated or depth_truncated,
+        )
+        result.confidence = 1
+        for path in paths:
+            result.confidence *= 1 - path.confidence
+        result.confidence = 1 - result.confidence
+        return result
 
     def save(
         self,

@@ -1,0 +1,53 @@
+{
+  "fixture_version": "platform-extraction-synthetic-v1",
+  "cases": [
+    {
+      "id": "automotive-explicit-dependency",
+      "industry": "automotive",
+      "documents": [{"id": "auto-filing", "text": "Aster Mobility depends on Meridian Semiconductors."}],
+      "entities": [
+        {"id": "aster", "name": "Aster Mobility", "kind": "Supplier"},
+        {"id": "meridian", "name": "Meridian Semiconductors", "kind": "Supplier"}
+      ],
+      "expected_relations": [{"source": "aster", "target": "meridian", "type": "DEPENDS_ON"}],
+      "recording": {"provider": "fixture", "model": "recorded-json", "version": "1"},
+      "recorded_response": {"relations": [{"source": "aster", "target": "meridian", "type": "DEPENDS_ON", "citation": {"document_id": "auto-filing", "passage": "Aster Mobility depends on Meridian Semiconductors.", "start": 0, "end": 50, "stance": "supports"}}]}
+    },
+    {
+      "id": "pharma-explicit-supply",
+      "industry": "pharma",
+      "documents": [{"id": "pharma-filing", "text": "ColdChain Labs supplies Vaccine Resin."}],
+      "entities": [
+        {"id": "coldchain", "name": "ColdChain Labs", "kind": "Supplier"},
+        {"id": "resin", "name": "Vaccine Resin", "kind": "Material"}
+      ],
+      "expected_relations": [{"source": "coldchain", "target": "resin", "type": "SUPPLIES"}],
+      "recording": {"provider": "fixture", "model": "recorded-json", "version": "1"},
+      "recorded_response": {"relations": [{"source": "coldchain", "target": "resin", "type": "SUPPLIES", "citation": {"document_id": "pharma-filing", "passage": "ColdChain Labs supplies Vaccine Resin.", "start": 0, "end": 38, "stance": "supports"}}]}
+    },
+    {
+      "id": "food-missed-ownership",
+      "industry": "food",
+      "documents": [{"id": "food-filing", "text": "Harvest Foods is owned by Regional Cooperative."}],
+      "entities": [
+        {"id": "harvest", "name": "Harvest Foods", "kind": "Supplier"},
+        {"id": "cooperative", "name": "Regional Cooperative", "kind": "Supplier"}
+      ],
+      "expected_relations": [{"source": "harvest", "target": "cooperative", "type": "OWNED_BY"}],
+      "recording": {"provider": "fixture", "model": "recorded-json", "version": "1"},
+      "recorded_response": {"relations": []}
+    },
+    {
+      "id": "electronics-invalid-citation",
+      "industry": "electronics",
+      "documents": [{"id": "electronics-filing", "text": "Port Alpha supplies Sensor Hub."}],
+      "entities": [
+        {"id": "port", "name": "Port Alpha", "kind": "Supplier"},
+        {"id": "sensor", "name": "Sensor Hub", "kind": "Material"}
+      ],
+      "expected_relations": [{"source": "port", "target": "sensor", "type": "SUPPLIES"}],
+      "recording": {"provider": "fixture", "model": "recorded-json", "version": "1"},
+      "recorded_response": {"relations": [{"source": "port", "target": "sensor", "type": "SUPPLIES", "citation": {"document_id": "electronics-filing", "passage": "Port Alpha supplies Sensor Hub.", "start": 1, "end": 32, "stance": "supports"}}]}
+    }
+  ]
+}

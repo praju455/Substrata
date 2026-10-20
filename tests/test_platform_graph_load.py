@@ -24,6 +24,7 @@ def test_platform_graph_load_smoke():
     )
     report = json.loads(result.stdout)
     assert report["data_label"] == "synthetic only"
+    assert report["backend"] == "in-memory-networkx"
     assert report["nodes"] == 63
     assert report["edges"] == 62
     assert report["queries"] == 8

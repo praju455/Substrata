@@ -15,6 +15,7 @@ from sqlalchemy import func, or_, select
 
 from substrata.observability import operation_span, parent_context, trace_headers
 from substrata.platform.database import tenant_transaction
+from substrata.platform.deadlines import JobDeadlineExceeded, job_deadline, require_time
 from substrata.platform.domain import Contract, Identifier
 from substrata.platform.models import WorkRecord
 from substrata.platform.records import add, encode, list_records
@@ -25,13 +26,15 @@ MAX_ACTIVE_JOBS_PER_TENANT = 100
 JOB_TYPES = {"event_poll", "assessment", "agent_task", "agent_plan"}
 LEASE = timedelta(minutes=2)
 RETRY = (5, 30, 120)
+DEFAULT_JOB_HOURLY_LIMIT = 100
+DEFAULT_JOB_TIMEOUT_SECONDS = 120
 
 
 class LeaseLost(RuntimeError):
     """The worker no longer owns this attempt and must not update its job state."""
 
 
-def _require_claim(session, tenant_id, job_id, claim):
+def _require_claim(session, tenant_id, job_id, claim, *, check_deadline=True):
     record = session.scalar(
         select(WorkRecord)
         .where(WorkRecord.tenant_id == tenant_id, WorkRecord.id == job_id)
@@ -48,6 +51,9 @@ def _require_claim(session, tenant_id, job_id, claim):
         or datetime.fromisoformat(record.payload["lease_until"]) <= datetime.now(UTC)
     ):
         raise LeaseLost("Job attempt is no longer owned by this worker.")
+    deadline_expired = datetime.fromisoformat(record.payload["deadline_at"]) <= datetime.now(UTC)
+    if check_deadline and deadline_expired:
+        raise JobDeadlineExceeded("Whole-job deadline exceeded.")
     return record
 
 
@@ -175,6 +181,14 @@ def _enqueue(store, actor, body):
                 "input_sha256": hashlib.sha256(canonical(body.payload).encode()).hexdigest(),
                 "attempts": 0,
                 "retry_at": datetime.now(UTC).isoformat(),
+                "deadline_at": (
+                    datetime.now(UTC)
+                    + timedelta(
+                        seconds=int(
+                            org.policy.get("job_timeout_seconds", DEFAULT_JOB_TIMEOUT_SECONDS)
+                        )
+                    )
+                ).isoformat(),
                 **trace_headers(),
             },
             id,
@@ -187,6 +201,10 @@ def _claim(store, tenant_id: str):
     now = datetime.now(UTC)
     with tenant_transaction(store.engine, tenant_id) as session:
         org = store.organisation(session, tenant_id)
+        hourly_limit = int(org.policy.get("job_hourly_limit", DEFAULT_JOB_HOURLY_LIMIT))
+        window = now.replace(minute=0, second=0, microsecond=0)
+        budget_id = f"execution-budget-{window.strftime('%Y%m%d%H')}"
+        budget_record = session.get(WorkRecord, (tenant_id, budget_id))
         query = (
             select(WorkRecord)
             .where(
@@ -208,6 +226,26 @@ def _claim(store, tenant_id: str):
                 continue
             if record.status == "pending" and retry_at > now:
                 continue
+            if datetime.fromisoformat(record.payload["deadline_at"]) <= now:
+                record.status = "failed"
+                record.payload = {
+                    **record.payload,
+                    "lease_until": None,
+                    "claim_id": None,
+                    "error": "JobDeadlineExceeded",
+                }
+                store.append(
+                    session,
+                    org,
+                    "job.failed",
+                    "worker",
+                    {
+                        "id": record.id,
+                        "attempt": record.payload["attempts"],
+                        "reason": "deadline",
+                    },
+                )
+                continue
             if record.payload["attempts"] >= MAX_ATTEMPTS:
                 record.status = "failed"
                 record.payload = {**record.payload, "lease_until": None, "claim_id": None}
@@ -223,6 +261,23 @@ def _claim(store, tenant_id: str):
                     },
                 )
                 continue
+            used = int(budget_record.payload["used"]) if budget_record else 0
+            if used >= hourly_limit:
+                return None
+            if budget_record is None:
+                budget_record = add(
+                    session,
+                    tenant_id,
+                    "execution_budget",
+                    "open",
+                    {
+                        "window_start": window.isoformat(),
+                        "limit": hourly_limit,
+                        "used": 0,
+                    },
+                    budget_id,
+                )
+            budget_record.payload = {**budget_record.payload, "used": used + 1}
             record.status = "running"
             record.payload = {
                 **record.payload,
@@ -259,7 +314,9 @@ def run_next(store, actor):
     ) as span:
         result = None
         try:
-            result = _run_claimed(store, actor, job_id, payload, span)
+            deadline = datetime.fromisoformat(payload["deadline_at"])
+            with job_deadline(deadline):
+                result = _run_claimed(store, actor, job_id, payload, span)
             return result
         finally:
             ids = span.get_span_context()
@@ -283,6 +340,7 @@ def _run_claimed(store, actor, job_id, payload, span):
     try:
         with tenant_transaction(store.engine, actor.tenant_id) as session:
             _require_claim(session, actor.tenant_id, job_id, payload)
+        require_time()
         if payload["job_type"] == "event_poll":
             from substrata.platform.events import poll
 
@@ -319,9 +377,40 @@ def _run_claimed(store, actor, job_id, payload, span):
             result = _run_agent_plan(store, actor, job_id, payload)
         else:
             raise ValueError("Persisted job type is not registered.")
+        require_time()
     except LeaseLost:
         span.set_attribute("job.lease_lost", True)
         return _lost_claim(job_id, payload)
+    except JobDeadlineExceeded:
+        span.set_status(Status(StatusCode.ERROR))
+        span.set_attribute("error.type", "JobDeadlineExceeded")
+        with tenant_transaction(store.engine, actor.tenant_id) as session:
+            org = store.organisation(session, actor.tenant_id)
+            try:
+                record = _require_claim(
+                    session,
+                    actor.tenant_id,
+                    job_id,
+                    payload,
+                    check_deadline=False,
+                )
+            except LeaseLost:
+                return _lost_claim(job_id, payload)
+            record.status = "failed"
+            record.payload = {
+                **record.payload,
+                "lease_until": None,
+                "claim_id": None,
+                "error": "JobDeadlineExceeded",
+            }
+            store.append(
+                session,
+                org,
+                "job.failed",
+                actor.subject,
+                {"id": job_id, "attempt": payload["attempts"], "reason": "deadline"},
+            )
+        return {"id": job_id, "status": "failed", "attempt": payload["attempts"]}
     except Exception as error:
         span.set_status(Status(StatusCode.ERROR))
         span.set_attribute("error.type", type(error).__name__)
@@ -332,7 +421,9 @@ def _run_claimed(store, actor, job_id, payload, span):
         with tenant_transaction(store.engine, actor.tenant_id) as session:
             org = store.organisation(session, actor.tenant_id)
             try:
-                record = _require_claim(session, actor.tenant_id, job_id, payload)
+                record = _require_claim(
+                    session, actor.tenant_id, job_id, payload, check_deadline=False
+                )
             except LeaseLost:
                 span.set_attribute("job.lease_lost", True)
                 return _lost_claim(job_id, payload)
@@ -365,7 +456,7 @@ def _run_claimed(store, actor, job_id, payload, span):
     with tenant_transaction(store.engine, actor.tenant_id) as session:
         org = store.organisation(session, actor.tenant_id)
         try:
-            record = _require_claim(session, actor.tenant_id, job_id, payload)
+            record = _require_claim(session, actor.tenant_id, job_id, payload, check_deadline=False)
         except LeaseLost:
             span.set_attribute("job.lease_lost", True)
             return _lost_claim(job_id, payload)

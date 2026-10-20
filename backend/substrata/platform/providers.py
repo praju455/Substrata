@@ -17,6 +17,7 @@ from sklearn.feature_extraction.text import HashingVectorizer
 
 from substrata.observability import operation_span, outbound_headers
 from substrata.platform.connectors import NoRedirect
+from substrata.platform.deadlines import bounded_timeout
 from substrata.platform.domain import Citation, Contract, Identifier, Measure
 
 PROMPT_VERSION = "platform-link-extraction-v1"
@@ -209,7 +210,9 @@ def _request_json(url, payload, headers, timeout, span):
         },
     )
     try:
-        with urllib.request.build_opener(NoRedirect()).open(request, timeout=timeout) as response:
+        with urllib.request.build_opener(NoRedirect()).open(
+            request, timeout=bounded_timeout(timeout)
+        ) as response:
             span.set_attribute("http.response.status_code", getattr(response, "status", 200))
             body = response.read(2_000_001)
         if len(body) > 2_000_000:

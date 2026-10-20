@@ -24,6 +24,8 @@ class Policy(Contract):
     auto_approve_limit: Measure
     approval_sla: Measure
     llm_daily_budget: Measure | None = None
+    job_hourly_limit: int = Field(default=100, ge=1, le=10000)
+    job_timeout_seconds: int = Field(default=120, ge=5, le=3600)
     approver_roles: set[Literal["approver", "admin"]] = {"approver", "admin"}
     require_separate_approver: bool = True
     allowed_kinds: set[str] = {
@@ -95,7 +97,27 @@ def save_assessment(
 ):
     actor.require("analyst")
     snapshot = store.snapshot(actor.tenant_id, version=version)
-    report = assess(snapshot, source_id, severity, as_of=as_of, max_depth=max_depth)
+
+    def path_finder(source, target, depth, paths, work):
+        return store.paths(
+            actor.tenant_id,
+            source,
+            target,
+            version=snapshot.version,
+            traversal_as_of=as_of,
+            max_depth=depth,
+            max_paths=paths,
+            budget=work,
+        )
+
+    report = assess(
+        snapshot,
+        source_id,
+        severity,
+        as_of=as_of,
+        max_depth=max_depth,
+        path_finder=path_finder,
+    )
     with tenant_transaction(store.engine, actor.tenant_id) as session:
         org = store.organisation(session, actor.tenant_id)
         status = (

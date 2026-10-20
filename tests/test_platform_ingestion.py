@@ -49,6 +49,38 @@ def test_import_is_idempotent_atomic_and_rollback_retains_history(platform):
     assert platform.audit("alpha")["verification"]["valid"]
 
 
+def test_entity_mapping_carries_identifiers_revenue_and_independent_units(platform):
+    content = (
+        "ID,Name,Type,DUNS,TaxID,Revenue,RequalDays\n"
+        "product,Control Unit,Product,123456789,IN-TAX-7,50000,90\n"
+    )
+    body = upload(content).model_copy(
+        update={
+            "mapping": {
+                "id": "ID",
+                "name": "Name",
+                "kind": "Type",
+                "identifiers.duns": "DUNS",
+                "identifiers.tax_id": "TaxID",
+                "measures.daily_revenue": "Revenue",
+                "measures.requalification_days": "RequalDays",
+            },
+            "units": {
+                "measures.daily_revenue": "USD/day",
+                "measures.requalification_days": "day",
+            },
+        }
+    )
+    staged = stage(platform, "alpha", body, "analyst")
+    assert staged["status"] == "staged"
+    apply_import(platform, "alpha", staged["id"], "analyst")
+    entity = platform.snapshot("alpha").data.entities[0]
+    assert entity.identifiers == {"duns": "123456789", "tax_id": "IN-TAX-7"}
+    assert entity.measures["daily_revenue"].unit == "USD/day"
+    assert entity.measures["daily_revenue"].value == 50000
+    assert entity.measures["requalification_days"].unit == "day"
+
+
 def test_invalid_rows_cannot_apply_and_schema_drift_needs_remapping(platform):
     body = upload("ID,Name,Type\nsupplier,Example,Unknown\n")
     invalid = stage(platform, "alpha", body, "analyst")

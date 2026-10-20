@@ -1,6 +1,7 @@
 """Deterministic, bounded propagation over tenant snapshots. No LLM dependencies."""
 
 import math
+from collections.abc import Callable
 from datetime import datetime
 
 import networkx as nx
@@ -96,6 +97,7 @@ def assess(
     max_depth: int = 8,
     max_paths: int = 128,
     budget: int = 10000,
+    path_finder: Callable[[str, str, int, int, int], PathResult] | None = None,
 ):
     if not math.isfinite(severity) or not 0 <= severity <= 1:
         raise ValueError("Severity must be a finite number between zero and one.")
@@ -119,11 +121,14 @@ def assess(
     truncated = False
     upstream_cache = {}
 
+    def find(source, target):
+        if path_finder is not None:
+            return path_finder(source, target, max_depth, max_paths, budget)
+        return dependency_paths(graph, source, target, max_depth, max_paths, budget)
+
     def upstream(material_id):
         if material_id not in upstream_cache:
-            upstream_cache[material_id] = dependency_paths(
-                graph, source_id, material_id, max_depth, max_paths, budget
-            )
+            upstream_cache[material_id] = find(source_id, material_id)
         return upstream_cache[material_id]
 
     for stock in data.inventory:
@@ -133,9 +138,7 @@ def assess(
             continue
         paths = _join_paths(
             material_paths,
-            dependency_paths(
-                graph, stock.material_id, stock.plant_id, max_depth, max_paths, budget
-            ),
+            find(stock.material_id, stock.plant_id),
             max_depth,
             max_paths,
             budget,
@@ -210,7 +213,7 @@ def assess(
         for product in products:
             product_paths = _join_paths(
                 material_paths,
-                dependency_paths(graph, stock.material_id, product, max_depth, max_paths, budget),
+                find(stock.material_id, product),
                 max_depth,
                 max_paths,
                 budget,
@@ -297,7 +300,7 @@ def assess(
                 continue
             paths = _join_paths(
                 material_paths,
-                dependency_paths(graph, material.id, plant.id, max_depth, max_paths, budget),
+                find(material.id, plant.id),
                 max_depth,
                 max_paths,
                 budget,
@@ -320,12 +323,7 @@ def assess(
     shared = []
     suppliers = sorted(e.id for e in data.entities if e.kind == "Supplier")
     for entity in data.entities:
-        reachable = [
-            id
-            for id in suppliers
-            if id != entity.id
-            and dependency_paths(graph, entity.id, id, max_depth, max_paths, budget).paths
-        ]
+        reachable = [id for id in suppliers if id != entity.id and find(entity.id, id).paths]
         if len(reachable) >= 2:
             shared.append({"id": entity.id, "name": entity.name, "supplier_ids": reachable})
     concentration = []

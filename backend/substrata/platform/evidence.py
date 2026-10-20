@@ -7,7 +7,7 @@ from sqlalchemy import select, text
 
 from substrata.platform.budgets import reserve, settle
 from substrata.platform.database import tenant_transaction
-from substrata.platform.domain import GraphData, Link, Provenance
+from substrata.platform.domain import ConfidenceProvenance, GraphData, Link, Provenance
 from substrata.platform.models import Document, DocumentChunk
 from substrata.platform.providers import configured_embedder, configured_extractor
 from substrata.platform.records import add, encode
@@ -262,6 +262,16 @@ def discover(store, actor, query, *, extractor=None):
                 evidence=[citation],
                 provenance=provenance,
                 valid_from=datetime.now(UTC),
+                confidence_provenance=ConfidenceProvenance(
+                    method="calibrated_scorer" if scoring["calibrated"] else "rule",
+                    scorer_version=scoring["model_version"],
+                    calibrated=scoring["calibrated"],
+                    feature_version=scoring["feature_version"],
+                    prompt_version=telemetry["prompt_version"],
+                    evaluation_scope=scoring["evaluation_scope"],
+                    evaluation_metrics=scoring["evaluation_metrics"],
+                    synthetic_evaluation=scoring["synthetic_evaluation"],
+                ),
             )
             inferred.append(id)
         data = snapshot.data.model_copy(update={"links": list(links.values())})

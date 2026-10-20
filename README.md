@@ -3,8 +3,8 @@
 The approved industry-neutral platform migration is tracked in
 [Platform migration](docs/PLATFORM_MIGRATION.md). The original synthetic demo
 remains available during the migration; new tenant features use a separate schema.
-The [remaining local work audit](docs/PLATFORM_REMAINING.md) records unfulfilled
-requirements separately from deployment and customer configuration gates.
+The [local platform completion audit](docs/PLATFORM_REMAINING.md) records the
+implemented local gaps separately from deployment and customer configuration gates.
 For manual Python installs, use `python -m pip install -e ".[dev,platform]"`;
 the setup runner installs these extras for the complete test suite.
 Platform API access requires verified tokens; see the migration guide for setup.
@@ -84,7 +84,16 @@ audit verification across retries. A2A clients can enqueue that plan and poll it
 tenant-scoped task; clients cannot delegate exposure arithmetic to an LLM.
 Run a synthetic graph traversal load check with
 `python -m scripts.platform_graph_load --nodes 4095 --queries 200 --workers 8`.
-Its local timings are not production service-level objectives.
+Pass `--database-url` (or `SUBSTRATA_GRAPH_LOAD_DATABASE_URL`) to exercise the
+tenant-scoped PostgreSQL recursive traversal instead of the offline NetworkX path.
+All generated graphs and performance measurements are synthetic and are not a
+production service-level claim.
+
+Run `python -m scripts.evaluate_platform_extraction` to replay the versioned,
+labelled extraction fixture and regenerate
+`data/platform_extraction_evaluation.json`. Its measurements are regression
+evidence on recorded synthetic responses, not learned or real-world accuracy.
+The graph harness's local timings are not production service-level objectives.
 For the local PostgreSQL/API/worker scaffold and production operations gates, see
 [Operations](docs/OPERATIONS.md). CI runs Python, frontend and container-build checks.
 Backup primitives encrypt custom PostgreSQL archives and their manifests with

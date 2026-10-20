@@ -147,6 +147,12 @@ def workspace_state(request: Request, actor: Actor):
             )
         ]
     snapshot = store.snapshot(actor.tenant_id) if organisation and organisation["version"] else None
+    if snapshot:
+        from substrata.platform.quality import inventory_completeness
+
+        quality = {"inventory": inventory_completeness(snapshot)}
+    else:
+        quality = {"inventory": None}
     return {
         "identity": actor,
         "organisation": organisation,
@@ -154,7 +160,17 @@ def workspace_state(request: Request, actor: Actor):
         "records": list_records(store, actor.tenant_id),
         "documents": documents,
         "audit": store.audit(actor.tenant_id)["verification"] if organisation else None,
+        "quality": quality,
     }
+
+
+@router.get("/quality")
+def quality(request: Request, actor: Actor):
+    from substrata.platform.quality import inventory_completeness
+
+    actor.require("viewer")
+    snapshot = request.app.state.platform_store.snapshot(actor.tenant_id)
+    return {"inventory": inventory_completeness(snapshot)}
 
 
 @router.post("/organisation", status_code=201)
@@ -243,6 +259,31 @@ def records(request: Request, actor: Actor, kind: str | None = None, status: str
 
     actor.require("viewer")
     return list_records(request.app.state.platform_store, actor.tenant_id, kind=kind, status=status)
+
+
+@router.get("/records/page")
+def records_page(
+    request: Request,
+    actor: Actor,
+    kind: str | None = None,
+    status: str | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    cursor: str | None = Query(None, max_length=1024),
+):
+    from substrata.platform.records import record_page
+
+    actor.require("viewer")
+    try:
+        return record_page(
+            request.app.state.platform_store,
+            actor.tenant_id,
+            kind=kind,
+            status=status,
+            limit=limit,
+            cursor=cursor,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
 
 
 @router.post("/events/subscriptions")

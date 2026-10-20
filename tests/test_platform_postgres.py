@@ -24,9 +24,10 @@ from substrata.platform.governance import (
     decide,
     execute,
     propose,
+    save_assessment,
 )
 from substrata.platform.ingestion import TabularImport, apply_import, rollback, stage
-from substrata.platform.jobs import JobInput, enqueue, run_next
+from substrata.platform.jobs import JobInput, enqueue, jobs, run_next
 from substrata.platform.models import (
     AuditRecord,
     Base,
@@ -167,6 +168,88 @@ def test_postgres_rls_is_forced_on_every_tenant_table_and_unset_context_denies_r
     with store.engine.connect() as connection:
         for table in Base.metadata.tables:
             assert connection.scalar(text(f"SELECT count(*) FROM {table}")) == 0, table
+
+
+def test_postgres_recursive_paths_match_offline_traversal(postgres_tenants):
+    store, alpha, beta = postgres_tenants
+    as_of = datetime.now(UTC)
+    store.save(alpha, generate("automotive", as_of=as_of), "analyst", expected_version=0)
+    store.save(beta, generate("food", as_of=as_of), "analyst", expected_version=0)
+    result = store.paths(
+        alpha,
+        "upstream",
+        "plant",
+        version=1,
+        traversal_as_of=as_of,
+        max_depth=8,
+        max_paths=128,
+        budget=10000,
+    )
+    assert sorted(path.nodes for path in result.paths) == [
+        ["upstream", "supplier-0", "material", "plant"],
+        ["upstream", "supplier-1", "material", "plant"],
+        ["upstream", "supplier-2", "material", "plant"],
+    ]
+    assert not result.truncated
+    assert store.paths(
+        beta,
+        "upstream",
+        "plant",
+        version=1,
+        traversal_as_of=as_of,
+    ).paths
+
+
+def test_postgres_assessment_matches_offline_cascade(postgres_tenants):
+    from substrata.platform.cascade import assess
+
+    store, alpha, _ = postgres_tenants
+    as_of = datetime.now(UTC)
+    snapshot = store.save(alpha, generate("automotive", as_of=as_of), "analyst", expected_version=0)
+    expected = assess(snapshot, "upstream", 0.8, as_of=as_of)
+    saved = save_assessment(
+        store,
+        principal(alpha),
+        "upstream",
+        0.8,
+        as_of=as_of,
+        version=snapshot.version,
+    )
+    assert saved["payload"]["report"] == expected
+
+
+def test_postgres_execution_budget_is_serialized_across_workers(postgres_tenants, monkeypatch):
+    store, alpha, _ = postgres_tenants
+    provenance = source()
+
+    def measure(value, unit):
+        return Measure(value=value, unit=unit, provenance=provenance)
+
+    admin = principal(alpha, subject="admin", role="admin")
+    configure_policy(
+        store,
+        admin,
+        Policy(
+            currency="USD",
+            spend_limit=measure(1000, "USD"),
+            auto_approve_limit=measure(100, "USD"),
+            approval_sla=measure(24, "hour"),
+            job_hourly_limit=1,
+            job_timeout_seconds=30,
+        ),
+    )
+    for key in ("postgres-budget-1", "postgres-budget-2"):
+        enqueue(store, admin, JobInput(kind="event_poll", idempotency_key=key))
+    monkeypatch.setattr("substrata.platform.events.poll", lambda platform, tenant: [])
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: run_next(store, admin), range(2)))
+
+    assert sum(result is not None for result in results) == 1
+    assert [row["status"] for row in jobs(store, alpha)].count("pending") == 1
+    budget = list_records(store, alpha, kind="execution_budget")
+    assert len(budget) == 1
+    assert budget[0]["payload"]["used"] == 1
 
 
 def test_postgres_pgvector_roundtrip_search_and_embedding_versions_are_tenant_scoped(

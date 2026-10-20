@@ -14,10 +14,11 @@ runway/audit views. Saved assessment exports retain their original graph snapsho
 when later supplier replies change the network. The deployment gates below remain
 reference material rather than the current integration task.
 
-A source-and-test audit found additional local gaps beyond deployment gates.
-They are tracked with required completion evidence in
-[Remaining local platform work](PLATFORM_REMAINING.md). The ten-area readiness
-map below describes existing foundations; it is not a completion checklist.
+A source-and-test audit identified additional local gaps beyond deployment gates.
+Those gaps have now been implemented and their evidence is recorded in the
+[local platform completion audit](PLATFORM_REMAINING.md). The ten-area readiness
+map below describes existing foundations; production and customer validation are
+still separate gates.
 
 The remaining local controls now connect sourced event intake and alert rules,
 approval delegation, read-only connector previews and scorer management to their
@@ -39,9 +40,9 @@ verification saved an isolated synthetic spending edit with a 72-hour deadline,
 USD budget and restricted approver roles intact. An unrelated refresh preserved
 the draft, and the saved change appeared in the verified audit chain.
 
-On 15 October, all 296 Python tests passed through the disposable PostgreSQL
-runner with no skips; twelve frontend tests, type checking, lint and the static
-production build also passed. Browser checks verified the unconfigured connector state, insufficient
+The current verification commands and results are recorded in the local completion
+audit. The disposable PostgreSQL runner now also executes a synthetic database
+graph-load probe after the regression suite. Browser checks verified the unconfigured connector state, insufficient
 training-label message, incomplete identity-review blocking and mixed identity
 decisions staging successfully without changing the graph. Focused API tests cover
 tenant/role boundaries, allowed candidate choices, history and audit integrity.
@@ -179,9 +180,11 @@ Tests include multi-industry golden results and generated stock monotonicity.
 fixtures only in development. `/platform/scenarios/assess` accepts an explicit
 source, date, graph version and bounded traversal depth.
 Run `python -m scripts.platform_graph_load` for repeatable concurrent traversal
-measurements on a generated binary tree. The harness reports query latency and
-throughput, labels all input as synthetic, and has no production performance
-threshold; pilot sizing still needs representative customer-shaped graphs.
+measurements on a generated binary tree. With `--database-url` it exercises the
+tenant-scoped PostgreSQL recursive CTE; otherwise it uses the offline NetworkX
+path. The harness reports query latency and throughput, labels all input as
+synthetic, and has no production performance threshold; pilot sizing still needs
+representative customer-shaped graphs.
 
 Event subscriptions and user-submitted events are tenant-scoped, deduplicated and
 audited. RSS/Atom inputs are bounded, HTTPS-only and restricted to an operator
@@ -388,12 +391,12 @@ heads separately to detect privileged tail truncation.
 | 2. Ingestion | CSV/XLSX mapping, drift checks, dedupe, review, rollback; REST/webhooks; read-only OData mock/adapter; see connector and ingestion tests | Real SAP resource mappings/credentials and the Ariba adapter remain customer integration work |
 | 3. Evidence and inference | Tenant document store, citation-checked extraction, optional embeddings, provider interface/mock/cost logs, scorer training/evaluation and registry | Semantic provider keys and customer-labelled evaluation data are external; offline fixtures do not establish field precision/recall |
 | 4. Event sensing | Tenant RSS/Atom, GDELT, NWS, MeteoAlarm, user/API events, OFAC SDN and ITA CSL flow through review rules | Port signals require a licensed provider configuration; more jurisdictions/lists need source-specific review adapters |
-| 5. Cascade engine | Deterministic traversal, runway/ranges, golden scenarios and generated stock invariants; see `cascade.py` and cascade tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
-| 6. Agents | Five typed role skills, durable tenant jobs, bounded retries/queue, checkpointed risk-review plan, A2A task submission/polling, MCP facade and deterministic math | General adaptive multi-role plan authoring, durable coordination beyond the fixed risk-review flow and broad external protocol interoperability remain |
+| 5. Cascade engine | Deterministic traversal, runway/ranges, golden scenarios, generated stock invariants and PostgreSQL recursive-path parity; see `cascade.py`, `store.py` and cascade/PostgreSQL tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
+| 6. Agents | Five typed role skills, durable tenant jobs, tenant hourly execution budgets, whole-job/provider deadlines, bounded retries/queue, checkpointed risk-review plan, A2A task submission/polling, MCP facade and deterministic math | General adaptive multi-role plan authoring, durable coordination beyond the fixed risk-review flow and broad external protocol interoperability remain |
 | 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
-| 8. Product surface | Onboarding, quality counts, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports; English/Hindi catalog covers the workspace, printable report and supplier confirmation portal with a persisted browser choice | Full locale coverage, translated third-party/API content and locale/accessibility QA remain |
+| 8. Product surface | Onboarding, graph-aware quality counts, full import mappings, paginated workflow history, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports; English/Hindi catalog covers the workspace, printable report and supplier confirmation portal with a persisted browser choice | Full locale coverage, translated third-party/API content and customer accessibility QA remain |
 | 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, complete-response HTTP latency/status metrics, HTTP/queue/worker/provider/connector trace causality, optional OTLP export, health checks and worker | Production secret manager, TLS topology, encrypted backup/restore drills, production collector/metrics/log shipping and managed broker require deployment work |
-| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, scorer evaluation, prototype extraction fixtures and in-memory graph load harness; PostgreSQL checks cover every tenant table, pgvector, imports/history, concurrent audit writes, resumable jobs and approvals; disposable runner verified all 296 Python tests with no skips | Platform extraction/replay evaluation and database/API graph-load coverage remain local work; customer-shaped baselines require customer data |
+| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, structured scorer provenance, versioned recorded extraction evaluation, in-memory and PostgreSQL graph-load harnesses; PostgreSQL checks cover every tenant table, pgvector, recursive cascade parity, imports/history, overlapping execution budgets, concurrent audit writes, resumable jobs and approvals | Customer-shaped baselines and representative labelled data require customer participation |
 
 This map describes implementation evidence, not a pilot or GA certification. A
 production release still needs the listed deployment gates, real-system validation,

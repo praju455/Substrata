@@ -168,7 +168,15 @@ def activate(store, actor, id):
 def score(store, tenant_id, values):
     models = list_records(store, tenant_id, kind="model_registry", status="active")
     if not models:
-        return {"score": 0.65, "model_version": "uncalibrated-rule-v1", "calibrated": False}
+        return {
+            "score": 0.65,
+            "model_version": "uncalibrated-rule-v1",
+            "calibrated": False,
+            "feature_version": FEATURE_VERSION,
+            "evaluation_scope": None,
+            "evaluation_metrics": {},
+            "synthetic_evaluation": None,
+        }
     record = models[0]
     path = registry_root() / tenant_id / record["id"] / "model.joblib"
     if hashlib.sha256(path.read_bytes()).hexdigest() != record["payload"]["model_sha256"]:
@@ -179,5 +187,12 @@ def score(store, tenant_id, values):
         "score": float(model.predict_proba([feature_vector(values)])[0, 1]),
         "model_version": record["id"],
         "calibrated": True,
+        "feature_version": record["payload"]["feature_version"],
         "calibration_scope": record["payload"]["report"]["scope"],
+        "evaluation_scope": record["payload"]["report"]["scope"],
+        "evaluation_metrics": {
+            name: float(record["payload"]["report"][name])
+            for name in ("precision", "recall", "average_precision", "brier_score")
+        },
+        "synthetic_evaluation": bool(record["payload"]["report"]["synthetic"]),
     }

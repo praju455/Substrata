@@ -12,6 +12,7 @@ from substrata.cascade import runway
 from substrata.graph import EvidencePath
 from substrata.platform.cascade import assess, confidence_bounds
 from substrata.platform.domain import Citation, GraphData, Snapshot
+from substrata.platform.quality import inventory_completeness
 from substrata.platform.seeds import generate
 
 AS_OF = datetime(2026, 10, 14, tzinfo=UTC)
@@ -91,6 +92,22 @@ def test_inferred_dependencies_report_exposure_range_and_missing_stock_is_incomp
     assert impact["revenue"][0]["value_range"] == [0, 3600000]
     no_stock = uncertain.model_copy(update={"data": data.model_copy(update={"inventory": []})})
     assert assess(no_stock, "upstream", 0.9, as_of=AS_OF)["impacts"][0]["status"] == "incomplete"
+    quality = inventory_completeness(no_stock, as_of=AS_OF)["missing_row_count"]
+    assert quality == 1
+
+
+def test_inventory_completeness_distinguishes_absent_rows_and_missing_values():
+    frozen = snapshot()
+    complete = inventory_completeness(frozen, as_of=AS_OF)
+    assert complete["expected_rows"] == 1
+    assert complete["complete_rows"] == 1
+    values = frozen.data.model_dump(mode="json")
+    values["inventory"][0]["on_hand"] = None
+    partial = frozen.model_copy(update={"data": GraphData.model_validate(values)})
+    summary = inventory_completeness(partial, as_of=AS_OF)
+    assert summary["missing_row_count"] == 0
+    assert summary["missing_value_row_count"] == 1
+    assert summary["incomplete_rows"][0]["missing_fields"] == ["on_hand"]
 
 
 def test_overlapping_paths_have_conservative_bounds_and_cycles_terminate():

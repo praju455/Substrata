@@ -134,6 +134,49 @@ def test_required_auth_and_demo_reset_absent_in_platform_mode(client, caplog):
     )
 
 
+def test_scoped_record_pagination_and_graph_aware_quality_are_available(client):
+    from substrata.platform.database import tenant_transaction
+    from substrata.platform.models import WorkRecord
+    from substrata.platform.records import add
+    from substrata.platform.seeds import generate
+
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "test-admin")
+    data = generate("automotive")
+    store.save(
+        "alpha",
+        data.model_copy(update={"inventory": []}),
+        "test-admin",
+        expected_version=0,
+    )
+    with tenant_transaction(store.engine, "alpha") as session:
+        for index in range(3):
+            add(session, "alpha", "import", "staged", {"index": index}, f"import-{index}")
+        session.add(
+            WorkRecord(
+                tenant_id="alpha",
+                id="unrelated",
+                kind="event",
+                status="open",
+                created_at=datetime.now(UTC),
+                payload={},
+            )
+        )
+    first = client.get(
+        "/platform/records/page?kind=import&limit=2", headers=headers(role="viewer")
+    ).json()
+    assert [row["id"] for row in first["items"]] == ["import-2", "import-1"]
+    second = client.get(
+        "/platform/records/page",
+        params={"kind": "import", "limit": 2, "cursor": first["next_cursor"]},
+        headers=headers(role="viewer"),
+    ).json()
+    assert [row["id"] for row in second["items"]] == ["import-0"]
+    state = client.get("/platform/state", headers=headers(role="viewer")).json()
+    assert state["quality"]["inventory"]["expected_rows"] == 1
+    assert state["quality"]["inventory"]["missing_row_count"] == 1
+
+
 def test_readiness_fails_when_database_cannot_connect(client, monkeypatch):
     engine = client.app.state.platform_store.engine
 

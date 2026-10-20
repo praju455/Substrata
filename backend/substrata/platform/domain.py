@@ -50,6 +50,25 @@ class Citation(Contract):
         return self
 
 
+class ConfidenceProvenance(Contract):
+    method: Literal["rule", "calibrated_scorer"]
+    scorer_version: Label
+    calibrated: bool
+    feature_version: Label
+    prompt_version: Label | None = None
+    evaluation_scope: str | None = Field(default=None, max_length=2000)
+    evaluation_metrics: dict[str, float] = Field(default_factory=dict)
+    synthetic_evaluation: bool | None = None
+
+    @model_validator(mode="after")
+    def calibration_claim(self):
+        if self.calibrated and self.method != "calibrated_scorer":
+            raise ValueError("Only a calibrated scorer may be labelled calibrated.")
+        if self.calibrated and not self.evaluation_scope:
+            raise ValueError("Calibrated confidence requires an evaluation scope.")
+        return self
+
+
 class Link(Contract):
     id: Identifier
     source: Identifier
@@ -62,6 +81,7 @@ class Link(Contract):
     valid_from: AwareDatetime
     valid_to: AwareDatetime | None = None
     measures: dict[str, Measure] = Field(default_factory=dict)
+    confidence_provenance: ConfidenceProvenance | None = None
 
     @model_validator(mode="after")
     def valid_link(self):

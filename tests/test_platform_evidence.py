@@ -52,6 +52,10 @@ def test_retrieval_exact_citations_and_no_cross_tenant_documents(platform):
     link = platform.snapshot("alpha").data.links[0]
     assert link.status == "inferred"
     assert link.evidence[0].passage == "Alpha Supplier depends on Shared Site."
+    assert link.confidence_provenance is not None
+    assert link.confidence_provenance.method == "rule"
+    assert not link.confidence_provenance.calibrated
+    assert link.confidence_provenance.prompt_version == "platform-link-extraction-v1"
     assert discover(platform, actor(), "Alpha Supplier")["payload"]["inferred_ids"] == []
 
 

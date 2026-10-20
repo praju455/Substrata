@@ -138,7 +138,34 @@ def verify(*, executable: Path, full_suite: bool) -> int:
             cwd=ROOT,
             env=test_environment,
         )
-        return result.returncode
+        if result.returncode:
+            return result.returncode
+        runtime_url = (
+            f"postgresql+psycopg://substrata_test_runtime:"
+            f"test-only-substrata-runtime-password@127.0.0.1:{match[1]}/substrata_test"
+        )
+        print(
+            "Running the synthetic load harness through PostgreSQL recursive traversal...",
+            flush=True,
+        )
+        load = subprocess.run(
+            [
+                python,
+                "-m",
+                "scripts.platform_graph_load",
+                "--nodes",
+                "1023",
+                "--queries",
+                "50",
+                "--workers",
+                "4",
+                "--database-url",
+                runtime_url,
+            ],
+            cwd=ROOT,
+            env=test_environment,
+        )
+        return load.returncode
     finally:
         if container_id and re.fullmatch(r"[a-f0-9]{64}", container_id):
             # Only this invocation's exact container is stopped; --rm removes its
