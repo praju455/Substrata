@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo_Black, JetBrains_Mono } from "next/font/google";
+import { Archivo_Black, JetBrains_Mono, Sora, Syne } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -14,6 +14,18 @@ const monoFont = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
+const soraFont = Sora({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  variable: "--font-sora",
+});
+
+const syneFont = Syne({
+  subsets: ["latin"],
+  weight: ["600", "800"],
+  variable: "--font-syne",
+});
+
 export const metadata: Metadata = {
   title: "Substrata | Supply chain workspace",
   description: "A synthetic supply-chain resilience prototype. Simulated actions only.",
@@ -23,7 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${displayFont.variable} ${monoFont.variable}`}
+      className={`${displayFont.variable} ${monoFont.variable} ${soraFont.variable} ${syneFont.variable}`}
     >
       <body>{children}</body>
     </html>

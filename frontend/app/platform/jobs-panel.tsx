@@ -35,6 +35,7 @@ export default function JobsPanel({
     copyKeys.includes(value as CopyKey) ? t(value as CopyKey) : value;
   const [source, setSource] = useState("");
   const [severity, setSeverity] = useState(0.8);
+  const [resumeReason, setResumeReason] = useState("");
   return (
     <section id="jobs" className="panel">
       <h2>{t("Background tasks")}</h2>
@@ -163,6 +164,35 @@ export default function JobsPanel({
                   <p key={step}>{label(step)}</p>
                 ))}
               </details>
+            )}
+            {job.status === "paused" && (
+              <div>
+                <p className="notice">
+                  Human checkpoint: {String((job.payload.result as Record<string, unknown>)?.awaiting)}
+                </p>
+                <label>
+                  Resume reason
+                  <input
+                    maxLength={2000}
+                    value={resumeReason}
+                    onChange={(event) => setResumeReason(event.target.value)}
+                  />
+                </label>
+                <button
+                  className="primary"
+                  disabled={busy || !canEdit || !resumeReason.trim()}
+                  onClick={() => void run(async () => {
+                    const result = job.payload.result as Record<string, unknown>;
+                    await call(`/jobs/${job.id}/resume`, token, {
+                      checkpoint: result.awaiting,
+                      reason: resumeReason.trim(),
+                    });
+                    setResumeReason("");
+                  })}
+                >
+                  Resume reviewed workflow
+                </button>
+              </div>
             )}
           </div>
           <span className="badge">{label(job.status)}</span>

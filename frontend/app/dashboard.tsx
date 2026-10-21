@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   Component,
   useCallback,
@@ -175,7 +176,7 @@ function Runway({ impact }: { impact: Impact }) {
       </div>
       {impact.status === "complete" && (
         <div
-          className="timeline"
+          className="runway-timeline timeline"
           aria-label={`${number(impact.cover_days)} days covered, ${number(impact.exposure_window)} days exposed`}
         >
           <span style={{ flexGrow: impact.cover_days ?? 0 }} />
@@ -364,7 +365,7 @@ export default function Dashboard() {
       </a>
       <header className="site-header">
         <div className="shell header-inner">
-          <a className="brand" href="#main">
+          <Link className="brand" href="/" title="Back to Substrata Overview">
             <svg viewBox="0 0 32 32" aria-hidden="true">
               <path
                 d="m3 10 13-7 13 7-13 7-13-7Zm0 7 13 7 13-7M3 24l13 7 13-7"
@@ -374,8 +375,11 @@ export default function Dashboard() {
               />
             </svg>
             Substrata
-          </a>
+          </Link>
           <nav aria-label="Workspace sections">
+            <Link href="/" style={{ color: "var(--c-amber, #e8913c)", fontWeight: 600 }}>
+              ← Overview
+            </Link>
             <a href="#network">Network</a>
             <a href="#workflow">Replay</a>
             <a href="#approvals">Decisions</a>
@@ -1090,7 +1094,7 @@ export default function Dashboard() {
                 </div>
                 {actions.length === 0 && (
                   <Empty>
-                    Mitigation drafts will appear after the cascade. Every
+                    Mitigation drafts will appear after deterministic impact analysis. Every
                     execution is simulated.
                   </Empty>
                 )}

@@ -10,10 +10,14 @@ from test_platform_evidence import actor, prepare
 from substrata.platform.confirmations import (
     ConfirmationInput,
     PortalSigner,
+    RelationshipDecision,
+    RelationshipSupersession,
     SupplierReply,
     create_request,
     describe_request,
     reply,
+    review,
+    supersede,
 )
 from substrata.platform.notifications import SMTPMailer, deliver_pending_confirmations
 from substrata.platform.records import list_records
@@ -137,6 +141,43 @@ def test_rejected_response_retains_cited_link_and_negative_label(platform):
     latest = platform.snapshot("alpha").data.links[0]
     assert latest.status == "rejected" and latest.evidence
     assert list_records(platform, "alpha", kind="training_label")[0]["payload"]["label"] == 0
+
+
+def test_analyst_review_and_supersession_are_reasoned_versioned_states(platform):
+    _, link = request(platform)
+    confirmed = review(
+        platform,
+        actor(),
+        link.id,
+        RelationshipDecision(decision="confirmed", reason="Evidence reviewed with procurement."),
+    )
+    assert confirmed["graph_version"] == 3
+    review_record = list_records(platform, "alpha", kind="relationship_review")[0]
+    assert review_record["payload"]["reason"]
+    assert review_record["payload"]["evidence_sha256"]
+
+    snapshot = platform.snapshot("alpha")
+    current = snapshot.data.links[0]
+    replacement = current.model_copy(update={"id": "replacement-link", "status": "declared"})
+    platform.save(
+        "alpha",
+        snapshot.data.model_copy(update={"links": [current, replacement]}),
+        "test-admin",
+        expected_version=snapshot.version,
+    )
+    result = supersede(
+        platform,
+        actor(),
+        current.id,
+        RelationshipSupersession(
+            replacement_link_id=replacement.id,
+            reason="Replacement source record is newer.",
+        ),
+    )
+    latest = {item.id: item for item in platform.snapshot("alpha").data.links}
+    assert result["decision"] == "superseded"
+    assert latest[current.id].status == "superseded"
+    assert latest[replacement.id].status == "declared"
 
 
 def test_supplier_confirmation_email_is_tls_worker_delivery_and_dev_stays_disabled(

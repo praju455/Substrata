@@ -1,6 +1,6 @@
 # Proposed technology stack
 
-> **Current implementation:** Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, typed core workflows, a LangGraph/LangChain read-only domain assistant, Google Gen AI SDK and Groq adapters, optional Tavily retrieval, offline mocks, Next.js/TypeScript/Tailwind/Cytoscape, and direct SSE. SAP services and cloud deployment remain access- and entitlement-dependent targets.
+> **Current implementation:** Python/FastAPI/Pydantic 2, SQLAlchemy 2/SQLite WAL/Alembic, NetworkX, LangGraph risk-review and assistant workflows, LangChain bounded context assembly, Google Gen AI SDK and Groq adapters, optional Tavily retrieval, offline mocks, Next.js/TypeScript/Tailwind/Cytoscape, and direct SSE. SAP services and cloud deployment remain access- and entitlement-dependent targets.
 
 ## Decision principles
 
@@ -22,16 +22,16 @@
 | Web | Next.js App Router | Static export option and familiar React ecosystem **[Design]** | Vite + React if team experience favors it |
 | Graph UI | Cytoscape.js | Interactive path and evidence views **[Design]** | Performance tested against planned graph size **[TBD]** |
 | Map UI | MapLibre | Region/facility view without coupling to a proprietary map API **[Design]** | Map can be omitted from minimum demo |
-| Orchestration | Typed core workflows plus LangGraph for the assistant | Explicit retrieve, optional-web, generate and validate states **[Design]** | Existing typed workflows remain the offline core |
-| Grounded assistant | LangChain prompt/context chain | Path-specific questions, exact source IDs and known/inferred/unknown labels **[Design]** | Read-only and fails closed on unsupported claims |
+| Orchestration | LangGraph risk review plus assistant workflows | Durable evidence, event, relationship-review, impact, mitigation, policy, approval and audit checkpoints; explicit assistant retrieve, optional-web, generate and validate states **[Implemented]** | Existing typed workflow remains the offline compatibility fallback |
+| Grounded assistant | LangChain prompt/context chain | Path-specific questions, exact source IDs and known/inferred/unknown labels **[Implemented]** | Read-only and fails closed on unsupported claims |
 | Tool protocol | MCP | Narrow, typed agent capabilities **[Design]** | In-process adapters retain same contracts in tests |
 | Agent interoperability | A2A wrapper | SAP-aligned stretch integration **[Design]** | Excluded from core scope |
 | Graph engine | NetworkX through `GraphStore` | Transparent deterministic prototype algorithms **[Design]** | HANA Cloud adapter only if entitled **[TBD]** |
 | ORM and migrations | SQLAlchemy + Alembic | SQLite/PostgreSQL portability **[Design]** | Schema migration discipline begins in Phase 1 |
 | Local database | SQLite WAL | Resettable, offline and zero-service demo **[Design]** | PostgreSQL in Compose for concurrency/shared preview |
-| Assistant retrieval | Tenant graph/evidence/report queries plus optional Tavily web search | Answers normal domain questions without requiring uploaded documents or a vector database **[Design]** | Web evidence remains inferred until governed confirmation |
+| Assistant retrieval | Tenant graph/evidence/report queries plus optional Tavily web search | Answers normal domain questions without requiring uploaded documents or a vector database **[Implemented]** | Web evidence remains inferred until governed confirmation |
 | Vector retrieval | Stored embeddings + NumPy for document search | Separate evidence-search capability; not required by the assistant **[Design]** | pgvector/HANA vector only if measured need exists |
-| AI access | Provider-neutral extraction `LLMClient`; Google Gen AI SDK/Groq assistant adapters; explicit offline mocks | Keeps provider/model details out of domain logic; no custom LLM training **[Design]** | SAP generative AI hub adapter only if supplied and entitled **[TBD]** |
+| AI access | Provider-neutral extraction `LLMClient`; Google Gen AI SDK/Groq assistant adapters; explicit offline mocks | Keeps provider/model details out of domain logic; no custom LLM training **[Implemented]** | SAP generative AI hub adapter only if supplied and entitled **[TBD]** |
 | Tests | pytest + schema/contract fixtures | Exact graph math and policy behavior **[Design]** | Browser tests selected with UI scaffold **[TBD]** |
 | Observability | Structured JSON logs + correlation IDs | Inspectable agent/tool trail **[Design]** | OpenTelemetry optional after core flow works |
 

@@ -35,7 +35,7 @@ approvals and audit history. All session records are disposable synthetic data.
    synthetic truth. No supplier was contacted. Ownership/control propagation is
    an explicit scenario assumption.”
 4. **1:20–1:55 — Replay.** Click **▶ Replay next event** once. Watch Agent activity
-   receive/match/cascade/propose updates. The runway defaults to Power module /
+   receive/match/impact/propose updates. The runway defaults to Power module /
    Pune assembly: **18 days cover**, **90 days requalification**, **72 days exposure**.
    Open **Calculation provenance and pinned versions**. “Python calculates these
    values from frozen graph, ERP and formula inputs. The model computes no numbers.”

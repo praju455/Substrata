@@ -241,7 +241,7 @@ A2A_SKILLS = [
     ),
     (
         "cascade-caller",
-        "Cascade-caller agent",
+        "Deterministic impact service",
         "Run a deterministic assessment on a versioned graph snapshot.",
         ["agent", "assessment", "risk"],
         ["Assess exposure from an upstream supplier."],
@@ -262,7 +262,7 @@ A2A_SKILLS = [
     ),
     (
         "cascade-assessment",
-        "Deterministic cascade assessment",
+        "Deterministic impact assessment",
         "Assess supplier exposure across a versioned tenant graph.",
         ["supply-chain", "risk", "assessment"],
         ["Assess exposure from supplier upstream."],
@@ -312,7 +312,7 @@ A2A_SKILLS = [
     (
         "risk-review",
         "Durable risk review",
-        "Queue a version-pinned cascade assessment and audit verification "
+        "Queue a version-pinned impact assessment and audit verification "
         "with resumable checkpoints.",
         ["agent", "assessment", "audit", "workflow"],
         ["Assess upstream at graph version 3 and verify the audit chain."],
@@ -420,6 +420,7 @@ def _a2a_plan_snapshot(task_id, job):
     state = {
         "pending": "submitted",
         "running": "working",
+        "paused": "input-required",
         "succeeded": "completed",
         "failed": "failed",
     }[job["status"]]
@@ -433,4 +434,10 @@ def _a2a_plan_snapshot(task_id, job):
         )
     elif job["status"] == "failed":
         task["status"]["message"] = "Risk review failed after its retry limit."
+    elif job["status"] == "paused":
+        task["status"]["message"] = (
+            "Human input required at "
+            + str(job["payload"].get("result", {}).get("awaiting", "a governed checkpoint"))
+            + "."
+        )
     return task

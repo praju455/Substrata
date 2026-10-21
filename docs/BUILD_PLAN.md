@@ -54,10 +54,10 @@ and broader inference remain deferred as recorded in DECISIONS.md.
 | Milestone | Scope | Status |
 |---|---|---|
 | M1 | Database schema, deterministic seed, separate true/declared graphs and synthetic evidence | Complete; M1.1–M1.5 |
-| M2 | GraphStore, deterministic cascade formulas and edge-case tests | Complete; formula assumptions recorded in D011 |
+| M2 | GraphStore, deterministic impact formulas and edge-case tests | Complete; formula assumptions recorded in D011 |
 | M3 | Mock-first LLM interface, evidence-backed Mapper, supplier confirmations and measured evaluation | Complete; narrow fixture baseline, limitations in D012 |
 | M4 | Event replay, ranked simulated actions, approval gate, hash-chained audit, API and SSE | Complete; single-process local API, no external execution |
-| M5 | Graph, replay feed, cascade card, approval queue, audit view and demo script | Implemented; final verification recorded below |
+| M5 | Graph, replay feed, deterministic impact card, approval queue, audit view and demo script | Implemented; final verification recorded below |
 
 ## Current verification
 

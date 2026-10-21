@@ -118,7 +118,7 @@ class NetworkXGraphStore:
 
 
 def project(snapshot: GraphSnapshot) -> nx.MultiDiGraph:
-    """Reverse ownership/location for event propagation; exclude rejected/expired links."""
+    """Reverse ownership/location for propagation; exclude inactive relationship states."""
     graph = nx.MultiDiGraph()
     graph.add_nodes_from((n["id"], n) for n in snapshot.nodes)
     for edge in snapshot.edges:

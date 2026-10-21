@@ -21,6 +21,7 @@ SUBSTRATA_ASSISTANT_PROVIDER=mock
 SUBSTRATA_ASSISTANT_GEMINI_MODEL=gemini-3.8-flash
 SUBSTRATA_ASSISTANT_GROQ_MODEL=openai/gpt-oss-120b
 SUBSTRATA_ASSISTANT_TIMEOUT_SECONDS=20
+SUBSTRATA_AGENT_ORCHESTRATOR=langgraph
 TAVILY_API_KEY=
 SUBSTRATA_TAVILY_MAX_RESULTS=5
 SUBSTRATA_TAVILY_ALLOWED_DOMAINS=
@@ -36,6 +37,12 @@ Assistant provider modes are `mock`, `gemini`, `groq` and `auto`. `auto` tries
 Google first and Groq second when both keys exist, or uses the one configured
 provider. Tavily is optional; when its key is blank, the assistant still answers
 from the tenant graph, exact evidence and saved deterministic reports.
+
+`SUBSTRATA_AGENT_ORCHESTRATOR=langgraph` selects the durable governed risk-review
+workflow. Set it to `typed` only for the compatibility fallback. LangGraph pauses
+an `agent_plan` job at relationship review or named approval. Resume through
+`POST /platform/jobs/{id}/resume` only after the pending relationships or actions
+have received their required human decisions.
 
 ## Grounded assistant boundary
 

@@ -16,11 +16,11 @@ In the prototype: synthetic ERP-shaped records, declared synthetic relationships
 
 ## 4. What if an inferred link is wrong?
 
-The design never equates `inferred` with `confirmed`. **[Design]** The edge retains evidence, confidence and score components; conflicting/low-confidence cases go to review; negative confirmation is stored; cascade outputs identify inferred exposure. **[Design]** A wrong link can still cause wasted attention, which is why precision and reviewer burden are evaluation criteria. **[Design]**
+The design never equates `inferred` with `confirmed`. **[Design]** The edge retains evidence, confidence and score components; conflicting/low-confidence cases go to review; negative confirmation is stored; deterministic impact outputs identify inferred exposure. **[Design]** A wrong link can still cause wasted attention, which is why precision and reviewer burden are evaluation criteria. **[Design]**
 
 ## 5. Why agents instead of a dashboard?
 
-The work crosses evidence extraction, event sensing, relationship confirmation, deterministic impact, option drafting and governance. **[Design]** Agent boundaries make those responsibilities inspectable. LangGraph now coordinates the read-only assistant's retrieval and validation steps; typed workflows remain the reliable core for deterministic assessment and governance. **[Design]**
+The work crosses evidence extraction, event sensing, relationship confirmation, deterministic impact, option drafting and governance. Agent boundaries make those responsibilities inspectable. LangGraph coordinates the governed risk-review stages and the read-only assistant's retrieval and validation flow; deterministic services still own graph traversal, runway arithmetic and policy checks. The typed workflow remains the offline compatibility fallback. **[Implemented]**
 
 ## 6. What is real today and what is simulated?
 

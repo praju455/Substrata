@@ -296,6 +296,9 @@ def propose(store, actor: Principal, body: ProposalInput, *, idempotency_key: st
             "requester": actor.subject,
             "graph_version": report["graph_version"],
             "graph_sha256": report["graph_sha256"],
+            "evidence_sha256": report["evidence_sha256"],
+            "calculation_sha256": hashlib.sha256(canonical(report).encode()).hexdigest(),
+            "formula_version": report["formula_version"],
             "policy_sha256": hashlib.sha256(canonical(org.policy).encode()).hexdigest(),
             "expires_at": (
                 datetime.now(UTC) + timedelta(hours=policy.approval_sla.value if policy else 1)
@@ -364,10 +367,21 @@ def decide(store, actor: Principal, id: str, decision: str, reason: str):
             or action.payload["policy_sha256"]
             != hashlib.sha256(canonical(org.policy).encode()).hexdigest()
         )
+        assessment = require_record(
+            session, actor.tenant_id, action.payload["assessment_id"], "assessment"
+        )
+        stale = (
+            stale
+            or action.payload.get("calculation_sha256")
+            != hashlib.sha256(canonical(assessment.payload["report"]).encode()).hexdigest()
+        )
         expired = stale or datetime.now(UTC) >= datetime.fromisoformat(action.payload["expires_at"])
         action.status = "expired" if expired else decision
         action.payload = {
             **action.payload,
+            "review_status": "returned_for_review"
+            if expired or decision == "rejected"
+            else "complete",
             "approval": {
                 "actor": actor.subject,
                 "roles": sorted(actor.roles),
@@ -472,6 +486,14 @@ def execute(store, actor: Principal, id: str, *, adapter: ExecutionAdapter | Non
             != hashlib.sha256(canonical(org.policy).encode()).hexdigest()
         ):
             raise Conflict("Policy changed after approval; submit a new action.")
+        assessment = require_record(
+            session, actor.tenant_id, action.payload["assessment_id"], "assessment"
+        )
+        if (
+            action.payload.get("calculation_sha256")
+            != hashlib.sha256(canonical(assessment.payload["report"]).encode()).hexdigest()
+        ):
+            raise Conflict("Calculation changed after approval; submit a new action.")
         live = os.environ.get("SUBSTRATA_SAP_WRITES_ENABLED") == "true"
         if live:
             if action.payload["approval"]["actor"] == "Tenant policy":

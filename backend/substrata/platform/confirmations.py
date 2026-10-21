@@ -11,7 +11,7 @@ from cryptography.fernet import Fernet
 from pydantic import Field
 
 from substrata.platform.database import tenant_transaction
-from substrata.platform.domain import Contract, GraphData
+from substrata.platform.domain import Contract, GraphData, Identifier
 from substrata.platform.records import add, encode, require_record
 from substrata.platform.store import Conflict
 from substrata.seed import canonical
@@ -28,6 +28,33 @@ class SupplierReply(Contract):
     decision: Literal["confirmed", "rejected"]
     responder: str = Field(min_length=1, max_length=96)
     reason: str = Field(min_length=1, max_length=2000)
+
+
+class RelationshipDecision(Contract):
+    decision: Literal["confirmed", "rejected", "expired"]
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class RelationshipSupersession(Contract):
+    replacement_link_id: Identifier
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+def _review_payload(link, *, actor, decision, reason, previous_version, graph_version, **extra):
+    return {
+        "link_id": link.id,
+        "decision": decision,
+        "actor": actor,
+        "reason": reason,
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "previous_graph_version": previous_version,
+        "graph_version": graph_version,
+        "evidence_ids": [citation.document_id for citation in link.evidence],
+        "evidence_sha256": hashlib.sha256(
+            canonical([item.model_dump(mode="json") for item in link.evidence]).encode()
+        ).hexdigest(),
+        **extra,
+    }
 
 
 class PortalSigner:
@@ -256,4 +283,143 @@ def reply(store, body: SupplierReply, *, signer=None):
                 "graph_version": frozen.version,
             },
         )
+        add(
+            session,
+            tenant_id,
+            "relationship_review",
+            body.decision,
+            _review_payload(
+                link,
+                actor="supplier:" + body.responder,
+                decision=body.decision,
+                reason=body.reason,
+                previous_version=snapshot.version,
+                graph_version=frozen.version,
+                confirmation_request_id=request.id,
+            ),
+        )
         return {"decision": body.decision, "graph_version": frozen.version}
+
+
+def review(store, actor, link_id: str, body: RelationshipDecision):
+    """Apply a reasoned analyst decision without allowing confidence to confirm a link."""
+    actor.require("analyst")
+    snapshot = store.snapshot(actor.tenant_id)
+    link = next((item for item in snapshot.data.links if item.id == link_id), None)
+    if link is None:
+        raise ValueError("Relationship is unavailable.")
+    if link.status not in {"declared", "inferred", "confirmed"}:
+        raise Conflict("Only an active relationship can be reviewed.")
+    if body.decision == "confirmed" and link.status not in {"declared", "inferred"}:
+        raise Conflict("Relationship is already confirmed.")
+    now = datetime.now(UTC)
+    update = {"status": body.decision}
+    if body.decision == "expired":
+        update["valid_to"] = now
+    changed = link.model_copy(update=update)
+    data = GraphData.model_validate(
+        snapshot.data.model_copy(
+            update={
+                "links": [changed if item.id == link.id else item for item in snapshot.data.links]
+            }
+        ).model_dump()
+    )
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        review_record = add(
+            session,
+            actor.tenant_id,
+            "relationship_review",
+            body.decision,
+            _review_payload(
+                link,
+                actor=actor.subject,
+                decision=body.decision,
+                reason=body.reason,
+                previous_version=snapshot.version,
+                graph_version=snapshot.version + 1,
+            ),
+        )
+        frozen = store.save_in(
+            session,
+            org,
+            data,
+            actor.subject,
+            expected_version=snapshot.version,
+            event_type="analyst.link." + body.decision,
+            confirmation_record_id=review_record.id,
+        )
+        if body.decision in {"confirmed", "rejected"}:
+            add(
+                session,
+                actor.tenant_id,
+                "training_label",
+                "labelled",
+                {
+                    "link_id": link.id,
+                    "label": int(body.decision == "confirmed"),
+                    "group_id": link.source,
+                    "synthetic": link.provenance.kind == "synthetic",
+                    "features": {"rule_score": link.confidence},
+                    "provenance": {
+                        "kind": "analyst",
+                        "actor": actor.subject,
+                        "recorded_at": now.isoformat(),
+                    },
+                    "graph_version": frozen.version,
+                },
+            )
+        return {"decision": body.decision, "graph_version": frozen.version}
+
+
+def supersede(store, actor, link_id: str, body: RelationshipSupersession):
+    """Retire one relationship in favour of a separately evidenced replacement."""
+    actor.require("analyst")
+    snapshot = store.snapshot(actor.tenant_id)
+    links = {item.id: item for item in snapshot.data.links}
+    link = links.get(link_id)
+    replacement = links.get(body.replacement_link_id)
+    if link is None or replacement is None or link.id == replacement.id:
+        raise ValueError("Source and replacement relationships must both exist and differ.")
+    if link.status not in {"declared", "inferred", "confirmed"}:
+        raise Conflict("Only an active relationship can be superseded.")
+    if replacement.status not in {"declared", "inferred", "confirmed"}:
+        raise Conflict("Replacement relationship must be active.")
+    changed = link.model_copy(update={"status": "superseded", "valid_to": datetime.now(UTC)})
+    data = GraphData.model_validate(
+        snapshot.data.model_copy(
+            update={
+                "links": [changed if item.id == link.id else item for item in snapshot.data.links]
+            }
+        ).model_dump()
+    )
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        frozen = store.save_in(
+            session,
+            org,
+            data,
+            actor.subject,
+            expected_version=snapshot.version,
+            event_type="analyst.link.superseded",
+        )
+        add(
+            session,
+            actor.tenant_id,
+            "relationship_review",
+            "superseded",
+            _review_payload(
+                link,
+                actor=actor.subject,
+                decision="superseded",
+                reason=body.reason,
+                previous_version=snapshot.version,
+                graph_version=frozen.version,
+                replacement_link_id=replacement.id,
+            ),
+        )
+        return {
+            "decision": "superseded",
+            "replacement_link_id": replacement.id,
+            "graph_version": frozen.version,
+        }

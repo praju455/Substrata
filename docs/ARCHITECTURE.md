@@ -6,7 +6,7 @@ revisions, measurement provenance and atomic graph/audit writes. See
 [Platform migration](PLATFORM_MIGRATION.md) for implemented contracts and gates.
 Platform endpoints use verified OIDC claims and role checks. Tenant IDs are never
 selected by request headers; the legacy reset route is absent in platform mode.
-The tenant cascade uses deterministic services, conservative evidence-support
+The tenant impact analysis uses deterministic services, conservative evidence-support
 bounds and full-interruption exposure ranges. It reuses the existing runway and
 bounded path calculations; LLMs have no arithmetic authority.
 Tenant workflow records store staged import validation, human entity resolution,
@@ -129,7 +129,7 @@ isolation and retirement of the previous active version. Local Docker artifacts
 live in a named registry volume writable by the API's unprivileged user and
 mounted read-only by workers. Database records and artifact hashes remain linked;
 model files are server-generated and cannot be uploaded through the workspace.
-Cascade formula `platform-runway-v2` composes source-to-material and
+Impact formula `platform-runway-v2` composes source-to-material and
 material-to-plant paths before establishing impact certainty, support bounds and
 citations. Product revenue requires both plant and product support, counting
 shared edges once in each conjunction. A BOM product without a graph route keeps
@@ -163,7 +163,7 @@ refused. Database roles/ACLs are provisioned separately after recovery. CI runs 
 two-container synthetic recovery drill, including a concurrent graph write,
 historical reads, audit verification, RLS/vector checks and a restored queued job.
 
-> **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/cascade services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
+> **Current implementation:** The local prototype implements SQLite/SQLAlchemy/Alembic, NetworkX graph/impact services, mock-first evidence mapping, confirmations, replay, simulated actions, approval/audit, FastAPI/SSE and the static-exported Next.js dashboard. See BUILD_PLAN.md for verification and DECISIONS.md D010–D015 for simplifications. Broader integrations and production topology below remain design targets.
 
 ## 1. Goals and boundaries
 
@@ -212,7 +212,7 @@ SQLAlchemy is the proposed data-access boundary. SQLite in WAL mode is the local
 
 ### Layer 4 — Agents and tools
 
-Typed Python workflows coordinate the core platform. A separate implemented LangGraph workflow controls the read-only assistant's retrieval, optional web-search, generation and validation states; it does not replace deterministic assessment or approval services. **[Design]** Three MCP boundaries keep capabilities narrow:
+LangGraph coordinates the implemented risk-review states—evidence mapping, event sensing, relationship review, deterministic impact, mitigation drafting, policy checks, approval and audit—and pauses at named human checkpoints. A typed workflow remains the offline compatibility fallback. A separate LangGraph workflow controls the read-only assistant's retrieval, optional web-search, generation and validation states. Neither graph replaces deterministic assessment, policy or approval services. **[Implemented]** Three MCP boundaries keep capabilities narrow:
 
 | Proposed MCP server | Example tools | Permitted effects |
 |---|---|---|
@@ -225,14 +225,12 @@ client interoperability has not been verified, and no SAP affiliation is claimed
 
 The current offline slice exposes typed Mapper, Sensor, deterministic-impact, Action and
 Compliance/Audit skills over the shared tool registry. The code retains `cascade`
-in some internal API names, but the pitch-facing responsibility is the deterministic
-impact engine, not an LLM agent. Tenant jobs persist typed
-inputs, retries and results and cap active work. A fixed, version-pinned risk-review
-plan coordinates deterministic impact assessment with Compliance/Audit verification and
-stores a checkpoint after each role step. The flow creates an assessment only; it
-does not propose or execute a mitigation. Adaptive plan authoring, cross-role flows
-beyond this path, push notifications and hosted agent interoperability remain
-deployment/integration work. A2A `tasks/send` queues this plan and `tasks/get`
+only in legacy internal API names; every user-facing responsibility is the deterministic
+impact engine, not an LLM agent. Tenant jobs persist typed inputs, retries, results and
+checkpoints. The LangGraph risk-review plan maps evidence, resolves the event, pauses for
+relationship review when needed, invokes version-pinned deterministic impact, gathers
+mitigation drafts, applies policy, pauses for named approval, and verifies audit integrity.
+All external actions remain simulated. A2A `tasks/send` queues this plan and `tasks/get`
 returns its tenant-scoped state and completed artifacts.
 
 The domain assistant retrieves tenant-scoped graph facts, exact evidence passages

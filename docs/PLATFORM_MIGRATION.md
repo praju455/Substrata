@@ -169,7 +169,7 @@ archives are bounded to 20 MB. Ambiguous normalised-name matches pause in review
 Rollback creates a new graph revision and refuses to overwrite subsequent work.
 The source URI, observation time, units and source kind are supplied explicitly.
 
-The platform cascade reuses the tested runway arithmetic and bounded traversal,
+The deterministic impact engine reuses the tested runway arithmetic and bounded traversal,
 adds elapsed-stock handling, eligible PO arrivals, shared ancestors, supply-share
 concentration, affected products and sourced gross revenue at risk. It reports
 exposure ranges when dependencies are inferred. Evidence-support bounds use
@@ -293,14 +293,15 @@ consolidated CSV, not historical entries or every jurisdiction's restricted-part
 lists.
 
 `/platform/jobs` stores idempotent work with leases, bounded retries and audit
-records. Its fixed `risk_review` plan runs a version-pinned Cascade-caller assessment
-and Compliance/Audit verification, saving each step result as a durable checkpoint;
-a retry resumes at the first incomplete role step. It creates an assessment only and
-does not draft, approve or execute a mitigation. Run
+records. Its LangGraph `risk_review` plan saves durable checkpoints for evidence
+mapping, event sensing, relationship review, deterministic impact, mitigation
+drafting, policy, approval and audit. It pauses at relationship and approval gates;
+a named user can resume it after the required decision, and retries start at the
+first incomplete step. All generated actions remain dry-run only. Run
 `python scripts/platform_worker.py --tenant demo` as a separately
 supervised process; each worker is bound to one tenant. The queue handles event
 polls, deterministic assessments and typed agent tasks for Mapper, Sensor,
-Cascade-caller, Action and Compliance/Audit roles. Agent task schemas are validated
+Deterministic Impact, Action and Compliance/Audit roles. Agent task schemas are validated
 against the same typed tools exposed over MCP/A2A; each tenant can hold at most 100
 active jobs. Results, role checkpoints, attempts and terminal states persist in the
 tenant job record.
@@ -339,7 +340,7 @@ The stateless authenticated `/platform/mcp` endpoint exposes typed tenant tools 
 `graph.snapshot`, `evidence.discover`, `event.submit`, `cascade.assess`,
 `mitigation.propose`, `approval.decide` and `audit.verify`. The A2A agent card
 advertises the same task skills at `/platform/a2a`; each call applies the same
-tenant and role checks as the REST service. The cascade remains plain Python and
+tenant and role checks as the REST service. The impact calculations remain plain Python and
 no model computes exposure numbers. Tests cover discovery, representative tool
 calls, authentication, tenant isolation and results, but do not claim broad client
 interoperability or streaming support. A2A `tasks/send` can enqueue the fixed
@@ -374,7 +375,7 @@ heads separately to detect privileged tail truncation.
 1. Tenant context, portable migrations, immutable graph/provenance and atomic audit.
 2. Authenticated API, OIDC/RBAC, tenant policy and feature-flagged product access.
 3. Imports/connectors, entity resolution and data-quality/onboarding workflows.
-4. Multi-industry scenarios, deterministic cascade, uncertainty and graph exploration.
+4. Multi-industry scenarios, deterministic impact, uncertainty and graph exploration.
 5. Retrieval/extraction, signed confirmations, scoring training and evaluation.
 6. Feeds, durable jobs, MCP/A2A facades and exports are implemented in the offline
    slice; weather feeds beyond MeteoAlarm and NWS, configured port-provider
@@ -391,12 +392,12 @@ heads separately to detect privileged tail truncation.
 | 2. Ingestion | CSV/XLSX mapping, drift checks, dedupe, review, rollback; REST/webhooks; read-only OData mock/adapter; see connector and ingestion tests | Real SAP resource mappings/credentials and the Ariba adapter remain customer integration work |
 | 3. Evidence and inference | Tenant document store, citation-checked extraction, optional embeddings, provider interface/mock/cost logs, scorer training/evaluation and registry | Semantic provider keys and customer-labelled evaluation data are external; offline fixtures do not establish field precision/recall |
 | 4. Event sensing | Tenant RSS/Atom, GDELT, NWS, MeteoAlarm, user/API events, OFAC SDN and ITA CSL flow through review rules | Port signals require a licensed provider configuration; more jurisdictions/lists need source-specific review adapters |
-| 5. Cascade engine | Deterministic traversal, runway/ranges, golden scenarios, generated stock invariants and PostgreSQL recursive-path parity; see `cascade.py`, `store.py` and cascade/PostgreSQL tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
+| 5. Deterministic impact engine | Deterministic traversal, runway/ranges, golden scenarios, generated stock invariants and PostgreSQL recursive-path parity; see the legacy-named `cascade.py`, `store.py` and impact/PostgreSQL tests | Production-sized customer graphs and calibrated disruption probabilities are not established |
 | 6. Agents | Five typed role skills, durable tenant jobs, tenant hourly execution budgets, whole-job/provider deadlines, bounded retries/queue, checkpointed risk-review plan, A2A task submission/polling, MCP facade and deterministic math | General adaptive multi-role plan authoring, durable coordination beyond the fixed risk-review flow and broad external protocol interoperability remain |
 | 7. Governance | Tenant policy, approval/rejection/delegation, expiry, audit verification, dry-run execution, optional approval email | Delegation notices remain portal records; live ERP execution still needs a customer adapter, deployment flag and approved environment |
 | 8. Product surface | Onboarding, graph-aware quality counts, full import mappings, paginated workflow history, graph/history, scenarios/runway, approvals, alerts, CSV and print-to-PDF reports; English/Hindi catalog covers the workspace, printable report and supplier confirmation portal with a persisted browser choice | Full locale coverage, translated third-party/API content and customer accessibility QA remain |
 | 9. Platform/security | OIDC/RBAC, PostgreSQL RLS, input bounds, encrypted contact outbox, complete-response HTTP latency/status metrics, HTTP/queue/worker/provider/connector trace causality, optional OTLP export, health checks and worker | Production secret manager, TLS topology, encrypted backup/restore drills, production collector/metrics/log shipping and managed broker require deployment work |
-| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, structured scorer provenance, versioned recorded extraction evaluation, in-memory and PostgreSQL graph-load harnesses; PostgreSQL checks cover every tenant table, pgvector, recursive cascade parity, imports/history, overlapping execution budgets, concurrent audit writes, resumable jobs and approvals | Customer-shaped baselines and representative labelled data require customer participation |
+| 10. Quality | Python/frontend CI, synthetic multi-industry seeds, structured scorer provenance, versioned recorded extraction evaluation, in-memory and PostgreSQL graph-load harnesses; PostgreSQL checks cover every tenant table, pgvector, recursive impact parity, imports/history, overlapping execution budgets, concurrent audit writes, resumable jobs and approvals | Customer-shaped baselines and representative labelled data require customer participation |
 
 This map describes implementation evidence, not a pilot or GA certification. A
 production release still needs the listed deployment gates, real-system validation,
@@ -416,6 +417,6 @@ pilot gates. See [Operations](OPERATIONS.md).
 
 | Milestone | Scope | Main risks | Explicitly deferred |
 |---|---|---|---|
-| A — Finale-ready hardened slice, by 4 November 2026 | Demonstrate tenant onboarding, three clearly synthetic industry seeds, mapped import and review, sourced event intake, deterministic cascade ranges, approval/audit flow and printable report. Keep offline mode reliable and run the full automated suite against the demo build. | Finale network and identity configuration, representative workflow usability, and the gap between synthetic fixtures and enterprise data | Live customer SAP credentials, supplier outreach, production sanctions decisions, live ERP writes and claims of field accuracy |
+| A — Finale-ready hardened slice, by 4 November 2026 | Demonstrate tenant onboarding, three clearly synthetic industry seeds, mapped import and review, sourced event intake, deterministic impact ranges, approval/audit flow and printable report. Keep offline mode reliable and run the full automated suite against the demo build. | Finale network and identity configuration, representative workflow usability, and the gap between synthetic fixtures and enterprise data | Live customer SAP credentials, supplier outreach, production sanctions decisions, live ERP writes and claims of field accuracy |
 | B — First pilot-ready release | Validate one customer's read-only SAP resource mappings, identity/roles, licensed event providers, operating policy, tenant isolation, encrypted backups and restore drill. Evaluate mappings and risk outputs against customer-reviewed labels before operational use. | Master-data quality, lawful data sharing, provider terms, and customer acceptance of review workload | General-purpose connector catalog, automatic ERP execution, broad jurisdiction coverage and GA uptime commitments |
 | C — General availability | Establish a supported multi-tenant operating model with managed durable work, production secrets/TLS, recovery objectives, distributed observability, accessibility/localization, security review, load/evaluation baselines and documented support/incident response. | Cross-tenant scale, evolving legal/provider requirements, security assurance and long-term calibration | Autonomous purchasing, unreviewed sanctions clearance, LLM-computed exposure and unsupported sources |

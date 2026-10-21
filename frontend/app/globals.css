@@ -54,6 +54,9 @@ body {
   font-size: 14px;
   line-height: 1.55;
 }
+body:not(:has(.landing-root)) {
+  overflow-x: clip;
+}
 a {
   color: inherit;
   text-decoration: none;
@@ -176,13 +179,13 @@ pre {
   height: 32px;
   color: #E8913C;
 }
-nav {
+.site-header nav {
   display: flex;
   gap: 27px;
   color: #686574;
   font-size: 12px;
 }
-nav a:hover {
+.site-header nav a:hover {
   color: #E8913C;
 }
 .synthetic-label {
@@ -199,7 +202,7 @@ nav a:hover {
 .main-content {
   padding-top: 36px;
 }
-.hero {
+.main-content > .hero {
   display: flex;
   justify-content: space-between;
   gap: 24px;
@@ -222,7 +225,7 @@ nav a:hover {
 .red {
   color: #c0393e;
 }
-.amber {
+.main-content .amber {
   color: #98590c;
 }
 .muted {
@@ -693,7 +696,8 @@ blockquote p {
 .risk-metric strong {
   color: #c0393e;
 }
-.timeline {
+.runway-timeline,
+.impact-panel .timeline {
   display: flex;
   height: 7px;
   background: #f2e6e9;
@@ -701,10 +705,12 @@ blockquote p {
   overflow: hidden;
   margin: 22px 0 12px;
 }
-.timeline span:first-child {
+.runway-timeline span:first-child,
+.impact-panel .timeline span:first-child {
   background: #168b83;
 }
-.timeline span:last-child {
+.runway-timeline span:last-child,
+.impact-panel .timeline span:last-child {
   background: #df9ca2;
 }
 .impact-details {
@@ -860,7 +866,7 @@ td small {
 .limitation-note strong {
   color: #665972;
 }
-footer {
+footer.shell {
   display: flex;
   justify-content: space-between;
   gap: 20px;
@@ -904,13 +910,13 @@ footer {
   .header-inner {
     gap: 20px;
   }
-  nav {
+  .site-header nav {
     gap: 16px;
   }
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .hero {
+  .main-content > .hero {
     align-items: flex-start;
   }
   .decision-form {
@@ -936,7 +942,7 @@ footer {
   .brand {
     font-size: 20px;
   }
-  nav {
+  .site-header nav {
     order: 3;
     width: 100%;
     justify-content: space-between;
@@ -948,7 +954,7 @@ footer {
   .main-content {
     padding-top: 26px;
   }
-  .hero {
+  .main-content > .hero {
     flex-direction: column;
     gap: 16px;
   }
@@ -958,7 +964,7 @@ footer {
     justify-content: space-between;
     align-items: center;
   }
-  .hero .muted {
+  .main-content > .hero .muted {
     font-size: 12px;
   }
   .summary-grid {
@@ -1010,7 +1016,7 @@ footer {
     display: block;
     margin-top: 4px;
   }
-  footer {
+  footer.shell {
     flex-direction: column;
     gap: 5px;
   }
@@ -1030,161 +1036,191 @@ footer {
   }
 }
 
-/* BRUTALIST OVERRIDES */
+/* BRUTALIST OVERRIDES FOR DASHBOARD */
 
-:root {
-  --font-disp: var(--font-archivo-black), sans-serif !important;
-  --font-sans: var(--font-jetbrains-mono), monospace !important;
-}
-
-* {
-  border-radius: 0 !important;
-}
-
-body {
-  background-color: #1c1c1c !important;
+body:not(:has(.landing-root)) {
+  --font-disp: var(--font-archivo-black), sans-serif;
+  --font-sans: var(--font-jetbrains-mono), monospace;
+  background-color: #1c1c1c;
   background-image: 
     linear-gradient(rgba(250, 204, 21, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(250, 204, 21, 0.05) 1px, transparent 1px) !important;
-  background-size: 20px 20px !important;
-  color: #fff !important;
-  font-family: var(--font-sans) !important;
-  text-transform: uppercase !important;
+    linear-gradient(90deg, rgba(250, 204, 21, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  color: #fff;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
 }
 
-h1, h2, h3, .brand {
-  font-family: var(--font-disp) !important;
-  text-transform: uppercase !important;
-  letter-spacing: -0.05em !important;
-  color: #fff !important;
+body:not(:has(.landing-root)) * {
+  border-radius: 0;
 }
 
-.brand {
-  color: #facc15 !important;
+body:not(:has(.landing-root)) h1,
+body:not(:has(.landing-root)) h2,
+body:not(:has(.landing-root)) h3,
+body:not(:has(.landing-root)) .brand {
+  font-family: var(--font-disp);
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  color: #fff;
 }
 
-.shell, .site-header, .main-content {
-  background: transparent !important;
-  border: none !important;
+body:not(:has(.landing-root)) .brand {
+  color: #facc15;
 }
 
-.header-inner {
-  border-bottom: 4px solid #000 !important;
-  background: #1c1c1c !important;
-  box-shadow: 0px 8px 0px 0px #000 !important;
+body:not(:has(.landing-root)) .shell,
+body:not(:has(.landing-root)) .site-header,
+body:not(:has(.landing-root)) .main-content {
+  background: transparent;
+  border: none;
+}
+
+body:not(:has(.landing-root)) .header-inner {
+  border-bottom: 4px solid #000;
+  background: #1c1c1c;
+  box-shadow: 0px 8px 0px 0px #000;
   margin-bottom: 24px;
 }
 
-.provider-status, .graph-canvas, .inspector, .option-card, textarea, input, select, pre {
-  background: #facc15 !important; /* Cyber Yellow */
-  color: #000 !important;
-  border: 4px solid #000 !important;
-  box-shadow: 8px 8px 0px 0px #000 !important;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+body:not(:has(.landing-root)) .provider-status,
+body:not(:has(.landing-root)) .graph-canvas,
+body:not(:has(.landing-root)) .inspector,
+body:not(:has(.landing-root)) .option-card,
+body:not(:has(.landing-root)) textarea,
+body:not(:has(.landing-root)) input,
+body:not(:has(.landing-root)) select,
+body:not(:has(.landing-root)) pre {
+  background: #facc15;
+  color: #000;
+  border: 4px solid #000;
+  box-shadow: 8px 8px 0px 0px #000;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-p, span, .muted, .eyebrow, .small, .connection, .synthetic-label, summary, label, .inspector {
-  color: #fff !important;
+body:not(:has(.landing-root)) p,
+body:not(:has(.landing-root)) span,
+body:not(:has(.landing-root)) .muted,
+body:not(:has(.landing-root)) .eyebrow,
+body:not(:has(.landing-root)) .small,
+body:not(:has(.landing-root)) .connection,
+body:not(:has(.landing-root)) .synthetic-label,
+body:not(:has(.landing-root)) summary,
+body:not(:has(.landing-root)) label {
+  color: #fff;
 }
 
-.provider-status p, .provider-status span, .inspector p, .inspector span, .inspector .muted, .option-card p, .option-card span, .option-card .muted, button, button span {
-  color: #000 !important;
+body:not(:has(.landing-root)) .provider-status p,
+body:not(:has(.landing-root)) .provider-status span,
+body:not(:has(.landing-root)) .inspector p,
+body:not(:has(.landing-root)) .inspector span,
+body:not(:has(.landing-root)) .inspector .muted,
+body:not(:has(.landing-root)) .option-card p,
+body:not(:has(.landing-root)) .option-card span,
+body:not(:has(.landing-root)) .option-card .muted,
+body:not(:has(.landing-root)) button,
+body:not(:has(.landing-root)) button span {
+  color: #000;
 }
 
-.option-card:hover {
-  transform: scale(1.02) translateY(-4px) !important;
-  box-shadow: 12px 12px 0px 0px #000 !important;
+body:not(:has(.landing-root)) .option-card:hover {
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: 12px 12px 0px 0px #000;
 }
 
-.graph-canvas {
-  background: transparent !important;
+body:not(:has(.landing-root)) .graph-canvas {
+  background: transparent;
 }
 
-button {
-  border: 4px solid #000 !important;
-  box-shadow: 4px 4px 0px 0px #000 !important;
-  font-family: var(--font-sans) !important;
-  font-weight: 800 !important;
-  text-transform: uppercase !important;
+body:not(:has(.landing-root)) button {
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0px 0px #000;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-button:hover:not(:disabled) {
-  transform: translate(-2px, -2px) !important;
-  box-shadow: 6px 6px 0px 0px #000 !important;
+body:not(:has(.landing-root)) button:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #000;
 }
 
-button:disabled {
-  background: #333 !important;
-  color: #888 !important;
-  border-color: #000 !important;
-  opacity: 1 !important;
-  box-shadow: 4px 4px 0px 0px #000 !important;
+body:not(:has(.landing-root)) button:disabled {
+  background: #333;
+  color: #888;
+  border-color: #000;
+  opacity: 1;
+  box-shadow: 4px 4px 0px 0px #000;
 }
 
-.primary, .approve-button {
-  background: #facc15 !important;
-  color: #000 !important;
+body:not(:has(.landing-root)) .primary,
+body:not(:has(.landing-root)) .approve-button {
+  background: #facc15;
+  color: #000;
 }
 
-.secondary {
-  background: #fff !important;
-  color: #000 !important;
+body:not(:has(.landing-root)) .secondary {
+  background: #fff;
+  color: #000;
 }
 
-.danger-button {
-  background: #ff3333 !important;
-  color: #000 !important;
+body:not(:has(.landing-root)) .danger-button {
+  background: #ff3333;
+  color: #000;
 }
 
-.badge, .synthetic-label {
-  background: #000 !important;
-  color: #facc15 !important;
-  border: 2px solid #facc15 !important;
-  font-family: var(--font-sans) !important;
-  border-radius: 0 !important;
+body:not(:has(.landing-root)) .badge,
+body:not(:has(.landing-root)) .synthetic-label {
+  background: #000;
+  color: #facc15;
+  border: 2px solid #facc15;
+  font-family: var(--font-sans);
+  border-radius: 0;
 }
 
-.shared-callout {
-  background: #ff3333 !important;
-  color: #000 !important;
-  border: 4px solid #000 !important;
-  box-shadow: 8px 8px 0px 0px #000 !important;
+body:not(:has(.landing-root)) .shared-callout {
+  background: #ff3333;
+  color: #000;
+  border: 4px solid #000;
+  box-shadow: 8px 8px 0px 0px #000;
 }
-.shared-callout span, .shared-callout strong {
-  color: #000 !important;
-}
-
-.network-grid {
-  background: #1c1c1c !important;
+body:not(:has(.landing-root)) .shared-callout span,
+body:not(:has(.landing-root)) .shared-callout strong {
+  color: #000;
 }
 
-.quiet {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: #facc15 !important;
+body:not(:has(.landing-root)) .network-grid {
+  background: #1c1c1c;
 }
 
-.notice {
-  background: #fff !important;
-  color: #000 !important;
-  border: 4px solid #000 !important;
-  box-shadow: 8px 8px 0px 0px #000 !important;
+body:not(:has(.landing-root)) .quiet {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #facc15;
 }
 
-.notice.warning {
-  background: #facc15 !important;
+body:not(:has(.landing-root)) .notice {
+  background: #fff;
+  color: #000;
+  border: 4px solid #000;
+  box-shadow: 8px 8px 0px 0px #000;
 }
 
-.notice.error {
-  background: #ff3333 !important;
+body:not(:has(.landing-root)) .notice.warning {
+  background: #facc15;
 }
 
-.notice span, .notice p {
-  color: #000 !important;
+body:not(:has(.landing-root)) .notice.error {
+  background: #ff3333;
 }
 
-.notice .quiet {
-  color: #000 !important;
+body:not(:has(.landing-root)) .notice span,
+body:not(:has(.landing-root)) .notice p {
+  color: #000;
+}
+
+body:not(:has(.landing-root)) .notice .quiet {
+  color: #000;
   text-decoration: underline;
 }

@@ -1,5 +1,6 @@
 """Deterministic, bounded propagation over tenant snapshots. No LLM dependencies."""
 
+import hashlib
 import math
 from collections.abc import Callable
 from datetime import datetime
@@ -9,6 +10,7 @@ import networkx as nx
 from substrata.cascade import runway
 from substrata.graph import EvidencePath, PathResult, dependency_paths
 from substrata.platform.domain import GraphData, Snapshot
+from substrata.seed import canonical
 
 FORMULA_VERSION = "platform-runway-v2"
 
@@ -19,7 +21,7 @@ def projection(data: GraphData, as_of: datetime):
         (entity.id, {"kind": entity.kind, "name": entity.name}) for entity in data.entities
     )
     for link in data.links:
-        if link.status in {"rejected", "expired"} or link.valid_from > as_of:
+        if link.status in {"rejected", "expired", "superseded"} or link.valid_from > as_of:
             continue
         if link.valid_to is not None and link.valid_to <= as_of:
             continue
@@ -353,6 +355,19 @@ def assess(
         "severity": severity,
         "as_of": as_of.isoformat(),
         "formula_version": FORMULA_VERSION,
+        "evidence_sha256": hashlib.sha256(
+            canonical(
+                [
+                    {
+                        "id": link.id,
+                        "status": link.status,
+                        "evidence": [item.model_dump(mode="json") for item in link.evidence],
+                    }
+                    for link in sorted(data.links, key=lambda item: item.id)
+                    if link.status not in {"rejected", "expired", "superseded"}
+                ]
+            ).encode()
+        ).hexdigest(),
         "impacts": sorted(impacts, key=lambda i: (i["material_id"], i["plant_id"])),
         "shared_dependencies": shared,
         "concentration": concentration,

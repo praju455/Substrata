@@ -75,7 +75,7 @@ class Link(Contract):
     target: Identifier
     type: Literal["SUPPLIES", "DEPENDS_ON", "USED_IN", "OWNED_BY", "LOCATED_IN"]
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
-    status: Literal["declared", "inferred", "confirmed", "rejected", "expired"]
+    status: Literal["declared", "inferred", "confirmed", "rejected", "expired", "superseded"]
     evidence: list[Citation] = Field(default_factory=list)
     provenance: Provenance
     valid_from: AwareDatetime

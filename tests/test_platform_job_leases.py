@@ -96,7 +96,13 @@ def test_expired_plan_does_not_publish_checkpoint_or_call_next_tool(platform, mo
     monkeypatch.setattr(agent_protocols, "execute_tool", forbidden_next_tool)
     assert run_next(platform, actor)["status"] == "lease_lost"
     assert calls == []
-    assert not jobs(platform, "alpha")[0]["payload"].get("checkpoints")
+    checkpoints = jobs(platform, "alpha")[0]["payload"].get("checkpoints", {})
+    assert set(checkpoints) == {
+        "evidence_mapping",
+        "event_sensing",
+        "relationship_review",
+    }
+    assert "deterministic_impact" not in checkpoints
     # The first tool's idempotent result survives and can be reused by recovery.
     assert len(list_records(platform, "alpha", kind="assessment")) == 1
     monkeypatch.setattr(governance, "save_assessment", original_save)

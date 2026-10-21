@@ -723,6 +723,8 @@ export default function PlatformWorkspace() {
                 <AssistantPanel
                   token={token}
                   entities={state.snapshot?.data.entities || []}
+                  selectedRelationshipId={selectedLink}
+                  onSelectRelationship={setSelectedLink}
                 />
                 <JobsPanel jobs={state.jobs || []} token={token} busy={busy}
                   canEdit={can("analyst")} run={run} snapshot={snapshot || null} />
@@ -1098,7 +1100,7 @@ export default function PlatformWorkspace() {
 
                 {snapshot && (
                   <section className="panel">
-                    <h2>{t("Scenario runner")}</h2>
+                    <h2>Deterministic Impact Engine</h2>
                     <p className="muted">
                       {t("Assess a full source interruption using the selected immutable graph revision.")}
                     </p>
@@ -1164,7 +1166,15 @@ export default function PlatformWorkspace() {
                     </div>
                     {report && (
                       <>
-                        <p className="muted">{t("Graph revision")} {report.graph_version}</p>
+                        <p className="muted">
+                          {t("Graph revision")} {report.graph_version} · formula {report.formula_version}
+                          {" · "}source {report.source_id} · severity {report.severity}
+                        </p>
+                        <p className="notice">
+                          Stock cover = usable stock ÷ daily consumption. Exposure runway =
+                          requalification time − remaining stock cover. Missing values or unit
+                          mismatches produce an incomplete result, never a guessed number.
+                        </p>
                         <p className="notice">{report.range_assumption}</p>
                         {report.truncated && (
                           <p role="alert">
@@ -1212,7 +1222,7 @@ export default function PlatformWorkspace() {
                   token={token} busy={busy} canAdmin={can("admin")} run={run} />
 
                 <section id="approvals" className="panel">
-                  <h2>{t("Approvals inbox")}</h2>
+                  <h2>Mitigation options, policy and approval</h2>
                   <label>
                     {t("Decision or rollback reason")}
                     <textarea
@@ -1348,7 +1358,7 @@ export default function PlatformWorkspace() {
                                 )
                               }
                             >
-                              {t("Record dry-run preview")}
+                              Generate approved dry-run action
                             </button>
                           )}
                         </div>

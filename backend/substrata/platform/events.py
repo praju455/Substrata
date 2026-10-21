@@ -423,7 +423,7 @@ class JSONAPIEventFeed:
             description = (
                 self._at_path(item, self.description_field) if self.description_field else ""
             )
-            if not isinstance(item_id, (str, int)) or isinstance(item_id, bool):
+            if not isinstance(item_id, str | int) or isinstance(item_id, bool):
                 continue
             if not isinstance(title, str) or not title.strip() or not isinstance(observed, str):
                 continue

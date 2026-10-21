@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from substrata.platform import agent_protocols
 from substrata.platform.auth import Principal
 from substrata.platform.database import tenant_transaction
-from substrata.platform.domain import Entity, Measure, Provenance
+from substrata.platform.domain import Citation, Entity, GraphData, Measure, Provenance
 from substrata.platform.events import (
     EventRule,
     EventSubmission,
@@ -28,7 +28,15 @@ from substrata.platform.events import (
     subscription,
 )
 from substrata.platform.governance import Policy, configure_policy
-from substrata.platform.jobs import MAX_ACTIVE_JOBS_PER_TENANT, JobInput, enqueue, jobs, run_next
+from substrata.platform.jobs import (
+    MAX_ACTIVE_JOBS_PER_TENANT,
+    AgentPlanResume,
+    JobInput,
+    enqueue,
+    jobs,
+    resume_agent_plan,
+    run_next,
+)
 from substrata.platform.models import WorkRecord
 from substrata.platform.records import list_records
 from substrata.platform.seeds import generate
@@ -756,9 +764,15 @@ def test_risk_review_plan_resumes_from_durable_role_checkpoint(platform, monkeyp
     assert run_next(platform, actor())["status"] == "retry_scheduled"
     with tenant_transaction(platform.engine, "alpha") as session:
         record = session.get(WorkRecord, ("alpha", queued["id"]))
-        assert set(record.payload.get("checkpoints", {})) == {"cascade_caller.assessment"}, (
-            record.payload.get("error")
-        )
+        assert set(record.payload.get("checkpoints", {})) == {
+            "evidence_mapping",
+            "event_sensing",
+            "relationship_review",
+            "deterministic_impact",
+            "mitigation_drafting",
+            "policy_checks",
+            "approval",
+        }, record.payload.get("error")
         record.payload = {
             **record.payload,
             "retry_at": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
@@ -768,12 +782,101 @@ def test_risk_review_plan_resumes_from_durable_role_checkpoint(platform, monkeyp
     assert completed["status"] == "succeeded"
     checkpoints = completed["payload"]["checkpoints"]
     assert set(checkpoints) == {
-        "cascade_caller.assessment",
-        "compliance_audit.verification",
+        "evidence_mapping",
+        "event_sensing",
+        "relationship_review",
+        "deterministic_impact",
+        "mitigation_drafting",
+        "policy_checks",
+        "approval",
+        "audit",
     }
-    assert checkpoints["compliance_audit.verification"]["valid"] is True
+    assert checkpoints["audit"]["valid"] is True
     assert calls == ["audit.verify", "audit.verify"]
     assert platform.audit("alpha")["verification"]["valid"]
+
+
+def test_langgraph_pauses_for_relationship_review_and_resumes_on_latest_graph(platform):
+    data = seeded(platform)
+    passage = "The supplier depends on the shared source."
+    platform.add_document(
+        "alpha",
+        "synthetic-review",
+        passage,
+        source("synthetic://relationship-review"),
+        "risk-user",
+    )
+    link = data.links[0].model_copy(
+        update={
+            "status": "inferred",
+            "evidence": [
+                Citation(
+                    document_id="synthetic-review",
+                    passage=passage,
+                    start=0,
+                    end=42,
+                )
+            ],
+        }
+    )
+    platform.save(
+        "alpha",
+        GraphData.model_validate(
+            data.model_copy(update={"links": [link, *data.links[1:]]}).model_dump()
+        ),
+        "risk-user",
+        expected_version=1,
+    )
+    queued = enqueue(
+        platform,
+        actor(),
+        JobInput(
+            kind="agent_plan",
+            idempotency_key="human-checkpoint",
+            payload={
+                "plan": "risk_review",
+                "arguments": {
+                    "source_id": "upstream",
+                    "severity": 0.8,
+                    "as_of": datetime.now(UTC).isoformat(),
+                    "max_depth": 4,
+                    "graph_version": 2,
+                },
+            },
+        ),
+    )
+    paused = run_next(platform, actor())
+    assert paused["status"] == "paused"
+    assert paused["payload"]["result"]["awaiting"] == "relationship_review"
+
+    with pytest.raises(ValueError, match="every inferred relationship"):
+        resume_agent_plan(
+            platform,
+            actor(),
+            queued["id"],
+            AgentPlanResume(checkpoint="relationship_review", reason="Tried to skip the review."),
+        )
+
+    from substrata.platform.confirmations import RelationshipDecision, review
+
+    review(
+        platform,
+        actor(),
+        link.id,
+        RelationshipDecision(decision="confirmed", reason="Analyst verified the evidence."),
+    )
+    resumed = resume_agent_plan(
+        platform,
+        actor(),
+        queued["id"],
+        AgentPlanResume(
+            checkpoint="relationship_review", reason="Confirmed relationship reviewed."
+        ),
+    )
+    assert resumed["status"] == "pending"
+    completed = run_next(platform, actor())
+    assert completed["status"] == "succeeded"
+    assert completed["payload"]["checkpoints"]["deterministic_impact"]["graph_version"] == 3
 
 
 def test_tenant_job_queue_enforces_active_work_limit(platform):

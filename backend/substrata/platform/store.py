@@ -310,12 +310,12 @@ class PlatformStore:
                 )
                 if (
                     confirmation is None
-                    or confirmation.kind != "confirmation"
+                    or confirmation.kind not in {"confirmation", "relationship_review"}
                     or confirmation.status != "confirmed"
                     or confirmation.payload["link_id"] != link.id
                 ):
                     raise ValueError(
-                        "New confirmations require a verified supplier response workflow."
+                        "New confirmations require a verified analyst review or supplier response."
                     )
             for citation in link.evidence:
                 document = session.get(Document, (tenant_id, citation.document_id))

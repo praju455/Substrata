@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import math
+import os
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Literal
@@ -85,7 +86,7 @@ class JobInput(Contract):
             if (
                 not isinstance(assessment["source_id"], str)
                 or isinstance(assessment["severity"], bool)
-                or not isinstance(assessment["severity"], (int, float))
+                or not isinstance(assessment["severity"], int | float)
                 or not math.isfinite(assessment["severity"])
                 or not 0 <= assessment["severity"] <= 1
                 or isinstance(assessment["max_depth"], bool)
@@ -130,6 +131,11 @@ class JobInput(Contract):
             if len(canonical(self.payload).encode()) > 65_536:
                 raise ValueError("Agent plan input exceeds the configured size limit.")
         return self
+
+
+class AgentPlanResume(Contract):
+    checkpoint: Literal["relationship_review", "approval"]
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 def enqueue(store, actor, body: JobInput):
@@ -460,7 +466,8 @@ def _run_claimed(store, actor, job_id, payload, span):
         except LeaseLost:
             span.set_attribute("job.lease_lost", True)
             return _lost_claim(job_id, payload)
-        record.status = "succeeded"
+        paused = isinstance(result, dict) and result.get("status") == "paused"
+        record.status = "paused" if paused else "succeeded"
         record.payload = {
             **record.payload,
             "result": result,
@@ -470,15 +477,61 @@ def _run_claimed(store, actor, job_id, payload, span):
         store.append(
             session,
             org,
-            "job.completed",
+            "agent_plan.paused" if paused else "job.completed",
             actor.subject,
-            {"id": job_id, "attempt": payload["attempts"]},
+            {
+                "id": job_id,
+                "attempt": payload["attempts"],
+                "awaiting": result.get("awaiting") if paused else None,
+            },
         )
         return encode(record)
 
 
 def _run_agent_plan(store, actor, job_id, payload):
-    """Run a version-pinned Cascade-caller → Compliance/Audit plan with durable checkpoints."""
+    """Run LangGraph, retaining the typed assessment/audit plan as an offline fallback."""
+    if os.environ.get("SUBSTRATA_AGENT_ORCHESTRATOR", "langgraph") == "typed":
+        return _run_typed_agent_plan(store, actor, job_id, payload)
+
+    from substrata.platform.orchestration import build_risk_review_graph
+
+    checkpoints = dict(payload.get("checkpoints", {}))
+
+    def persist(step, result):
+        checkpoints[step] = result
+        with tenant_transaction(store.engine, actor.tenant_id) as session:
+            org = store.organisation(session, actor.tenant_id)
+            record = _require_claim(session, actor.tenant_id, job_id, payload)
+            record.payload = {**record.payload, "checkpoints": checkpoints}
+            store.append(
+                session,
+                org,
+                "agent_plan.step_completed",
+                actor.subject,
+                {"id": job_id, "step": step, "result": result},
+            )
+
+    graph = build_risk_review_graph(store, actor, job_id, persist)
+    result = graph.invoke(
+        {
+            "arguments": payload["input"]["arguments"],
+            "checkpoints": checkpoints,
+            "human_checkpoints": dict(payload.get("human_checkpoints", {})),
+            "status": "running",
+            "awaiting": None,
+        }
+    )
+    return {
+        "plan": "risk_review",
+        "orchestrator": "langgraph",
+        "status": result.get("status", "completed"),
+        "awaiting": result.get("awaiting"),
+        "checkpoints": result.get("checkpoints", checkpoints),
+    }
+
+
+def _run_typed_agent_plan(store, actor, job_id, payload):
+    """Run the compatibility assessment/audit workflow without LangGraph."""
     from substrata.platform.agent_protocols import AssessmentArguments, execute_tool
     from substrata.platform.governance import save_assessment
 
@@ -529,7 +582,101 @@ def _run_agent_plan(store, actor, job_id, payload):
                 actor.subject,
                 {"id": job_id, "step": step, "result": checkpoint},
             )
-    return {"plan": "risk_review", "checkpoints": checkpoints}
+    return {
+        "plan": "risk_review",
+        "orchestrator": "typed_fallback",
+        "status": "completed",
+        "awaiting": None,
+        "checkpoints": checkpoints,
+    }
+
+
+def resume_agent_plan(store, actor, job_id: str, body: AgentPlanResume):
+    """Resume a paused LangGraph plan after a named human checkpoint."""
+    actor.require("analyst")
+    with tenant_transaction(store.engine, actor.tenant_id) as session:
+        org = store.organisation(session, actor.tenant_id)
+        record = session.get(WorkRecord, (actor.tenant_id, job_id))
+        if record is None or record.kind != "job" or record.payload.get("job_type") != "agent_plan":
+            raise ValueError("Risk-review job is unavailable.")
+        awaiting = record.payload.get("result", {}).get("awaiting")
+        if record.status != "paused" or awaiting != body.checkpoint:
+            raise ValueError("Risk-review job is not waiting at that checkpoint.")
+        if body.checkpoint == "approval":
+            pending_ids = (
+                record.payload.get("checkpoints", {}).get("approval", {}).get("action_ids", [])
+            )
+            current = (
+                {
+                    item.id: item.status
+                    for item in session.scalars(
+                        select(WorkRecord).where(
+                            WorkRecord.tenant_id == actor.tenant_id,
+                            WorkRecord.kind == "mitigation",
+                            WorkRecord.id.in_(pending_ids),
+                        )
+                    )
+                }
+                if pending_ids
+                else {}
+            )
+            if any(status == "pending" for status in current.values()):
+                raise ValueError("Complete the named approval decision before resuming.")
+        if body.checkpoint == "relationship_review":
+            awaiting_ids = set(
+                record.payload.get("checkpoints", {})
+                .get("relationship_review", {})
+                .get("relationship_ids", [])
+            )
+            current_links = {
+                link.id: link.status for link in store.snapshot(actor.tenant_id).data.links
+            }
+            unresolved = sorted(
+                link_id
+                for link_id in awaiting_ids
+                if current_links.get(link_id) in {None, "inferred"}
+            )
+            if unresolved:
+                raise ValueError(
+                    "Confirm, reject, expire or supersede every inferred relationship "
+                    "before resuming."
+                )
+        human = dict(record.payload.get("human_checkpoints", {}))
+        human[body.checkpoint] = {
+            "actor": actor.subject,
+            "reason": body.reason,
+            "recorded_at": datetime.now(UTC).isoformat(),
+            "graph_version": org.version,
+        }
+        next_input = record.payload["input"]
+        next_checkpoints = dict(record.payload.get("checkpoints", {}))
+        if body.checkpoint == "relationship_review":
+            next_input = {
+                **next_input,
+                "arguments": {**next_input["arguments"], "graph_version": org.version},
+            }
+            next_checkpoints = {}
+        timeout = int(org.policy.get("job_timeout_seconds", DEFAULT_JOB_TIMEOUT_SECONDS))
+        record.status = "pending"
+        record.payload = {
+            **record.payload,
+            "input": next_input,
+            "checkpoints": next_checkpoints,
+            "human_checkpoints": human,
+            "retry_at": datetime.now(UTC).isoformat(),
+            "deadline_at": (datetime.now(UTC) + timedelta(seconds=timeout)).isoformat(),
+            "lease_until": None,
+            "claim_id": None,
+            "result": None,
+        }
+        store.append(
+            session,
+            org,
+            "agent_plan.resumed",
+            actor.subject,
+            {"id": job_id, "checkpoint": body.checkpoint, "reason": body.reason},
+        )
+        return encode(record)
 
 
 def jobs(store, tenant_id: str, limit=50):

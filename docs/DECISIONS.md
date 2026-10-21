@@ -201,7 +201,7 @@ or labels. Fixture hashes and generator parameters are recorded.
 The documented graph schema has no site-to-site supply edge. This demo therefore
 models a shared **ownership/control** dependency using the documented OWNED_BY
 edge: three apparently independent groups share one semiconductor parent.
-Cascade propagation from a disrupted parent to controlled sites is an explicit
+Deterministic impact propagation from a disrupted parent to controlled sites is an explicit
 scenario assumption, not proof that ownership always implies supply disruption.
 This preserves documented edge directions rather than inventing real procurement
 relationships. All names, quantities, claims and events are invented. Public
@@ -305,7 +305,7 @@ directly from FastAPI, with generation/cursor IDs, heartbeat and reset handling;
 `once=true` provides a bounded diagnostic response.
 
 Exact event names match deterministically. Non-exact candidates enter analyst
-review; no uncertain match triggers a cascade automatically. Severity comes
+review; no uncertain match triggers an impact assessment automatically. Severity comes
 from the validated synthetic event fixture. Replay handles the next unseen
 event, can pause between events and resets only synthetic data. Refresh creates
 a new frozen scenario instead of editing previous calculations. An input-file

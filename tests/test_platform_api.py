@@ -370,8 +370,8 @@ def test_a2a_risk_review_queues_and_polls_tenant_scoped_checkpointed_task(client
     ).json()["result"]
     assert completed["status"]["state"] == "completed"
     result = completed["artifacts"][0]["parts"][0]["data"]
-    assert result["checkpoints"]["cascade_caller.assessment"]["graph_version"] == 1
-    assert result["checkpoints"]["compliance_audit.verification"]["valid"] is True
+    assert result["checkpoints"]["deterministic_impact"]["graph_version"] == 1
+    assert result["checkpoints"]["audit"]["valid"] is True
 
     elsewhere = client.post(
         "/platform/a2a",

@@ -44,6 +44,9 @@ export default function EvidencePanel({
   const [recipient, setRecipient] = useState("");
   const [preview, setPreview] = useState("");
   const [previewRequestId, setPreviewRequestId] = useState("");
+  const [reviewLink, setReviewLink] = useState("");
+  const [reviewReason, setReviewReason] = useState("");
+  const [replacementLink, setReplacementLink] = useState("");
   const previewRequest = workspace.records.find((item) => item.id === previewRequestId);
   const candidates =
     workspace.snapshot?.data.links.filter(
@@ -212,6 +215,98 @@ export default function EvidencePanel({
           </small>
         </blockquote>
       ))}
+      <h3>Relationship review</h3>
+      <p className="muted">
+        AI confidence never confirms a relationship. An analyst or supplier must record a
+        reasoned decision; rejected, expired and superseded links remain visible for audit.
+      </p>
+      <label>
+        Relationship
+        <select value={reviewLink} onChange={(event) => setReviewLink(event.target.value)}>
+          <option value="">Choose a relationship</option>
+          {(workspace.snapshot?.data.links || []).map((item) => (
+            <option value={item.id} key={item.id}>
+              {item.source} → {item.target} · {item.status} · {Math.round(item.confidence * 100)}%
+            </option>
+          ))}
+        </select>
+      </label>
+      {reviewLink && (() => {
+        const selected = workspace.snapshot?.data.links.find((item) => item.id === reviewLink);
+        if (!selected) return null;
+        const conflicting = selected.evidence.some((item) => item.stance === "supports") &&
+          selected.evidence.some((item) => item.stance === "contradicts");
+        return (
+          <div className="relationship-review-card">
+            <p>
+              <span className="badge">{selected.status}</span>{" "}
+              <strong>{selected.type}</strong> · confidence {selected.confidence.toFixed(2)}
+              {conflicting && <span className="badge warning">CONFLICTING EVIDENCE</span>}
+            </p>
+            <p className="muted">{selected.provenance.uri} · {selected.provenance.note}</p>
+            {selected.evidence.map((citation, index) => (
+              <blockquote key={`${citation.document_id}-${index}`}>
+                <p>{citation.passage}</p>
+                <small>{citation.document_id} · {citation.stance}</small>
+              </blockquote>
+            ))}
+          </div>
+        );
+      })()}
+      <label>
+        Mandatory decision reason
+        <textarea
+          maxLength={2000}
+          value={reviewReason}
+          onChange={(event) => setReviewReason(event.target.value)}
+        />
+      </label>
+      <div className="button-row">
+        {(["confirmed", "rejected", "expired"] as const).map((decision) => (
+          <button
+            key={decision}
+            className={decision === "confirmed" ? "primary" : "secondary"}
+            disabled={busy || !canEdit || !reviewLink || !reviewReason.trim()}
+            onClick={() => void run(async () => {
+              await call(`/relationships/${reviewLink}/decision`, token, {
+                decision,
+                reason: reviewReason.trim(),
+              });
+              setReviewReason("");
+            })}
+          >
+            {decision === "confirmed" ? "Confirm" : decision === "rejected" ? "Reject" : "Expire"}
+          </button>
+        ))}
+      </div>
+      <div className="platform-form-row">
+        <label>
+          Replacement relationship
+          <select
+            value={replacementLink}
+            onChange={(event) => setReplacementLink(event.target.value)}
+          >
+            <option value="">Choose replacement</option>
+            {(workspace.snapshot?.data.links || [])
+              .filter((item) => item.id !== reviewLink && ["declared", "inferred", "confirmed"].includes(item.status))
+              .map((item) => <option key={item.id} value={item.id}>{item.id}</option>)}
+          </select>
+        </label>
+        <button
+          className="secondary"
+          disabled={busy || !canEdit || !reviewLink || !replacementLink || !reviewReason.trim()}
+          onClick={() => void run(async () => {
+            await call(`/relationships/${reviewLink}/supersede`, token, {
+              replacement_link_id: replacementLink,
+              reason: reviewReason.trim(),
+            });
+            setReviewReason("");
+            setReplacementLink("");
+          })}
+        >
+          Supersede
+        </button>
+      </div>
       <h3>{t("Request supplier confirmation")}</h3>
       <label>
         {t("Relationship to review")}

@@ -11,7 +11,7 @@
 
 Substrata is a proposed agentic supply-chain resilience layer that discovers hidden dependencies across supplier tiers, estimates how much decision time remains before production is exposed, and recommends governed mitigation options. <sup>[Design]</sup>
 
-> **Current prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, simulated supplier confirmations, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. The tenant platform also includes a read-only, cited domain assistant: LangGraph controls its retrieval workflow, LangChain assembles bounded context, Google Gen AI SDK/Groq provide optional live inference, Tavily provides optional public-web evidence and mock mode works offline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
+> **Current prototype status:** the synthetic vertical slice implements evidence-backed graph discovery, analyst/supplier relationship review, event replay, deterministic exposure calculations, mitigation drafts, named approval and hash-chained audit. LangGraph coordinates explicit risk-review stages and the read-only cited assistant; durable checkpoints pause for relationship review or named approval and resume safely. LangChain assembles bounded assistant context, Google Gen AI SDK/Groq provide optional live inference, Tavily provides optional public-web evidence and mock mode works offline. Neither path claims validated live SAP access, customer accuracy or real purchase execution.
 
 See the [three-minute demo](docs/DEMO_SCRIPT.md), [build checklist](docs/BUILD_PLAN.md) and [decision register](docs/DECISIONS.md).
 
@@ -130,7 +130,7 @@ exposure_window = 90 - 18 = 72 days
 
 The exposure window means production cover ends 72 days before the alternative is ready. It does **not** predict that the hackathon or project will take 72 days. <sup>[Design]</sup>
 
-![Synthetic cascade from a matched event to a deterministic impact report](docs/diagrams/09-cascade-simulation.png)
+![Synthetic deterministic impact from a matched event to a governed report](docs/diagrams/09-cascade-simulation.png)
 
 *Figure 3 — The graph identifies affected paths; deterministic code performs the calculation. <sup>[Design]</sup>*
 
@@ -157,9 +157,9 @@ The proposed demo replays public Nexperia events over an invented automotive net
 | Data | Synthetic procurement, BOM, stock and lead-time records; declared links; replayed public events; simulated confirmations. <sup>[Design]</sup> |
 | Persistence | SQLAlchemy and Alembic with PostgreSQL for the platform and SQLite WAL for the local demo. <sup>[Design]</sup> |
 | Graph and impact | `GraphStore` with NetworkX and PostgreSQL traversal; deterministic services calculate exposure, runway and policy outcomes. SAP HANA Graph remains an entitlement-dependent stretch adapter. <sup>[Design]</sup> <sup>[TBD]</sup> |
-| Orchestration | Typed Python workflows coordinate the core platform; an implemented LangGraph workflow controls the assistant's retrieve, optional-web, generate and validate steps. MCP and A2A expose bounded task/tool contracts. <sup>[Design]</sup> |
-| Grounded assistance | An implemented LangChain chain answers path-specific questions from graph facts, exact evidence, saved deterministic reports and optional Tavily results. Every claim is labelled known, inferred or unknown. <sup>[Design]</sup> |
-| Pretrained AI gateway | Provider-neutral `LLMClient` for extraction plus Google Gen AI SDK/Groq adapters for the assistant and explicit offline mocks. No custom LLM training or fine-tuning. <sup>[Design]</sup> |
+| Orchestration | LangGraph coordinates evidence mapping, event sensing, relationship review, deterministic impact, mitigation drafting, policy, approval and audit with durable pause/resume checkpoints. A typed workflow remains the offline compatibility fallback. <sup>[Implemented]</sup> |
+| Grounded assistance | An implemented LangChain chain answers path-specific questions from graph facts, exact evidence, saved deterministic reports and optional Tavily results. Every claim is labelled known, inferred or unknown. <sup>[Implemented]</sup> |
+| Pretrained AI gateway | Provider-neutral `LLMClient` for extraction plus Google Gen AI SDK/Groq adapters for the assistant and explicit offline mocks. No custom LLM training or fine-tuning. <sup>[Implemented]</sup> |
 | Experience | Next.js and TypeScript with Cytoscape.js; MapLibre is planned for geographic concentration views. FastAPI/Pydantic and SSE serve the current interface; WebSocket transport is planned. <sup>[Design]</sup> |
 | Governed execution | Relationship confirmation, deterministic policy checks, named approval, SHA-256 audit history and SAP-shaped actions marked `simulated_only`. <sup>[Design]</sup> |
 
@@ -188,10 +188,10 @@ The prototype will not issue purchase orders, onboard suppliers or move real shi
 
 Substrata does not train or fine-tune a generative model. Pretrained models are
 accessed through bounded adapters for evidence extraction, explanation and cited
-supply-path investigation. Typed Python workflows coordinate the core platform;
-LangGraph controls the assistant workflow and LangChain assembles its retrieved
-context and structured prompt. Neither framework performs exposure arithmetic or
-automatically turns an inferred link into a confirmed fact.
+supply-path investigation. LangGraph coordinates the governed risk-review and
+assistant workflows; LangChain assembles only the assistant's retrieved context
+and structured prompt. Deterministic services perform exposure arithmetic, and a
+named analyst or supplier must confirm an inferred relationship.
 
 Separately, administrators can train a small classical gradient-boosted link
 scorer from reviewed supplier labels, with grouped holdouts, calibration and
@@ -306,11 +306,11 @@ Key unresolved items include stakeholder validation, real data availability, sou
 | Interactive graph, replay, runway, approvals and audit UI | Implemented with direct API/SSE and static export; see current verification in the build checklist |
 | Development commands and local configuration | Implemented and checked (M0.4); Makefile forwarding supplied, GNU Make execution unverified locally |
 | Database connection, transactions and migration history | Implemented and checked (M1.1) |
-| Graph entities, relationships and evidence provenance | Implemented with typed/versioned records, evidence citations and GraphStore API |
+| Graph entities, relationships and evidence provenance | Implemented with typed/versioned records, exact citations, confirm/reject/expire/supersede states and GraphStore API |
 | Synthetic dataset and workflow | Implemented: fixed seed 42, separate truth/declared graphs, 32 nodes, seven evidence snippets and six events |
 | Mapper and supplier replies | Provider-neutral `LLMClient` with Gemini primary, Groq fallback and an explicit offline mock; provider transport/failover is tested with simulated responses |
 | Grounded domain assistant | Implemented read-only LangChain chain over graph/evidence/report retrieval, optional Tavily web evidence, exact source IDs and known/inferred/unknown labels; no vector database is required for this path |
-| Agent orchestration | Typed Python core workflows plus an implemented LangGraph assistant workflow; broader platform migration to LangGraph remains optional |
+| Agent orchestration | Implemented LangGraph risk-review and assistant workflows with durable human checkpoints; typed offline fallback retained |
 | Action, approval and audit | Implemented simulated templates, stale-input checks and hash-chain verification; self-declared local roles |
 | Generative-model training | No custom LLM training or fine-tuning; pretrained models remain behind the provider-neutral gateway <sup>[Design]</sup> |
 | Classical link scorer | Implemented training/registry path from reviewed labels; reported separately from generative AI |

@@ -95,6 +95,7 @@ CURRENT_TERMS = {
 class AssistantRequest(Contract):
     question: str = Field(min_length=3, max_length=2000)
     focus_entity_ids: list[Identifier] = Field(default_factory=list, max_length=12)
+    focus_relationship_ids: list[Identifier] = Field(default_factory=list, max_length=12)
     web_search: Literal["off", "auto", "required"] = "auto"
 
 
@@ -215,9 +216,13 @@ def internal_sources(store, tenant_id: str, request: AssistantRequest) -> tuple[
     now = datetime.now(UTC)
     question_tokens = _tokens(request.question)
     entities = {entity.id: entity for entity in snapshot.data.entities}
+    relationships = {link.id: link for link in snapshot.data.links}
     missing = sorted(set(request.focus_entity_ids) - entities.keys())
     if missing:
         raise ValueError("The selected focus entity is not present in this graph revision.")
+    missing_relationships = sorted(set(request.focus_relationship_ids) - relationships.keys())
+    if missing_relationships:
+        raise ValueError("The selected relationship is not present in this graph revision.")
 
     selected_ids = set(request.focus_entity_ids)
     for entity in entities.values():
@@ -230,10 +235,13 @@ def internal_sources(store, tenant_id: str, request: AssistantRequest) -> tuple[
     general_network_question = bool(
         question_tokens & {"dependency", "dependencies", "relationship", "risk", "network"}
     )
-    links = []
+    links = [relationships[id] for id in request.focus_relationship_ids]
+    selected_ids.update(endpoint for link in links for endpoint in (link.source, link.target))
     for link in snapshot.data.links:
         connected = link.source in selected_ids or link.target in selected_ids
-        if connected or (general_network_question and link.status in {"inferred", "confirmed"}):
+        if link not in links and (
+            connected or (general_network_question and link.status in {"inferred", "confirmed"})
+        ):
             links.append(link)
             selected_ids.update((link.source, link.target))
 
@@ -444,7 +452,7 @@ def web_sources(search: WebSearch, query: str) -> list[AssistantSource]:
             continue
         digest = hashlib.sha256(f"{url}\n{excerpt}".encode()).hexdigest()
         raw_score = result.get("score", 0)
-        score = float(raw_score) if isinstance(raw_score, (int, float)) else 0
+        score = float(raw_score) if isinstance(raw_score, int | float) else 0
         sources.append(
             _source(
                 id=f"web:{digest[:24]}",
@@ -626,7 +634,7 @@ class FallbackAssistantModel:
             result = self.primary.generate(prompt)
             self.last_provider = self.primary.provider
             return result
-        except (OSError, ValueError, TypeError):
+        except Exception:  # Provider SDKs expose different retryable exception hierarchies.
             result = self.backup.generate(prompt)
             self.last_provider = self.backup.provider
             return result
@@ -801,9 +809,17 @@ def assistant_graph(store, tenant_id: str, model: AssistantModel, search: WebSea
 
     def generate_node(state: AssistantState):
         chain = PROMPT | RunnableLambda(model.generate)
-        draft = chain.invoke(
-            {"question": state["request"].question, "context": _context(state["sources"])}
-        )
+        try:
+            draft = chain.invoke(
+                {"question": state["request"].question, "context": _context(state["sources"])}
+            )
+        except Exception:  # Fail closed across provider-specific SDK exception types.
+            draft = DraftVerdict(
+                verdict="insufficient_evidence",
+                claims=[],
+                uncertainties=["Model provider unavailable; no unsupported answer was generated."],
+                next_step="review_evidence",
+            )
         return {"draft": DraftVerdict.model_validate(draft)}
 
     def validate_node(state: AssistantState):

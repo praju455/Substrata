@@ -102,6 +102,11 @@ export type Report = {
   shared_dependencies: { id: string; name: string; supplier_ids: string[] }[];
   range_assumption: string;
   graph_version: number;
+  graph_sha256: string;
+  evidence_sha256: string;
+  formula_version: string;
+  source_id: string;
+  severity: number;
   as_of: string;
   truncated: boolean;
 };

@@ -50,6 +50,14 @@ class HallucinatingModel:
         )
 
 
+class FailingModel:
+    provider = "failed-provider"
+    model = "failed-model"
+
+    def generate(self, prompt):
+        raise TimeoutError("private provider diagnostic")
+
+
 def seeded(platform):
     platform.save("alpha", generate("automotive"), "test-admin", expected_version=0)
     return platform
@@ -108,6 +116,25 @@ def test_invalid_model_citations_fail_closed(platform):
     assert response.claims[0].status == "unknown"
     assert response.claims[0].source_ids == []
     assert response.sources == []
+
+
+def test_path_focus_and_provider_failure_return_no_unsupported_answer(platform):
+    seeded(platform)
+    relationship = platform.snapshot("alpha").data.links[0]
+    response = ask(
+        platform,
+        "alpha",
+        AssistantRequest(
+            question="What evidence supports this supplier relationship?",
+            focus_relationship_ids=[relationship.id],
+            web_search="off",
+        ),
+        model=FailingModel(),
+        search=WebFixture(),
+    )
+    assert response.verdict == "insufficient_evidence"
+    assert response.claims == []
+    assert "unsupported answer" in response.uncertainties[0]
 
 
 def test_out_of_domain_question_does_not_call_web_or_model(platform):

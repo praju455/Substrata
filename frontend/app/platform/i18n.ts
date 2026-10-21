@@ -131,7 +131,7 @@ const hindi = {
   assessment: "आकलन",
   agent_task: "एजेंट कार्य",
   agent_plan: "एजेंट समीक्षा योजना",
-  "cascade_caller.assessment": "कैस्केड आकलन",
+  "cascade_caller.assessment": "निर्धारित प्रभाव आकलन",
   "compliance_audit.verification": "ऑडिट सत्यापन",
   Language: "भाषा",
   "Skip to workspace": "कार्यक्षेत्र पर जाएँ",

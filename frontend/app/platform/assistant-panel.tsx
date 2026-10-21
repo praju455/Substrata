@@ -10,6 +10,8 @@ import { useLocale } from "./i18n";
 type Props = {
   token: string;
   entities: Entity[];
+  selectedRelationshipId?: string;
+  onSelectRelationship?: (id: string) => void;
 };
 
 const english = {
@@ -58,7 +60,12 @@ const hindi = {
   retrieved: "प्राप्त स्रोत",
 };
 
-export default function AssistantPanel({ token, entities }: Props) {
+export default function AssistantPanel({
+  token,
+  entities,
+  selectedRelationshipId,
+  onSelectRelationship,
+}: Props) {
   const [locale] = useLocale();
   const copy = locale === "hi" ? hindi : english;
   const [question, setQuestion] = useState("");
@@ -76,6 +83,7 @@ export default function AssistantPanel({ token, entities }: Props) {
         await call("/assistant/ask", token, {
           question: question.trim(),
           focus_entity_ids: focus ? [focus] : [],
+          focus_relationship_ids: selectedRelationshipId ? [selectedRelationshipId] : [],
           web_search: webSearch,
         }),
       );
@@ -101,6 +109,9 @@ export default function AssistantPanel({ token, entities }: Props) {
         <span className="badge">READ ONLY</span>
       </div>
       <p className="muted">{copy.intro}</p>
+      {selectedRelationshipId && (
+        <p className="notice">Focused supply-chain path: {selectedRelationshipId}</p>
+      )}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -207,6 +218,18 @@ export default function AssistantPanel({ token, entities }: Props) {
                   </h4>
                   <p>{source.excerpt}</p>
                   <small className="mono">{source.id}</small>
+                  {source.source_type === "graph_relationship" && onSelectRelationship && (
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        const id = source.id.replace("graph:relationship:", "");
+                        onSelectRelationship(id);
+                        document.getElementById("graph")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    >
+                      View relationship
+                    </button>
+                  )}
                 </article>
               );
             })}

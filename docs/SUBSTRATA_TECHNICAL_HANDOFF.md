@@ -102,7 +102,7 @@ The browser renders server results. It should not independently recalculate conf
 | PyJWT | 2.15.1 | OIDC/JWT validation |
 | openpyxl | 3.1.5 | Bounded Excel ingestion |
 | OpenTelemetry SDK/exporter | 1.45.1 | Optional OTLP/HTTP trace export |
-| LangGraph | 1.2.16 | Explicit read-only assistant workflow |
+| LangGraph | 1.2.16 | Explicit risk-review and read-only assistant workflows |
 | LangChain | 1.4.6 | Bounded prompt and retrieved-context assembly |
 | Google Gen AI SDK | 2.31.0 | Optional Gemini assistant adapter |
 | Tavily Python | 0.8.5 | Optional bounded public-web evidence retrieval |
@@ -122,7 +122,7 @@ The platform path also contains provider-neutral structured extractors and optio
 ![Substrata technology map](diagrams/12-tech-stack.png)
 
 - The diagram is a design map, not a literal dependency inventory.
-- **LangGraph is implemented for the domain-assistant workflow.** Core platform jobs still use typed Python workflow/state-machine services and durable jobs.
+- **LangGraph is implemented for the governed risk-review and domain-assistant workflows.** Risk review has explicit evidence, event, relationship, deterministic-impact, mitigation, policy, approval and audit nodes with durable pause/resume checkpoints. The typed workflow remains an offline compatibility fallback.
 - **LangChain is implemented for bounded assistant context and prompt assembly.** The backend retrieves path-specific graph facts, exact evidence, saved deterministic reports and optional Tavily results; it then validates citations and known/inferred/unknown labels.
 - **Google Gen AI SDK is implemented as an optional Gemini assistant adapter.** Groq and the deterministic offline mock remain fallback/configuration choices.
 - **The assistant does not require a vector database.** Existing document-vector retrieval remains a separate capability for uploaded evidence.
@@ -140,11 +140,11 @@ The platform path also contains provider-neutral structured extractors and optio
 | Grounded assistant | `backend/substrata/platform/assistant.py` | LangGraph routing, LangChain context assembly, optional Tavily retrieval and fail-closed citation validation |
 | Mapper | `backend/substrata/mapper.py` | Evidence-backed candidate relationship extraction |
 | Graph services | `backend/substrata/graph.py` | Versioned graph projection and relationship operations |
-| Cascade and runway | `backend/substrata/cascade.py` | Deterministic traversal and impact calculations |
+| Impact and runway | `backend/substrata/cascade.py` | Deterministic traversal and impact calculations |
 | Actions and governance | `backend/substrata/actions.py`, `governance.py`, `audit.py` | Mitigation drafts, policy, approval, hash-chain records |
 | Platform API | `backend/substrata/platform/api.py` | Tenant endpoints for imports, evidence, events, jobs, policies, approvals, models, connectors, and exports |
 | Platform domain/store | `backend/substrata/platform/domain.py`, `store.py`, `models.py`, `records.py` | Tenant-aware business types and persistence |
-| Platform graph and cascade | `backend/substrata/platform/cascade.py` | Full-route deterministic assessment with uncertainty ranges |
+| Platform graph and impact | `backend/substrata/platform/cascade.py` | Full-route deterministic assessment with uncertainty ranges |
 | Ingestion and connectors | `backend/substrata/platform/ingestion.py`, `connectors.py` | CSV/XLSX staging, OData/REST/webhook inputs, mapping, review, apply, rollback |
 | Evidence | `backend/substrata/platform/evidence.py`, `vector.py`, `providers.py` | Immutable documents, chunks, retrieval, exact citations, provider calls, budgets |
 | Jobs and agents | `backend/substrata/platform/jobs.py`, `agent_protocols.py` | Durable leased work, checkpointed plans, MCP/A2A tool access |
@@ -288,9 +288,9 @@ Safe framing:
 - Review required: supplier contact, spend-bearing drafts, inventory movements, alternate qualification, or elevated-route choices.
 - Prohibited in the prototype: purchase-order mutation, supplier onboarding, shipment movement, or bypassing approval.
 
-## 9. Deterministic cascade and runway
+## 9. Deterministic impact and runway
 
-![Substrata deterministic cascade](diagrams/09-cascade-simulation.png)
+![Substrata deterministic impact simulation](diagrams/09-cascade-simulation.png)
 
 ### Core formula
 
@@ -415,11 +415,11 @@ The existing diagram shows a six-minute version. The exact repository demo scrip
 | Identity and organisation | `/identity`, `/auth/config`, `/auth/exchange`, `/organisation` | Verified identity; tenant is not selected by an arbitrary header |
 | Graph and assessments | `/graph`, `/scenarios/assess`, `/seeds` | Immutable versions and development-only synthetic seeding |
 | Imports | `/imports/stage`, `/imports/{id}/resolve`, `/apply`, `/rollback` | Mapping, validation, explicit identity choice, idempotency, revision history |
-| Evidence | `/documents`, `/evidence/index`, `/search`, `/discover` | Immutable documents, exact passages, tenant budget |
+| Evidence and assistant | `/documents`, `/evidence/index`, `/search`, `/discover`, `/assistant/ask` | Immutable documents, exact passages, cited read-only answers, tenant budget |
 | Events and alerts | `/events`, `/events/subscriptions`, `/events/poll`, `/alerts/{id}/acknowledge` | Sourced, bounded, deduplicated, reviewed when ambiguous |
-| Jobs and agents | `/jobs`, `/jobs/dispatch`, `/mcp`, `/a2a` | Typed inputs, retries, leases, tenant scope, deterministic tool authority |
+| Jobs and agents | `/jobs`, `/jobs/dispatch`, `/jobs/{id}/resume`, `/mcp`, `/a2a` | Typed inputs, retries, leases, durable human checkpoints, tenant scope, deterministic tool authority |
 | Policy and decisions | `/policy`, `/mitigations`, `/approvals/{id}/decision`, `/delegate`, `/actions/{id}/execute` | Roles, separation of duties, expiry, staleness, dry run |
-| Supplier portal | `/confirmations`, `/supplier-portal/describe`, `/reply` | Signed, expiring, single-use request |
+| Relationship review and supplier portal | `/relationships/{id}/decision`, `/relationships/{id}/supersede`, `/confirmations`, `/supplier-portal/describe`, `/reply` | Mandatory reason, attributed graph revision, signed expiring single-use supplier request |
 | Models | `/models/train`, `/models/{id}/activate` | Admin-only, label minimums, held-out gates, synthetic restriction |
 | Integrations and exports | `/connectors`, `/ingest`, `/webhooks/{name}`, `/exports/graph.csv` | Read-only/bounded connector contracts, HMAC webhooks, tenant-scoped exports |
 
@@ -597,7 +597,7 @@ This is a deterministic template fixture, not an independent benchmark. It shows
 | Link recall | at least 0.70 |
 | First-pass schema-valid extraction | at least 0.98 |
 | Event macro-F1 | at least 0.80 |
-| Curated cascade calculations | 100% exact |
+| Curated impact calculations | 100% exact |
 | Prohibited actions blocked | 100% |
 | Injected audit mutations detected | 100% |
 | Canonical offline replay | 10/10 identical runs |
@@ -646,7 +646,7 @@ Do not claim willingness to pay, pricing, buyer ownership, or sales-cycle length
 | Can it execute procurement? | No. Actions are dry-run/simulated. |
 | Is the audit chain proof of truth? | No. It detects later record changes; it does not establish that the original claim was true. |
 | Is accuracy validated? | No. Only constructed fixture behavior is measured. |
-| Is LangGraph implemented? | Yes, for the read-only domain assistant. Core assessment and governance still use typed deterministic workflows. |
+| Is LangGraph implemented? | Yes, for governed risk review and the read-only domain assistant. Deterministic services still perform impact arithmetic and policy checks. |
 | Is a custom GNN required? | No. It is deliberately excluded from the finale scope. |
 | Is any model trained? | The core LLM/graph flow is not trained. The platform has a separate optional gradient-boosted link scorer trained from reviewed labels under gates. |
 
@@ -658,14 +658,14 @@ Do not claim willingness to pay, pricing, buyer ownership, or sales-cycle length
 | `02-runway-timeline.png` | Explain cover, qualification, and exposure | 90 days is an assumption, not a project timeline |
 | `03-system-context.png` | Explain external actors and system boundary | SAP-shaped inputs and outputs are not live SAP integrations |
 | `04-layered-architecture.png` | Explain replaceable layers | Some adapters remain proposed |
-| `05-agent-collaboration.png` | Explain bounded roles and the human gate | LangGraph coordinates the assistant, not deterministic impact or approval |
+| `05-agent-collaboration.png` | Explain bounded roles and the human gate | LangGraph coordinates stages; deterministic services calculate impact and people approve |
 | `06-autonomy-matrix.png` | Explain allow/review/prohibit policy | Real external execution is disabled |
 | `07-graph-schema.png` | Explain entities, edges, status, confidence, provenance | Conceptual names may differ slightly from platform models |
 | `08-link-inference-pipeline.png` | Explain evidence to inferred edge to confirmation | Pretrained extraction does not confirm truth |
 | `09-cascade-simulation.png` | Explain deterministic event impact | Synthetic values only |
 | `10-demo-replay.png` | Rehearse the presentation sequence | Diagram is six minutes; current script also has a three-minute version |
 | `11-persistence-model.png` | Explain snapshots, provenance, and audit | Audit proves integrity, not source truth |
-| `12-tech-stack.png` | Explain interfaces and choices | LangGraph/MapLibre/SAP services are not all implemented |
+| `12-tech-stack.png` | Explain interfaces and choices | LangGraph is implemented; MapLibre and SAP services remain planned/optional |
 | `13-deployment-topology.png` | Explain local and SAP stretch paths | BTP/HANA/AI services require verified entitlement |
 | `14-evaluation-roadmap.png` | Explain gates before claims | Targets are not results |
 | `15-empathy-map.png` | Guide interviews | Draft assumptions only |

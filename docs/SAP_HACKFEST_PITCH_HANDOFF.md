@@ -423,7 +423,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 
 > **Link quality:** held-out synthetic precision and recall, with false positives and review volume.<br>
 > **Warning:** days of warning gained over an identical Tier-1-only snapshot.<br>
-> **Calculation safety:** exact results on hand-calculated cascade fixtures.<br>
+> **Calculation safety:** exact results on hand-calculated impact fixtures.<br>
 > **Governance:** prohibited actions blocked and stale approvals rejected.<br>
 > **Human factors:** analyst completion time, errors, and confidence in the explanation.
 
@@ -434,7 +434,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 - Run the discovery and confirmation workflow on the remaining evidence.
 - Measure true positives, false positives, false negatives, precision, recall, and review volume.
 - Compare warning time under the Tier-1-only graph and the hidden-dependency graph using the same event and inventory snapshot.
-- Compare every cascade result against a hand-calculated fixture.
+- Compare every deterministic impact result against a hand-calculated fixture.
 - Test missing units, missing stock, conflicting evidence, ambiguous entities, stale approvals, policy violations, and audit tampering.
 - Run short usability tasks that ask a new user to find the evidence, explain the runway, and identify the required approver.
 
@@ -444,7 +444,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 |---|---:|
 | Hidden-link precision at review threshold | at least 0.80 |
 | Hidden-link recall at review threshold | at least 0.70 |
-| Curated cascade calculations | 100% exact |
+| Curated impact calculations | 100% exact |
 | Prohibited test actions blocked | 100% |
 | Seeded offline replay consistency | 10 out of 10 identical runs |
 
@@ -599,7 +599,7 @@ The repository already contains a working local synthetic vertical slice. Frame 
 |---|---|
 | Recommended | Substrata reveals hidden shared supplier dependencies, calculates how long production remains protected, and places every high-impact response under evidence-backed human approval. |
 | Business-focused | Substrata helps manufacturers detect false supplier diversification early enough to protect production through a traceable and governed response. |
-| Technical | Substrata combines cited relationship inference, a versioned supply graph, deterministic cascade analysis, and policy-controlled approval for Tier-N disruption response. |
+| Technical | Substrata combines cited relationship inference, a versioned supply graph, deterministic impact analysis, and policy-controlled approval for Tier-N disruption response. |
 
 **Final request to the judges**
 

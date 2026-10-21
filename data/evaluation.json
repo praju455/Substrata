@@ -1,5 +1,5 @@
 {
-  "corpus_sha256": "189232224ef3f4195552817314db241d7593f656fd6868ce2a2d68ec40e0f82b",
+  "corpus_sha256": "ffbe1ab7b7bf9cd8fab1a98042a46a910c5513e852150124457fd3c87dd4e63e",
   "dataset_version": "synthetic-v1",
   "evaluation_scope": "Frozen synthetic fixture; no trained model or held-out generalisation claim",
   "expected": [

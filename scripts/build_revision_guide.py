@@ -206,7 +206,7 @@ def p1(g: Guide):
     g.bullets(
         [
             "<b>Current:</b> synthetic graph discovery, replay, deterministic impact, dry-run approval, audit, and a cited read-only domain assistant.",
-            "<b>Assistant:</b> LangGraph workflow, LangChain context assembly, Google Gen AI SDK/Groq adapters, optional Tavily evidence, and offline mock.",
+            "<b>Orchestration:</b> LangGraph risk-review and assistant workflows, LangChain bounded context assembly, Google Gen AI SDK/Groq adapters, optional Tavily evidence, and an offline fallback.",
             "<b>Never claim:</b> live customer accuracy, live SAP access, autonomous purchasing, or that 10/10 replay consistency means prediction accuracy.",
         ],
         M,
@@ -246,7 +246,7 @@ def p2(g: Guide):
         (
             "L",
             "LangGraph",
-            "Coordinates the assistant workflow; it does not perform graph or runway math.",
+            "Coordinates governed risk-review and assistant workflows; deterministic services still perform graph and runway math.",
         ),
         ("M", "Mapper", "Proposes cited hidden relationships from records and evidence."),
         ("N", "Tier-N", "Any deeper supplier tier beyond the direct Tier-1 relationship."),
@@ -553,7 +553,7 @@ def p7(g: Guide):
     y = g.table(rows, M, y, [91, 257, 171], font=7.1, leading=8.7) - 10
     g.callout(
         "LangGraph and LangChain",
-        "LangGraph controls the assistant's retrieve, optional-web, generate, and validate steps. LangChain assembles the retrieved graph, evidence, report, and optional Tavily context. Neither replaces deterministic calculations, validates relationships automatically, or grants approval.",
+        "LangGraph coordinates the governed risk-review stages and the assistant's retrieve, optional-web, generate, and validate steps. LangChain assembles bounded graph, evidence, report, and optional Tavily context for the assistant. Neither replaces deterministic calculations, confirms relationships automatically, or grants approval.",
         M,
         y,
         PAGE_W - 2 * M,
@@ -963,7 +963,7 @@ def p15(g: Guide):
         ),
         (
             "Why LangGraph?",
-            "It coordinates the assistant's retrieve, optional-web, generate, and validate states. It does not perform graph math or approve anything.",
+            "It coordinates resumable risk-review stages and the assistant's retrieval and validation flow. It does not perform graph math or approve anything.",
         ),
         (
             "Why LangChain?",

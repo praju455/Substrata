@@ -9,9 +9,15 @@ from pydantic import AwareDatetime, Field
 
 from substrata.platform.assistant import AssistantRequest
 from substrata.platform.auth import Principal, principal, public_request
-from substrata.platform.confirmations import ConfirmationInput, SupplierReply
+from substrata.platform.confirmations import (
+    ConfirmationInput,
+    RelationshipDecision,
+    RelationshipSupersession,
+    SupplierReply,
+)
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
 from substrata.platform.governance import Policy, ProposalInput
+from substrata.platform.jobs import AgentPlanResume
 from substrata.platform.oidc import CodeExchange
 from substrata.platform.store import Conflict
 
@@ -89,7 +95,7 @@ class EventSubmitInput(Contract):
 
 
 class JobInput(Contract):
-    kind: Literal["event_poll", "assessment", "agent_task"]
+    kind: Literal["event_poll", "assessment", "agent_task", "agent_plan"]
     idempotency_key: Identifier
     payload: dict = Field(default_factory=dict)
 
@@ -414,6 +420,18 @@ def job_list(request: Request, actor: Actor):
     return jobs(request.app.state.platform_store, actor.tenant_id)
 
 
+@router.post("/jobs/{id}/resume")
+def job_resume(id: str, body: AgentPlanResume, request: Request, actor: Actor):
+    from substrata.platform.jobs import resume_agent_plan
+
+    return resume_agent_plan(
+        request.app.state.platform_store,
+        actor,
+        id,
+        body,
+    )
+
+
 @router.post("/mcp")
 def mcp(request: Request, actor: Actor, body: dict):
     from fastapi.responses import Response
@@ -643,6 +661,22 @@ def confirmation_request(body: ConfirmationInput, request: Request, actor: Actor
     from substrata.platform.confirmations import create_request
 
     return create_request(request.app.state.platform_store, actor, body)
+
+
+@router.post("/relationships/{link_id}/decision")
+def relationship_decision(link_id: str, body: RelationshipDecision, request: Request, actor: Actor):
+    from substrata.platform.confirmations import review
+
+    return review(request.app.state.platform_store, actor, link_id, body)
+
+
+@router.post("/relationships/{link_id}/supersede")
+def relationship_supersession(
+    link_id: str, body: RelationshipSupersession, request: Request, actor: Actor
+):
+    from substrata.platform.confirmations import supersede
+
+    return supersede(request.app.state.platform_store, actor, link_id, body)
 
 
 @router.post("/supplier-portal/describe", dependencies=[Depends(public_request)])
