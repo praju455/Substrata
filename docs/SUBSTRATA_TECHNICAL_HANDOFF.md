@@ -102,6 +102,10 @@ The browser renders server results. It should not independently recalculate conf
 | PyJWT | 2.15.1 | OIDC/JWT validation |
 | openpyxl | 3.1.5 | Bounded Excel ingestion |
 | OpenTelemetry SDK/exporter | 1.45.1 | Optional OTLP/HTTP trace export |
+| LangGraph | 1.2.16 | Explicit read-only assistant workflow |
+| LangChain | 1.4.6 | Bounded prompt and retrieved-context assembly |
+| Google Gen AI SDK | 2.31.0 | Optional Gemini assistant adapter |
+| Tavily Python | 0.8.5 | Optional bounded public-web evidence retrieval |
 
 ### AI providers
 
@@ -118,9 +122,10 @@ The platform path also contains provider-neutral structured extractors and optio
 ![Substrata technology map](diagrams/12-tech-stack.png)
 
 - The diagram is a design map, not a literal dependency inventory.
-- **LangGraph is the selected next-step orchestrator but is not yet in the current Python manifest.** Current orchestration uses typed Python workflow/state-machine services, durable jobs, and tool contracts; it remains the offline fallback.
-- **LangChain is planned for the grounded domain assistant.** It will retrieve path-specific evidence and return citations with known/inferred/unknown labels; it will not calculate impact or confirm relationships.
-- **Google Gen AI SDK is the planned Gemini adapter.** The current provider-neutral `LLMClient`, Groq fallback, and offline mock remain the resilience boundary.
+- **LangGraph is implemented for the domain-assistant workflow.** Core platform jobs still use typed Python workflow/state-machine services and durable jobs.
+- **LangChain is implemented for bounded assistant context and prompt assembly.** The backend retrieves path-specific graph facts, exact evidence, saved deterministic reports and optional Tavily results; it then validates citations and known/inferred/unknown labels.
+- **Google Gen AI SDK is implemented as an optional Gemini assistant adapter.** Groq and the deterministic offline mock remain fallback/configuration choices.
+- **The assistant does not require a vector database.** Existing document-vector retrieval remains a separate capability for uploaded evidence.
 - **MapLibre is not in the current frontend manifest.** The implemented core visualization is Cytoscape.js.
 - SAP HANA graph/vector and SAP generative AI hub are entitlement-dependent integration targets, not current connections.
 - NetworkX, FastAPI, Next.js, TypeScript, SQLAlchemy, Alembic, SQLite/PostgreSQL, pytest, and OpenTelemetry support are grounded in the current codebase.
@@ -132,6 +137,7 @@ The platform path also contains provider-neutral structured extractors and optio
 | App assembly | `backend/substrata/app.py` | Mounts the retained API, platform API, health, readiness, metrics, and lifecycle |
 | Retained demo API | `backend/substrata/api.py` | State, graph, discovery, simulated confirmations, replay, approvals, audit, SSE |
 | Retained LLM clients | `backend/substrata/llm.py` | Gemini/Groq/mock structured extraction and failover |
+| Grounded assistant | `backend/substrata/platform/assistant.py` | LangGraph routing, LangChain context assembly, optional Tavily retrieval and fail-closed citation validation |
 | Mapper | `backend/substrata/mapper.py` | Evidence-backed candidate relationship extraction |
 | Graph services | `backend/substrata/graph.py` | Versioned graph projection and relationship operations |
 | Cascade and runway | `backend/substrata/cascade.py` | Deterministic traversal and impact calculations |
@@ -259,11 +265,18 @@ The LLM may not:
 | Deterministic impact engine (legacy internal `cascade` name) | Pinned graph, inventory, BOM, lead times, event | Affected paths, products/plants, cover, exposure, support range | None for arithmetic | Graph traversal, units, formulas, bounds, truncation | Reports incomplete or truncated; does not make a business decision |
 | Action | Impact report, quotes, constraints, policy | Ranked simulated mitigation drafts | Rationale drafting may use a model | Feasibility, values, spend/risk thresholds, payload shape | Supplier switch, elevated risk, spend, missing source |
 | Compliance/Audit | Proposed action, actor, roles, policy, snapshots | Allow/review/block result and audit event | None required | Role checks, separation of duties, staleness, expiry, hashes | Missing authority, policy conflict, stale snapshot, invalid chain |
+| Domain assistant | Question, graph facts, evidence, saved reports, optional public results | Cited known/inferred/unknown claims and an advisory verdict | Grounded explanation over supplied context | Backend citation/number validation; no graph math or mutations | Insufficient/conflicting evidence or confirmation required |
 | Human gate | Exact option, evidence, uncertainty, policy reason | Approve or reject with actor and reason | None | Server validates identity, assignment, role, versions, and expiry | Fresh analysis required when inputs change |
 
 ### Implemented orchestration detail
 
-The current system does not yet depend on LangGraph. It uses typed Python services and state transitions. LangGraph is the selected orchestration upgrade, while the current workflow remains the offline fallback. The platform adds durable jobs with leases, retries, ownership fencing, and checkpoints. Authenticated MCP tools and an A2A task endpoint call the same deterministic services. The fixed risk-review plan pins the graph and checkpoints deterministic impact assessment plus audit verification across retries.
+The core platform uses typed Python services and state transitions. The domain
+assistant uses LangGraph for explicit retrieve, optional-web, generate and validate
+steps; LangChain assembles the controlled prompt context. The platform also adds
+durable jobs with leases, retries, ownership fencing and checkpoints. Authenticated
+MCP tools and an A2A task endpoint call the same deterministic services. The fixed
+risk-review plan pins the graph and checkpoints deterministic impact assessment
+plus audit verification across retries.
 
 ### Autonomy policy
 
@@ -633,7 +646,7 @@ Do not claim willingness to pay, pricing, buyer ownership, or sales-cycle length
 | Can it execute procurement? | No. Actions are dry-run/simulated. |
 | Is the audit chain proof of truth? | No. It detects later record changes; it does not establish that the original claim was true. |
 | Is accuracy validated? | No. Only constructed fixture behavior is measured. |
-| Is LangGraph implemented? | Not yet. It is the selected next-step orchestrator; current typed Python workflows remain the offline fallback. |
+| Is LangGraph implemented? | Yes, for the read-only domain assistant. Core assessment and governance still use typed deterministic workflows. |
 | Is a custom GNN required? | No. It is deliberately excluded from the finale scope. |
 | Is any model trained? | The core LLM/graph flow is not trained. The platform has a separate optional gradient-boosted link scorer trained from reviewed labels under gates. |
 
@@ -645,7 +658,7 @@ Do not claim willingness to pay, pricing, buyer ownership, or sales-cycle length
 | `02-runway-timeline.png` | Explain cover, qualification, and exposure | 90 days is an assumption, not a project timeline |
 | `03-system-context.png` | Explain external actors and system boundary | SAP-shaped inputs and outputs are not live SAP integrations |
 | `04-layered-architecture.png` | Explain replaceable layers | Some adapters remain proposed |
-| `05-agent-collaboration.png` | Explain bounded roles and the human gate | Current orchestration is not LangGraph-dependent |
+| `05-agent-collaboration.png` | Explain bounded roles and the human gate | LangGraph coordinates the assistant, not deterministic impact or approval |
 | `06-autonomy-matrix.png` | Explain allow/review/prohibit policy | Real external execution is disabled |
 | `07-graph-schema.png` | Explain entities, edges, status, confidence, provenance | Conceptual names may differ slightly from platform models |
 | `08-link-inference-pipeline.png` | Explain evidence to inferred edge to confirmation | Pretrained extraction does not confirm truth |

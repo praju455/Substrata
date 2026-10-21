@@ -67,6 +67,29 @@ def test_wrong_claims_fail_closed(client, changes):
     assert client.get("/platform/identity", headers=headers(**changes)).status_code == 401
 
 
+def test_read_only_assistant_endpoint_works_without_uploaded_documents(client):
+    from substrata.platform.seeds import generate
+
+    store = client.app.state.platform_store
+    store.provision("alpha", "Alpha", "admin")
+    store.save("alpha", generate("automotive"), "admin", expected_version=0)
+    before = store.snapshot("alpha")
+    denied = client.post(
+        "/platform/assistant/ask",
+        json={"question": "Which supplier dependency affects the plant?", "web_search": "off"},
+    )
+    assert denied.status_code == 401
+    result = client.post(
+        "/platform/assistant/ask",
+        headers=headers(role="viewer"),
+        json={"question": "Which supplier dependency affects the plant?", "web_search": "off"},
+    )
+    assert result.status_code == 200
+    assert result.json()["read_only"] is True
+    assert result.json()["retrieval"]["vector_database_used"] is False
+    assert store.snapshot("alpha").sha256 == before.sha256
+
+
 def test_identity_review_requires_complete_authorized_choices_before_apply(client):
     from test_platform_ingestion import upload
     from test_platform_store import graph

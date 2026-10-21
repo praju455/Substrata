@@ -212,7 +212,7 @@ SQLAlchemy is the proposed data-access boundary. SQLite in WAL mode is the local
 
 ### Layer 4 — Agents and tools
 
-Typed Python workflows are implemented today; LangGraph is the selected next-step orchestration layer for explicit state, pause/resume and human gates. The current typed workflow remains the offline fallback. **[Design]** Three MCP boundaries keep capabilities narrow:
+Typed Python workflows coordinate the core platform. A separate implemented LangGraph workflow controls the read-only assistant's retrieval, optional web-search, generation and validation states; it does not replace deterministic assessment or approval services. **[Design]** Three MCP boundaries keep capabilities narrow:
 
 | Proposed MCP server | Example tools | Permitted effects |
 |---|---|---|
@@ -234,6 +234,14 @@ does not propose or execute a mitigation. Adaptive plan authoring, cross-role fl
 beyond this path, push notifications and hosted agent interoperability remain
 deployment/integration work. A2A `tasks/send` queues this plan and `tasks/get`
 returns its tenant-scoped state and completed artifacts.
+
+The domain assistant retrieves tenant-scoped graph facts, exact evidence passages
+and saved deterministic reports, then may add bounded Tavily results for current
+public information. LangChain assembles only this controlled context. Every
+material claim must cite a returned source and is labelled `known`, `inferred` or
+`unknown`; public-web evidence is always `inferred`. The assistant has no mutation
+tools, does not require a vector database, and cannot confirm a relationship,
+calculate impact, approve an action or write to SAP.
 
 ### Layer 5 — API and experience
 

@@ -41,6 +41,7 @@ import ScorerPanel from "./scorer-panel";
 import IdentityReview from "./identity-review";
 import PolicyPanel from "./policy-panel";
 import { defaultUnits, importFields } from "./import-fields";
+import AssistantPanel from "./assistant-panel";
 
 const Network = dynamic(() => import("../network"), { ssr: false });
 
@@ -488,6 +489,7 @@ export default function PlatformWorkspace() {
             <a href="#imports">{t("Imports")}</a>
             <a href="#graph">{t("Network")}</a>
             <a href="#evidence">{t("Evidence")}</a>
+            <a href="#assistant">Assistant</a>
             <a href="#jobs">{t("Background tasks")}</a>
             <a href="#event-intake">{t("Events")}</a>
             <a href="#approvals">{t("Approvals")}</a>
@@ -718,6 +720,10 @@ export default function PlatformWorkspace() {
                 <EvidencePanel key={state.identity.tenant_id} token={token} workspace={state}
                   canEdit={can("analyst")} busy={busy} run={run}
                   development={auth?.development === true} />
+                <AssistantPanel
+                  token={token}
+                  entities={state.snapshot?.data.entities || []}
+                />
                 <JobsPanel jobs={state.jobs || []} token={token} busy={busy}
                   canEdit={can("analyst")} run={run} snapshot={snapshot || null} />
                 <section id="imports" className="panel">

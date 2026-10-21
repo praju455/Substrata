@@ -322,7 +322,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 > FastAPI + Pydantic service layer<br>
 > NetworkX deterministic graph analysis<br>
 > SQLAlchemy + Alembic with SQLite/PostgreSQL<br>
-> Provider-neutral pretrained AI gateway; Google Gen AI SDK planned for Gemini, with Groq fallback and an offline mock<br>
+> Provider-neutral pretrained AI gateway; Google Gen AI SDK for the cited assistant, with Groq fallback and an offline mock<br>
 > SSE updates, human approval, and SHA-256 audit chain
 
 > **SAP-aligned integration path, subject to access**<br>
@@ -368,7 +368,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 |---|---|---|
 | Data | Synthetic fixtures, file imports, local connector mock | Customer-authorized read-only SAP interfaces |
 | Graph | Versioned relational records and NetworkX | SAP HANA graph adapter if available |
-| AI | Provider-neutral `LLMClient`; Google Gen AI SDK planned for Gemini, with Groq fallback and an offline mock | SAP generative AI hub adapter if entitled |
+| AI | Provider-neutral extraction `LLMClient`; Google Gen AI SDK/Groq assistant adapters and offline mocks | SAP generative AI hub adapter if entitled |
 | Deployment | Local Python and Next.js; Docker/PostgreSQL platform path | SAP BTP after account and service verification |
 | Action | Simulated SAP-shaped draft | Controlled external adapter after approval and production safeguards |
 
@@ -390,7 +390,7 @@ This slide must distinguish the **working local prototype** from the **SAP-align
 
 ![Substrata technology map](diagrams/12-tech-stack.png)
 
-**Important correction to the diagram:** typed Python workflows are implemented today. LangGraph is the selected next orchestration step, LangChain is planned for the cited domain assistant, and Google Gen AI SDK is the planned Gemini adapter. MapLibre, SAP HANA graph, and SAP generative AI hub remain planned or entitlement-dependent; none should be presented as implemented.
+**Important correction to the diagram:** typed Python workflows remain the core platform path. LangGraph and LangChain are implemented for the read-only cited domain assistant, Google Gen AI SDK is its optional Gemini adapter, and Tavily is optional public-web retrieval. MapLibre, SAP HANA graph, and SAP generative AI hub remain planned or entitlement-dependent; none should be presented as implemented.
 
 **What to say**
 
@@ -689,7 +689,7 @@ If a judge asks for the architecture, answer in six layers:
 1. **Inputs:** synthetic ERP-shaped supplier, purchasing, BOM, inventory, lead-time, document, event, and supplier-response data.
 2. **Persistence:** SQLAlchemy and Alembic with SQLite for the offline demo and PostgreSQL/pgvector for the tenant platform.
 3. **Knowledge graph:** versioned entities and relationships projected into NetworkX for transparent traversal.
-4. **Agent workflow:** Mapper and Sensor interpret evidence; LangGraph is the selected orchestration step; deterministic services perform graph and runway calculations; the domain assistant returns cited path answers; Action prepares options; Compliance/Audit enforces controls.
+4. **Agent workflow:** Mapper and Sensor interpret evidence; LangGraph coordinates the read-only assistant; deterministic services perform graph and runway calculations; the assistant returns cited path answers; Action prepares options; Compliance/Audit enforces controls.
 5. **Application:** FastAPI/Pydantic owns domain logic; Next.js/TypeScript/Cytoscape.js renders the workspace and receives updates through SSE.
 6. **Governance and execution:** named approval, separation of duties, dry-run SAP-shaped payloads, and a hash-chained audit record. No real procurement mutation is enabled.
 

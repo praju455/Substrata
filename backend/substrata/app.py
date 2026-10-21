@@ -34,7 +34,15 @@ class TenantHealthResponse(BaseModel):
     data_mode: Literal["tenant"] = "tenant"
 
 
-def create_app(runtime=None, *, platform_store=None, auth_verifier=None, tracing=None) -> FastAPI:
+def create_app(
+    runtime=None,
+    *,
+    platform_store=None,
+    auth_verifier=None,
+    tracing=None,
+    assistant_model=None,
+    web_search=None,
+) -> FastAPI:
     """Build an independent API instance without database or network side effects."""
 
     @asynccontextmanager
@@ -62,6 +70,8 @@ def create_app(runtime=None, *, platform_store=None, auth_verifier=None, tracing
         description="Synthetic demo data. All eventual operational actions are simulated.",
     )
     application.state.runtime = runtime
+    application.state.assistant_model = assistant_model
+    application.state.web_search = web_search
     configure_logging()
     application.state.runtime_lock = threading.Lock()
     application.state.tracing = tracing or configured_tracing()

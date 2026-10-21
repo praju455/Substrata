@@ -108,6 +108,106 @@
   min-height: 84px;
 }
 
+.assistant-panel textarea {
+  min-height: 112px;
+}
+
+.assistant-panel .assistant-boundary {
+  margin-top: 18px;
+}
+
+.assistant-result {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.48);
+}
+
+.assistant-result-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 24px;
+}
+
+.assistant-result-heading > div {
+  min-width: 0;
+}
+
+.assistant-verdict {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 7px 10px;
+  border: 2px solid #000;
+  background: #c4b5fd;
+  color: #000;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.assistant-verdict.insufficient_evidence,
+.assistant-verdict.conflicting_evidence {
+  background: #fecaca;
+}
+
+.assistant-claims,
+.assistant-sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 18px 0 24px;
+}
+
+.assistant-claim,
+.assistant-source {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: #15191e;
+  overflow-wrap: anywhere;
+}
+
+.assistant-claim.known {
+  border-left: 5px solid #15958e;
+}
+
+.assistant-claim.inferred {
+  border-left: 5px solid #8b5cf6;
+}
+
+.assistant-claim.unknown {
+  border-left: 5px solid #ff3333;
+}
+
+.assistant-claim small,
+.assistant-source small {
+  color: #aaa4b1;
+}
+
+.assistant-source h4 {
+  margin: 10px 0 8px;
+}
+
+.assistant-source p {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.assistant-uncertainty {
+  margin: 20px 0;
+  padding: 16px;
+  border-left: 5px solid var(--platform-yellow);
+  background: #15191e;
+}
+
+@media (max-width: 720px) {
+  .assistant-result-heading {
+    display: block;
+  }
+}
+
 .platform-workspace input[type="checkbox"] {
   width: 18px;
   height: 18px;

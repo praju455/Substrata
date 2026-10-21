@@ -357,6 +357,22 @@ Explicit mock mode and isolated mock-only evaluation retain the repeatable demo.
 The user will provide keys later, so live model quality, billing and account access
 are not verified. Historical mock graph/scenario records are preserved.
 
+## D017: read-only grounded domain assistant — 21 October 2026
+
+The tenant workspace now implements a bounded supply-chain assistant. LangGraph
+controls retrieve, optional-web, generate and validate states; LangChain assembles
+the retrieved context and structured prompt. Internal retrieval queries the
+versioned graph, exact evidence passages and saved deterministic reports directly.
+Tavily may add bounded HTTPS public-web results when configured. This assistant
+path does not require an uploaded document or vector database.
+
+Every material claim must cite a returned source and is labelled `known`,
+`inferred` or `unknown`. Public-web and candidate-relationship evidence remain
+`inferred`. The backend fails closed on invented citations or unsupported numbers.
+The assistant is read-only: it cannot confirm relationships, perform graph or
+runway arithmetic, approve actions, or write to SAP. Google Gen AI SDK and Groq
+are optional live adapters; deterministic mock mode remains the offline default.
+
 ## Resolved initial implementation questions
 
 - Formula/priority and bounded path traversal: D011 records the exact assumptions.
@@ -366,7 +382,7 @@ are not verified. Historical mock graph/scenario records are preserved.
 
 ## Deferred scope
 
-SAP HANA/BTP/Joule adapters, live public-signal retrieval, live provider verification, model
-training, MCP transport, authentication and production deployment remain TODOs
+SAP HANA/BTP/Joule adapters, live provider verification, custom model training,
+MCP transport and production deployment remain TODOs
 outside this prototype pass. **[Design]** No SAP integration is claimed. Measured
 frozen synthetic-fixture results are generated in EVALUATION.md.

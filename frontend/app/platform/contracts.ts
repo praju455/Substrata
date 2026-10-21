@@ -105,3 +105,43 @@ export type Report = {
   as_of: string;
   truncated: boolean;
 };
+export type AssistantSource = {
+  id: string;
+  title: string;
+  uri: string;
+  excerpt: string;
+  source_type: string;
+  status: "known" | "inferred" | "unknown";
+  observed_at: string | null;
+  retrieved_at: string;
+  sha256: string;
+  relevance: number;
+};
+export type AssistantClaim = {
+  statement: string;
+  status: "known" | "inferred" | "unknown";
+  source_ids: string[];
+};
+export type AssistantResponse = {
+  verdict:
+    | "likely_dependency"
+    | "unlikely_dependency"
+    | "conflicting_evidence"
+    | "insufficient_evidence";
+  answer: string;
+  claims: AssistantClaim[];
+  uncertainties: string[];
+  next_step: string;
+  sources: AssistantSource[];
+  graph_version: number | null;
+  model: { provider: string; model: string };
+  retrieval: {
+    internal_source_count: number;
+    web_source_count: number;
+    web_attempted: boolean;
+    web_query: string | null;
+    vector_database_used: boolean;
+  };
+  prompt_version: string;
+  read_only: true;
+};

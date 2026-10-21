@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import AwareDatetime, Field
 
+from substrata.platform.assistant import AssistantRequest
 from substrata.platform.auth import Principal, principal, public_request
 from substrata.platform.confirmations import ConfirmationInput, SupplierReply
 from substrata.platform.domain import Contract, GraphData, Identifier, Provenance
@@ -620,6 +621,21 @@ def evidence_discover(body: EvidenceQuery, request: Request, actor: Actor):
     from substrata.platform.evidence import discover
 
     return discover(request.app.state.platform_store, actor, body.query)
+
+
+@router.post("/assistant/ask")
+def assistant_ask(request: Request, actor: Actor, body: AssistantRequest):
+    """Answer from tenant evidence and optional public web results without business writes."""
+    from substrata.platform.assistant import ask
+
+    actor.require("viewer")
+    return ask(
+        request.app.state.platform_store,
+        actor.tenant_id,
+        body,
+        model=request.app.state.assistant_model,
+        search=request.app.state.web_search,
+    )
 
 
 @router.post("/confirmations")

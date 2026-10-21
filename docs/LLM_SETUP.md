@@ -1,8 +1,9 @@
-# Gemini primary, Groq backup
+# Gemini primary, Groq backup and grounded assistant
 
-The application's extraction provider is **Google Gemini**, with **Groq** as
-backup. It calls the providers directly from Python without a provider SDK. API
-keys are never sent to the browser or stored in agent results.
+The retained Mapper uses **Google Gemini**, with **Groq** as backup, through its
+provider-neutral HTTP client. The tenant domain assistant can use the Google Gen
+AI SDK, Groq or an explicit offline mock. API keys are never sent to the browser
+or stored in assistant results.
 
 ## Configure
 
@@ -15,6 +16,14 @@ GROQ_API_KEY=your-groq-api-key
 SUBSTRATA_GEMINI_MODEL=gemini-3.8-flash
 SUBSTRATA_GROQ_MODEL=openai/gpt-oss-120b
 SUBSTRATA_LLM_TIMEOUT_SECONDS=20
+
+SUBSTRATA_ASSISTANT_PROVIDER=mock
+SUBSTRATA_ASSISTANT_GEMINI_MODEL=gemini-3.8-flash
+SUBSTRATA_ASSISTANT_GROQ_MODEL=openai/gpt-oss-120b
+SUBSTRATA_ASSISTANT_TIMEOUT_SECONDS=20
+TAVILY_API_KEY=
+SUBSTRATA_TAVILY_MAX_RESULTS=5
+SUBSTRATA_TAVILY_ALLOWED_DOMAINS=
 ```
 
 Use keys from [Google AI Studio](https://aistudio.google.com/apikey) and the
@@ -22,6 +31,26 @@ Use keys from [Google AI Studio](https://aistudio.google.com/apikey) and the
 accounts. Keep `.env` local and ignored by Git. Shell environment values override
 it. Restart `python scripts/dev.py demo` (or the API process) after changing keys.
 Do not put keys in `NEXT_PUBLIC_*` variables or share them in chat.
+
+Assistant provider modes are `mock`, `gemini`, `groq` and `auto`. `auto` tries
+Google first and Groq second when both keys exist, or uses the one configured
+provider. Tavily is optional; when its key is blank, the assistant still answers
+from the tenant graph, exact evidence and saved deterministic reports.
+
+## Grounded assistant boundary
+
+`POST /platform/assistant/ask` runs a read-only LangGraph workflow. LangChain
+assembles the user question and retrieved context for the selected model. The
+backend validates source IDs and numerical claims before returning the answer.
+Every claim is labelled `known`, `inferred` or `unknown`; Tavily results remain
+`inferred` and never become confirmed graph facts automatically.
+
+The assistant accepts questions about suppliers, evidence, disruptions, affected
+plants, assumptions and previously calculated runway. It cannot confirm or reject
+a relationship, perform graph traversal or runway arithmetic, approve an action,
+or write to SAP. No vector database or uploaded document is required for this
+assistant path. The separate evidence-search subsystem may still use stored
+document vectors when documents exist.
 
 The **Run the scenario** panel shows the primary and backup models and whether
 keys are configured. A configured key is not proof of account access. Click
